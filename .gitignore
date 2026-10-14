@@ -1,0 +1,70 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Archivos generados y locales
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+
+# Phyton
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+.venv/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Distribución / empaquetado
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Archivos de caché de herramientas
+.pytest_cache/
+.mypy_cache/
+
+
+# Archivos de Base de datos SQL Lite
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos temporales de SQLite
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Local development databases 
+dev.db
+local.db
