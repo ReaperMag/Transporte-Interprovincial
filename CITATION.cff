@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "Si utilizas este software, por favor cítalo usando los siguientes metadatos."
+type: software
+title: "Transporte Interprovincial"
+abstract: >-
+  Aplicación web académica para la gestión y venta de pasajes de transporte
+  interprovincial en Ecuador. Integra la administración de cooperativas, buses,
+  rutas, frecuencias, hojas de ruta, reservas, pagos y boletos, junto con la
+  validación de boletos mediante código QR. Proyecto del segundo parcial de la
+  asignatura Manejo y Configuración de Software, Carrera de Software,
+  Universidad Técnica de Ambato.
+authors:
+  - family-names: "Perez Vallejo"
+    given-names: "Leidy Estefania"
+    affiliation: "Universidad Técnica de Ambato"
+  - family-names: "Apellido1 Apellido2"
+    given-names: "Nombre1 Nombre2"
+    affiliation: "Universidad Técnica de Ambato"
+  - family-names: "Apellido1 Apellido2"
+    given-names: "Nombre1 Nombre2"
+    affiliation: "Universidad Técnica de Ambato"
+repository-code: "https://github.com/ReaperMag/Transporte-Interprovincial"
+license: GPL-3.0
+keywords:
+  - transporte interprovincial
+  - venta de pasajes
+  - git flow
+  - fastapi
+  - react
