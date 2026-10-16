@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { LoginCredentials, LoginFormProps } from '../types/auth.types';
+import './LoginForm.css';
 
 export function LoginForm({ onSubmit, isLoading = false, error = null }: LoginFormProps) {
   const [credentials, setCredentials] = useState<LoginCredentials>({
@@ -29,10 +30,13 @@ export function LoginForm({ onSubmit, isLoading = false, error = null }: LoginFo
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor="login-email">Correo electrónico</label>
+    <form className="login-form" onSubmit={handleSubmit}>
+      <div className="login-form__field">
+        <label className="login-form__label" htmlFor="login-email">
+          Correo electrónico
+        </label>
         <input
+          className="login-form__input"
           id="login-email"
           name="email"
           type="email"
@@ -45,37 +49,45 @@ export function LoginForm({ onSubmit, isLoading = false, error = null }: LoginFo
         />
       </div>
 
-      <div>
-        <label htmlFor="login-password">Contraseña</label>
-        <input
-          id="login-password"
-          name="password"
-          type={showPassword ? 'text' : 'password'}
-          value={credentials.password}
-          onChange={(event) => handleChange('password', event.target.value)}
-          placeholder="Ingresa tu contraseña"
-          autoComplete="current-password"
-          required
-          disabled={isLoading}
-        />
+      <div className="login-form__field">
+        <label className="login-form__label" htmlFor="login-password">
+          Contraseña
+        </label>
 
-        <button
-          type="button"
-          onClick={() => setShowPassword((previous) => !previous)}
-          aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-          disabled={isLoading}
-        >
-          {showPassword ? 'Ocultar' : 'Mostrar'}
-        </button>
+        <div className="login-form__password">
+          <input
+            className="login-form__input"
+            id="login-password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            value={credentials.password}
+            onChange={(event) => handleChange('password', event.target.value)}
+            placeholder="Ingresa tu contraseña"
+            autoComplete="current-password"
+            required
+            disabled={isLoading}
+          />
+
+          <button
+            className="login-form__toggle"
+            type="button"
+            onClick={() => setShowPassword((previous) => !previous)}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            aria-pressed={showPassword}
+            disabled={isLoading}
+          >
+            {showPassword ? 'Ocultar' : 'Mostrar'}
+          </button>
+        </div>
       </div>
 
       {error && (
-        <p role="alert" aria-live="polite">
+        <p className="login-form__error" role="alert">
           {error}
         </p>
       )}
 
-      <button type="submit" disabled={isLoading}>
+      <button className="login-form__submit" type="submit" disabled={isLoading}>
         {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
       </button>
     </form>
