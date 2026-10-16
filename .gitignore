@@ -68,3 +68,5 @@ dist/
 # Local development databases 
 dev.db
 local.db
+
+*.tsbuildinfo

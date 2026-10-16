@@ -1,0 +1,13 @@
+
+{
+  "name": "transporte-interprovincial",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @transporte/web dev",
+    "build:web": "pnpm --filter @transporte/web build",
+    "lint": "pnpm --filter @transporte/web lint",
+    "format:check": "pnpm --filter @transporte/web format:check",
+    "typecheck": "pnpm --filter @transporte/web typecheck"
+  }
+}
