@@ -1,13 +1,15 @@
 import { LoginForm } from '../components/LoginForm';
+import type { LoginFormProps } from '../types/auth.types';
 
-export function LoginPage() {
+export function LoginPage({ onSubmit, isLoading = false, error = null }: LoginFormProps) {
   return (
     <main>
-      <section>
-        <h1>Iniciar sesión</h1>
+      <section aria-labelledby="login-title">
+        <h1 id="login-title">Iniciar sesión</h1>
+
         <p>Ingresa tus credenciales para acceder al sistema.</p>
 
-        <LoginForm />
+        <LoginForm onSubmit={onSubmit} isLoading={isLoading} error={error} />
       </section>
     </main>
   );
