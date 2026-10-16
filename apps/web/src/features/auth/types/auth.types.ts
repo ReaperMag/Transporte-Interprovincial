@@ -3,8 +3,16 @@ export interface LoginCredentials {
   password: string;
 }
 
-export interface LoginFormProps {
-  onSubmit: (credentials: LoginCredentials) => void | Promise<void>;
-  isLoading?: boolean;
-  error?: string | null;
-}
+export type LoginFormProps =
+  | {
+      mode: 'preview';
+      onSubmit?: never;
+      isLoading?: never;
+      error?: never;
+    }
+  | {
+      mode?: 'interactive';
+      onSubmit: (credentials: LoginCredentials) => void | Promise<void>;
+      isLoading?: boolean;
+      error?: string | null;
+    };

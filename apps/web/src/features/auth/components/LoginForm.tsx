@@ -3,13 +3,17 @@ import type { FormEvent } from 'react';
 import type { LoginCredentials, LoginFormProps } from '../types/auth.types';
 import './LoginForm.css';
 
-export function LoginForm({ onSubmit, isLoading = false, error = null }: LoginFormProps) {
+export function LoginForm(props: LoginFormProps) {
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
     password: '',
   });
 
   const [showPassword, setShowPassword] = useState(false);
+
+  const isPreview = props.mode === 'preview';
+  const isLoading = !isPreview && (props.isLoading ?? false);
+  const error = !isPreview ? props.error : null;
 
   const handleChange = (field: keyof LoginCredentials, value: string) => {
     setCredentials((previous) => ({
@@ -21,9 +25,11 @@ export function LoginForm({ onSubmit, isLoading = false, error = null }: LoginFo
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isLoading) return;
+    if (props.mode === 'preview' || isLoading) {
+      return;
+    }
 
-    await onSubmit({
+    await props.onSubmit({
       email: credentials.email.trim(),
       password: credentials.password,
     });
@@ -35,6 +41,7 @@ export function LoginForm({ onSubmit, isLoading = false, error = null }: LoginFo
         <label className="login-form__label" htmlFor="login-email">
           Correo electrónico
         </label>
+
         <input
           className="login-form__input"
           id="login-email"
@@ -87,7 +94,7 @@ export function LoginForm({ onSubmit, isLoading = false, error = null }: LoginFo
         </p>
       )}
 
-      <button className="login-form__submit" type="submit" disabled={isLoading}>
+      <button className="login-form__submit" type="submit" disabled={isPreview || isLoading}>
         {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
       </button>
     </form>

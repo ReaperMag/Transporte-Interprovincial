@@ -2,7 +2,7 @@ import { LoginForm } from '../components/LoginForm';
 import type { LoginFormProps } from '../types/auth.types';
 import './LoginPage.css';
 
-export function LoginPage({ onSubmit, isLoading = false, error = null }: LoginFormProps) {
+export function LoginPage(props: LoginFormProps) {
   return (
     <main className="login-page">
       <section className="login-page__card" aria-labelledby="login-title">
@@ -16,7 +16,7 @@ export function LoginPage({ onSubmit, isLoading = false, error = null }: LoginFo
           </p>
         </header>
 
-        <LoginForm onSubmit={onSubmit} isLoading={isLoading} error={error} />
+        <LoginForm {...props} />
       </section>
     </main>
   );
