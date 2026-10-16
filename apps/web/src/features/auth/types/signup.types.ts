@@ -1,4 +1,3 @@
-
 export interface SignupFormValues {
   firstName: string;
   lastName: string;

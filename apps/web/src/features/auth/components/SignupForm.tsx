@@ -1,10 +1,6 @@
-
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type {
-  SignupFormProps,
-  SignupFormValues,
-} from '../types/signup.types';
+import type { SignupFormProps, SignupFormValues } from '../types/signup.types';
 import './SignupForm.css';
 
 const initialValues: SignupFormValues = {
@@ -21,12 +17,10 @@ export function SignupForm(props: SignupFormProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const passwordsDoNotMatch =
-    values.confirmPassword.length > 0 &&
-    values.password !== values.confirmPassword;
+    values.confirmPassword.length > 0 && values.password !== values.confirmPassword;
 
   const isPreview = props.mode === 'preview';
-  const isLoading =
-    props.mode === 'interactive' && (props.isLoading ?? false);
+  const isLoading = props.mode === 'interactive' && (props.isLoading ?? false);
 
   function updateField(field: keyof SignupFormValues, value: string) {
     setValues((current) => ({
@@ -60,9 +54,7 @@ export function SignupForm(props: SignupFormProps) {
           type="text"
           name="firstName"
           value={values.firstName}
-          onChange={(event) =>
-            updateField('firstName', event.target.value)
-          }
+          onChange={(event) => updateField('firstName', event.target.value)}
           autoComplete="given-name"
           placeholder="Ingresa tus nombres"
           required
@@ -76,9 +68,7 @@ export function SignupForm(props: SignupFormProps) {
           type="text"
           name="lastName"
           value={values.lastName}
-          onChange={(event) =>
-            updateField('lastName', event.target.value)
-          }
+          onChange={(event) => updateField('lastName', event.target.value)}
           autoComplete="family-name"
           placeholder="Ingresa tus apellidos"
           required
@@ -92,9 +82,7 @@ export function SignupForm(props: SignupFormProps) {
           type="email"
           name="email"
           value={values.email}
-          onChange={(event) =>
-            updateField('email', event.target.value)
-          }
+          onChange={(event) => updateField('email', event.target.value)}
           autoComplete="email"
           placeholder="ejemplo@correo.com"
           required
@@ -109,9 +97,7 @@ export function SignupForm(props: SignupFormProps) {
             type={showPassword ? 'text' : 'password'}
             name="password"
             value={values.password}
-            onChange={(event) =>
-              updateField('password', event.target.value)
-            }
+            onChange={(event) => updateField('password', event.target.value)}
             autoComplete="new-password"
             placeholder="Crea una contraseña"
             required
@@ -121,9 +107,7 @@ export function SignupForm(props: SignupFormProps) {
             className="signup-form__toggle"
             onClick={() => setShowPassword((current) => !current)}
             disabled={isLoading}
-            aria-label={
-              showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
-            }
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
             {showPassword ? 'Ocultar' : 'Mostrar'}
           </button>
@@ -131,34 +115,24 @@ export function SignupForm(props: SignupFormProps) {
       </div>
 
       <div className="signup-form__field">
-        <label htmlFor="signup-confirm-password">
-          Confirmar contraseña
-        </label>
+        <label htmlFor="signup-confirm-password">Confirmar contraseña</label>
         <div className="signup-form__password-wrapper">
           <input
             id="signup-confirm-password"
             type={showConfirmPassword ? 'text' : 'password'}
             name="confirmPassword"
             value={values.confirmPassword}
-            onChange={(event) =>
-              updateField('confirmPassword', event.target.value)
-            }
+            onChange={(event) => updateField('confirmPassword', event.target.value)}
             autoComplete="new-password"
             placeholder="Repite tu contraseña"
             required
             aria-invalid={passwordsDoNotMatch}
-            aria-describedby={
-              passwordsDoNotMatch
-                ? 'signup-password-error'
-                : undefined
-            }
+            aria-describedby={passwordsDoNotMatch ? 'signup-password-error' : undefined}
           />
           <button
             type="button"
             className="signup-form__toggle"
-            onClick={() =>
-              setShowConfirmPassword((current) => !current)
-            }
+            onClick={() => setShowConfirmPassword((current) => !current)}
             disabled={isLoading}
             aria-label={
               showConfirmPassword
@@ -171,11 +145,7 @@ export function SignupForm(props: SignupFormProps) {
         </div>
 
         {passwordsDoNotMatch && (
-          <p
-            id="signup-password-error"
-            className="signup-form__error"
-            role="alert"
-          >
+          <p id="signup-password-error" className="signup-form__error" role="alert">
             Las contraseñas no coinciden.
           </p>
         )}
@@ -187,18 +157,13 @@ export function SignupForm(props: SignupFormProps) {
         </p>
       )}
 
-      <button
-        className="signup-form__submit"
-        type="submit"
-        disabled={isPreview || isLoading}
-      >
+      <button className="signup-form__submit" type="submit" disabled={isPreview || isLoading}>
         {isLoading ? 'Procesando...' : 'Crear cuenta'}
       </button>
 
       {isPreview && (
         <p className="signup-form__notice">
-          El registro estará disponible cuando se habilite el servicio
-          de creación de cuentas.
+          El registro estará disponible cuando se habilite el servicio de creación de cuentas.
         </p>
       )}
     </form>
