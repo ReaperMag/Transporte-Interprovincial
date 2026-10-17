@@ -1,0 +1,90 @@
+/* Contenedor principal */
+.signup-page {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100dvh;
+  width: 100%;
+  padding: 2rem 1rem;
+  background-color: #f1f5f9;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Tarjeta de registro */
+.signup-page__card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 440px;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+}
+
+/* Encabezado */
+.signup-page__header {
+  margin-bottom: 1.75rem;
+  text-align: center;
+}
+
+.signup-page__title {
+  margin: 0 0 0.75rem;
+  color: #0f172a;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.signup-page__description {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Pie de página */
+.signup-page__footer {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.signup-page__footer p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.signup-page__link {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signup-page__link:hover {
+  text-decoration: underline;
+}
+
+.signup-page__link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+/* Diseño adaptable */
+@media (max-width: 480px) {
+  .signup-page {
+    padding: 1rem;
+  }
+
+  .signup-page__card {
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+  }
+
+  .signup-page__title {
+    font-size: 1.5rem;
+  }
+
+  .signup-page__description {
+    font-size: 0.875rem;
+  }
+}
