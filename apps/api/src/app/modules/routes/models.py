@@ -1,8 +1,10 @@
 import enum
+from decimal import Decimal
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.modules.buses.models import SeatType
 from app.shared.base_model import BaseModel, str_enum
 from app.shared.tenant_model import TenantModel
 
@@ -38,6 +40,7 @@ class Route(TenantModel):
     stops: Mapped[list["RouteStop"]] = relationship(
         back_populates="route", cascade="all, delete-orphan", order_by="RouteStop.stop_order"
     )
+    fares: Mapped[list["Fare"]] = relationship(back_populates="route", cascade="all, delete-orphan")
 
 
 class RouteStop(BaseModel):
@@ -54,3 +57,20 @@ class RouteStop(BaseModel):
 
     route: Mapped[Route] = relationship(back_populates="stops")
     city: Mapped[City] = relationship()
+
+
+class Fare(BaseModel):
+    """Precio de un tramo de la ruta según el tipo de asiento (base: tarifas de la ANT)."""
+
+    __tablename__ = "fares"
+    __table_args__ = (
+        UniqueConstraint("route_id", "origin_city_id", "destination_city_id", "seat_type"),
+    )
+
+    route_id: Mapped[int] = mapped_column(ForeignKey("routes.id", ondelete="CASCADE"))
+    origin_city_id: Mapped[int] = mapped_column(ForeignKey("cities.id", ondelete="RESTRICT"))
+    destination_city_id: Mapped[int] = mapped_column(ForeignKey("cities.id", ondelete="RESTRICT"))
+    seat_type: Mapped[SeatType] = mapped_column(str_enum(SeatType))
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+
+    route: Mapped[Route] = relationship(back_populates="fares")
