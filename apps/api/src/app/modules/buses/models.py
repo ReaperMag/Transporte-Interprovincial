@@ -42,3 +42,12 @@ class TemplateSeat(BaseModel):
     seat_type: Mapped[SeatType] = mapped_column(str_enum(SeatType), default=SeatType.NORMAL)
 
     template: Mapped[BusTemplate] = relationship(back_populates="seats")
+
+
+class BusGroup(TenantModel):
+    """Grupo de buses, por ejemplo 'Buses cómodos' o 'Buses cantonales'. La hoja de ruta es por grupo."""
+
+    __tablename__ = "bus_groups"
+
+    name: Mapped[str] = mapped_column(String(100))
+    description: Mapped[str | None] = mapped_column(String(255))
