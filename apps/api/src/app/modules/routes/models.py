@@ -35,3 +35,22 @@ class Route(TenantModel):
 
     origin_city: Mapped[City] = relationship(foreign_keys=[origin_city_id])
     destination_city: Mapped[City] = relationship(foreign_keys=[destination_city_id])
+    stops: Mapped[list["RouteStop"]] = relationship(
+        back_populates="route", cascade="all, delete-orphan", order_by="RouteStop.stop_order"
+    )
+
+
+class RouteStop(BaseModel):
+    """Parada intermedia de una ruta con paradas, por ejemplo Latacunga en Quito - Loja."""
+
+    __tablename__ = "route_stops"
+    __table_args__ = (UniqueConstraint("route_id", "stop_order"),)
+
+    route_id: Mapped[int] = mapped_column(ForeignKey("routes.id", ondelete="CASCADE"))
+    city_id: Mapped[int] = mapped_column(ForeignKey("cities.id", ondelete="RESTRICT"))
+    stop_order: Mapped[int]
+    # Minutos desde la salida, para mostrar la hora de cada parada en la hoja de ruta
+    minutes_from_origin: Mapped[int | None]
+
+    route: Mapped[Route] = relationship(back_populates="stops")
+    city: Mapped[City] = relationship()
