@@ -58,6 +58,13 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 
+def reset_db() -> None:
+    """Borra todas las tablas y las vuelve a crear. Se pierden todos los datos."""
+    import_models()
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+
 def get_db() -> Generator[Session, None, None]:
     """Dependencia de FastAPI: entrega una sesión y la cierra al terminar la petición."""
     db = SessionLocal()
