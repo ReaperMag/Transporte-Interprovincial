@@ -60,3 +60,6 @@ class RouteSheet(TenantModel):
     notes: Mapped[str | None] = mapped_column(String(500))
 
     standby_buses: Mapped[list[Bus]] = relationship(secondary=route_sheet_standby_buses)
+    trips: Mapped[list["Trip"]] = relationship(  # noqa: F821
+        back_populates="route_sheet", order_by="Trip.departure_at"
+    )
