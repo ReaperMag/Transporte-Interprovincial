@@ -51,3 +51,22 @@ class BusGroup(TenantModel):
 
     name: Mapped[str] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(String(255))
+
+
+class Bus(TenantModel):
+    __tablename__ = "buses"
+    __table_args__ = (UniqueConstraint("cooperative_id", "number"),)
+
+    number: Mapped[str] = mapped_column(String(10))  # Número de disco
+    plate: Mapped[str] = mapped_column(String(10), unique=True)
+    chassis_brand: Mapped[str] = mapped_column(String(50))
+    chassis_number: Mapped[str | None] = mapped_column(String(50))
+    body_brand: Mapped[str] = mapped_column(String(50))  # Carrocería
+    year: Mapped[int | None]
+    photo_url: Mapped[str | None] = mapped_column(String(500))
+    template_id: Mapped[int] = mapped_column(ForeignKey("bus_templates.id", ondelete="RESTRICT"))
+    group_id: Mapped[int | None] = mapped_column(ForeignKey("bus_groups.id", ondelete="SET NULL"))
+    is_active: Mapped[bool] = mapped_column(default=True)
+
+    template: Mapped[BusTemplate] = relationship()
+    group: Mapped[BusGroup | None] = relationship()
