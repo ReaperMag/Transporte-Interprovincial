@@ -3,6 +3,11 @@ from fastapi import FastAPI
 
 from app.api.v1.router import router as api_v1_router
 from app.core.config import settings
+from app.core.database import import_models
+
+
+# Registrar todos los modelos de SQLAlchemy.
+import_models()
 
 
 # Crear la aplicación principal de FastAPI.
