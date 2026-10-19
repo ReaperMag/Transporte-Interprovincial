@@ -18,6 +18,60 @@ Antes de contribuir, asegúrate de tener instalado:
 - **pnpm**: gestor de paquetes del workspace (obligatorio, no uses `npm` ni `yarn`).
 - **Python**: versión **3.12 o superior** para `apps/api`.
 
+
+## Ejecución local del backend (FastAPI)
+
+Los siguientes comandos deben ejecutarse desde la **raíz del repositorio** `Transporte-Interprovincial`, utilizando Git Bash en Windows.
+
+### Instalación de dependencias
+
+Crear el entorno virtual de Python (solo la primera vez):
+
+```bash
+python -m venv apps/api/.venv
+```
+
+Activar el entorno virtual:
+
+```bash
+source apps/api/.venv/Scripts/activate
+```
+
+Instalar las dependencias del backend:
+
+```bash
+python -m pip install -r apps/api/requirements.txt
+```
+
+### Preparación de la base de datos
+
+Para desarrollo local se utiliza SQLite mediante SQLAlchemy.
+
+La primera vez, crear las tablas de la base de datos:
+
+```bash
+DATABASE_URL="sqlite:///./apps/api/.venv/transporte_dev.db" PYTHONPATH=apps/api/src python -c "from app.core.database import init_db; init_db()"
+```
+
+### Iniciar el backend
+
+Con el entorno virtual activado, ejecutar:
+
+```bash
+DATABASE_URL="sqlite:///./apps/api/.venv/transporte_dev.db" PYTHONPATH=apps/api/src python -m uvicorn app.main:app --reload --reload-dir apps/api/src --host 127.0.0.1 --port 8000
+```
+
+El servidor estará disponible en:
+
+- API: http://127.0.0.1:8000
+- Documentación Swagger: http://127.0.0.1:8000/docs
+
+Para detener el servidor, presionar `Ctrl + C`.
+
+**Nota:** La configuración `DATABASE_URL` debe ser la misma al crear las tablas y ejecutar Uvicorn. La base SQLite se guarda dentro de `.venv` y no se incluye en Git.
+
+
+
 ## Modelo de ramas (Git Flow)
 
 El proyecto usa el estándar de Git Flow con la extensión `git flow`. Las ramas principales y de soporte son:
