@@ -6,6 +6,7 @@ import './SignupForm.css';
 const initialValues: SignupFormValues = {
   firstName: '',
   lastName: '',
+  idNumber: '',
   email: '',
   password: '',
   confirmPassword: '',
@@ -39,6 +40,7 @@ export function SignupForm(props: SignupFormProps) {
     props.onSubmit({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
+      idNumber: values.idNumber.trim(),
       email: values.email.trim(),
       password: values.password,
       confirmPassword: values.confirmPassword,
@@ -71,6 +73,21 @@ export function SignupForm(props: SignupFormProps) {
           onChange={(event) => updateField('lastName', event.target.value)}
           autoComplete="family-name"
           placeholder="Ingresa tus apellidos"
+          required
+        />
+      </div>
+
+      {/* Identificación del pasajero */}
+      <div className="signup-form__field">
+        <label htmlFor="signup-id-number">Cédula o pasaporte</label>
+        <input
+          id="signup-id-number"
+          type="text"
+          name="idNumber"
+          value={values.idNumber}
+          onChange={(event) => updateField('idNumber', event.target.value)}
+          placeholder="Ingresa tu cédula o pasaporte"
+          maxLength={13}
           required
         />
       </div>
