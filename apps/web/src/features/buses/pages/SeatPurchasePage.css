@@ -1,0 +1,226 @@
+.seat-purchase-page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: clamp(1.25rem, 4vw, 3rem) 1rem;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+.seat-purchase-page__content {
+  width: min(100%, 70rem);
+  margin: 0 auto;
+}
+
+.seat-purchase-page__header {
+  margin-bottom: 2rem;
+}
+
+.seat-purchase-page__eyebrow {
+  margin: 0 0 0.45rem;
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.seat-purchase-page__title {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  line-height: 1.2;
+}
+
+.seat-purchase-page__description {
+  max-width: 42rem;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.seat-purchase-page__section,
+.seat-purchase-page__map-card,
+.seat-purchase-page__summary {
+  box-sizing: border-box;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 30px rgb(15 23 42 / 5%);
+}
+
+.seat-purchase-page__section {
+  margin-bottom: 1rem;
+}
+
+.seat-purchase-page__section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.seat-purchase-page__section-heading h2,
+.seat-purchase-page__summary h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.seat-purchase-page__section-heading p {
+  margin: 0.3rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.seat-purchase-page__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
+  align-items: start;
+  gap: 1rem;
+}
+
+.seat-purchase-page__map-card .seat-purchase-page__section-heading {
+  justify-content: center;
+  text-align: center;
+}
+
+.seat-purchase-page__legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  margin: 1.5rem 0 0;
+  padding: 1rem 0 0;
+  border-top: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.8rem;
+  list-style: none;
+}
+
+.seat-purchase-page__legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.seat-purchase-page__legend-swatch {
+  display: inline-grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.35rem;
+  background: #dbeafe;
+}
+
+.seat-purchase-page__legend-swatch--vip {
+  width: 1.75rem;
+  border-color: #d6b56d;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 0.5rem;
+  font-weight: 800;
+}
+
+.seat-purchase-page__legend-aisle {
+  width: 0.35rem;
+  height: 1.25rem;
+  border-right: 1px dashed #94a3b8;
+  border-left: 1px dashed #94a3b8;
+}
+
+.seat-purchase-page__legend-bathroom {
+  padding: 0.2rem 0.35rem;
+  border: 1px dashed #94a3b8;
+  border-radius: 0.25rem;
+  background: #e2e8f0;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.seat-purchase-page__summary {
+  position: sticky;
+  top: 1rem;
+}
+
+.seat-purchase-page__summary-count {
+  margin: 0.45rem 0 1rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.seat-purchase-page__selected-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seat-purchase-page__selected-seat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding: 0.7rem;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.seat-purchase-page__selected-detail {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.seat-purchase-page__empty {
+  margin: 0;
+  padding: 0.9rem;
+  border-radius: 0.6rem;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.seat-purchase-page__continue {
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+  font: inherit;
+  font-weight: 700;
+}
+
+.seat-purchase-page__demo-note {
+  margin: 0.75rem 0 0;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .seat-purchase-page__workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .seat-purchase-page__summary {
+    position: static;
+  }
+}
