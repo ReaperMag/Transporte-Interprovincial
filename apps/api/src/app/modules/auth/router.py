@@ -29,6 +29,12 @@ from app.modules.auth.service import (
     register_passenger,
 )
 
+from app.modules.login_attempts.service import (
+    is_login_blocked,
+    register_failed_login,
+)
+
+
 
 router = APIRouter(
     prefix="/auth",
@@ -57,6 +63,7 @@ def signup(
         ) from error
 
 
+
 @router.post(
     "/login",
     response_model=LoginResponse,
@@ -64,12 +71,29 @@ def signup(
 )
 def login(
     data: LoginRequest,
+    request: Request,
     response: Response,
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[None, Depends(validate_request_origin)],
 ) -> LoginResponse:
-    """Autentica un pasajero y establece su cookie JWT."""
+    """Autentica un pasajero y controla los intentos fallidos."""
 
+    # Obtenemos la IP de la conexión.
+    # No confiamos en X-Forwarded-For enviado por el cliente.
+    ip_address = (
+        request.client.host
+        if request.client is not None
+        else "unknown"
+    )
+
+    # 1. Comprobar si alcanzó el límite de intentos.
+    if is_login_blocked(db, str(data.email), ip_address):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos. Inténtalo más tarde.",
+        )
+
+    # 2. Verificar las credenciales.
     try:
         account, access_token = authenticate_passenger(
             db,
@@ -78,11 +102,19 @@ def login(
         )
 
     except InvalidCredentialsError as error:
+        # 3. Registrar el fallo de forma persistente.
+        register_failed_login(
+            db,
+            str(data.email),
+            ip_address,
+        )
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Correo o contraseña incorrectos.",
         ) from error
 
+    # 4. Establecer la cookie tras autenticar correctamente.
     response.set_cookie(
         key=settings.auth_cookie_name,
         value=access_token,
@@ -100,6 +132,7 @@ def login(
         email=account.email,
         accountType="passenger",
     )
+
 
 
 @router.get(
