@@ -21,7 +21,7 @@ Antes de contribuir, asegúrate de tener instalado:
 
 ## Ejecución local del backend (FastAPI)
 
-Los siguientes comandos deben ejecutarse desde la **raíz del repositorio** `Transporte-Interprovincial`, utilizando Git Bash en Windows.
+**Importante:** Ejecuta todos los comandos de esta sección desde **Git Bash**, ubicado en la raíz del repositorio `Transporte-Interprovincial`. No ejecutes estos comandos en PowerShell ni en CMD, porque la sintaxis utilizada para configurar las variables de entorno corresponde a Git Bash.
 
 ### Instalación de dependencias
 
