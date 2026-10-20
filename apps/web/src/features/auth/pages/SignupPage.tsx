@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { SignupForm } from '../components/SignupForm';
 import { registerPassenger, SignupApiError } from '../services/signup.service';
@@ -8,9 +8,10 @@ import type { SignupFormValues } from '../types/signup.types';
 import './SignupPage.css';
 
 export function SignupPage() {
+  const navigate = useNavigate();
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   async function handleSignup(values: SignupFormValues): Promise<void> {
     if (isLoading) return;
@@ -19,9 +20,10 @@ export function SignupPage() {
     setError(null);
 
     try {
-      const response = await registerPassenger(values);
+      await registerPassenger(values);
 
-      setRegisteredEmail(response.email);
+      // Redirige al Login únicamente si el registro fue exitoso.
+      navigate('/login', { replace: true });
     } catch (err: unknown) {
       if (err instanceof SignupApiError) {
         setError(err.message);
@@ -46,19 +48,12 @@ export function SignupPage() {
           </p>
         </header>
 
-        {registeredEmail ? (
-          <p className="signup-form__notice" role="status">
-            La cuenta con el correo {registeredEmail} se creó correctamente. Podrás iniciar sesión
-            cuando esta función esté habilitada.
-          </p>
-        ) : (
-          <SignupForm
-            mode="interactive"
-            onSubmit={handleSignup}
-            isLoading={isLoading}
-            error={error}
-          />
-        )}
+        <SignupForm
+          mode="interactive"
+          onSubmit={handleSignup}
+          isLoading={isLoading}
+          error={error}
+        />
 
         <footer className="signup-page__footer">
           <p>
