@@ -23,6 +23,7 @@ MODEL_MODULES = (
     "app.modules.sales.models",
     "app.modules.tickets.models",
     "app.modules.notifications.models",
+    "app.modules.login_attempts.models",
 )
 
 _is_sqlite = settings.database_url.startswith("sqlite")
