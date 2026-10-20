@@ -6,6 +6,7 @@ import './SignupForm.css';
 const initialValues: SignupFormValues = {
   firstName: '',
   lastName: '',
+  idNumber: '',
   email: '',
   password: '',
   confirmPassword: '',
@@ -32,13 +33,14 @@ export function SignupForm(props: SignupFormProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (props.mode === 'preview' || passwordsDoNotMatch) {
+    if (props.mode === 'preview' || passwordsDoNotMatch || isLoading) {
       return;
     }
 
     props.onSubmit({
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
+      idNumber: values.idNumber.trim(),
       email: values.email.trim(),
       password: values.password,
       confirmPassword: values.confirmPassword,
@@ -57,6 +59,7 @@ export function SignupForm(props: SignupFormProps) {
           onChange={(event) => updateField('firstName', event.target.value)}
           autoComplete="given-name"
           placeholder="Ingresa tus nombres"
+          maxLength={100}
           required
         />
       </div>
@@ -71,6 +74,24 @@ export function SignupForm(props: SignupFormProps) {
           onChange={(event) => updateField('lastName', event.target.value)}
           autoComplete="family-name"
           placeholder="Ingresa tus apellidos"
+          maxLength={100}
+          required
+        />
+      </div>
+
+      {/* Identificación del pasajero */}
+      <div className="signup-form__field">
+        <label htmlFor="signup-id-number">Cédula o pasaporte</label>
+        <input
+          id="signup-id-number"
+          type="text"
+          name="idNumber"
+          value={values.idNumber}
+          onChange={(event) => updateField('idNumber', event.target.value)}
+          placeholder="Ingresa tu cédula o pasaporte"
+          maxLength={13}
+          pattern="[A-Za-z0-9]+"
+          title="Ingresa únicamente letras y números."
           required
         />
       </div>
@@ -100,6 +121,8 @@ export function SignupForm(props: SignupFormProps) {
             onChange={(event) => updateField('password', event.target.value)}
             autoComplete="new-password"
             placeholder="Crea una contraseña"
+            minLength={8}
+            maxLength={128}
             required
           />
           <button
@@ -125,6 +148,8 @@ export function SignupForm(props: SignupFormProps) {
             onChange={(event) => updateField('confirmPassword', event.target.value)}
             autoComplete="new-password"
             placeholder="Repite tu contraseña"
+            minLength={8}
+            maxLength={128}
             required
             aria-invalid={passwordsDoNotMatch}
             aria-describedby={passwordsDoNotMatch ? 'signup-password-error' : undefined}
