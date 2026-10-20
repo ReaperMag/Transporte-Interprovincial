@@ -8,7 +8,8 @@ from app.modules.login_attempts.service import (
     is_login_blocked,
     register_failed_login,
 )
-
+from sqlalchemy import create_engine
+from app.modules.login_attempts.models import LoginFailedAttempt
 
 EMAIL = "ana@example.com"
 IP = "192.0.2.10"
@@ -86,3 +87,56 @@ def test_attempts_persist_between_sessions(test_environment):
         assert count_recent_failed_attempts(
             second_session, EMAIL, IP
         ) == 1
+
+def test_failed_attempts_persist_after_database_reopen(tmp_path):
+    """Comprueba la persistencia en un archivo SQLite real."""
+
+    database_path = tmp_path / "login_attempts_test.db"
+    database_url = f"sqlite+pysqlite:///{database_path.as_posix()}"
+
+    email = "persistencia@example.com"
+    ip_address = "192.0.2.50"
+
+    # Primera conexión: crear la tabla y registrar cinco fallos.
+    first_engine = create_engine(database_url)
+
+    try:
+        LoginFailedAttempt.__table__.create(
+            bind=first_engine,
+            checkfirst=True,
+        )
+
+        with Session(first_engine) as db:
+            for _ in range(5):
+                register_failed_login(
+                    db,
+                    email,
+                    ip_address,
+                )
+
+            assert is_login_blocked(
+                db,
+                email,
+                ip_address,
+            )
+    finally:
+        first_engine.dispose()
+
+    # Segunda conexión: abrir nuevamente el archivo SQLite.
+    second_engine = create_engine(database_url)
+
+    try:
+        with Session(second_engine) as db:
+            assert count_recent_failed_attempts(
+                db,
+                email,
+                ip_address,
+            ) == 5
+
+            assert is_login_blocked(
+                db,
+                email,
+                ip_address,
+            )
+    finally:
+        second_engine.dispose()
