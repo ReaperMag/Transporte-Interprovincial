@@ -30,6 +30,12 @@ export async function loginAccount(credentials: LoginCredentials): Promise<Authe
     throw new Error('Demasiados intentos de inicio de sesión. Inténtalo en unos minutos.');
   }
 
+  if (response.status === 403) {
+    throw new Error(
+      'La API rechazó el origen del frontend',
+    );
+  }
+
   if (!response.ok) {
     throw new Error('No fue posible iniciar sesión.');
   }
