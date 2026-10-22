@@ -1,21 +1,25 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LoginPage } from '../pages/LoginPage';
-import { loginPassenger } from '../services/login.service';
+import { loginAccount } from '../services/login.service';
 import type { LoginCredentials } from '../types/auth.types';
 import { useAuth } from '../context/useAuth';
 export function LoginContainer() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { refreshSession } = useAuth();
+  const navigate = useNavigate();
   async function handleLogin(credentials: LoginCredentials) {
     setIsLoading(true);
     setError(null);
 
     try {
-      await loginPassenger(credentials);
+      const account = await loginAccount(credentials);
       await refreshSession();
-      // Temporalmente verificamos el inicio de sesión.
-      // La navegación dependerá de las rutas privadas existentes.
+      navigate(
+        account.accountType === 'super_admin' ? '/admin/cooperativas' : '/comprar-asientos',
+        { replace: true },
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocurrió un error al iniciar sesión.');
     } finally {

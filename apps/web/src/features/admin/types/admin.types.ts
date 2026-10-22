@@ -9,12 +9,6 @@ export interface Cooperative {
   isActive: boolean;
 }
 
-export interface AdminSummaryMetric {
-  id: string;
-  label: string;
-  value: number;
-}
-
 export interface CooperativeWrite {
   name: string;
   ruc: string;
@@ -27,16 +21,4 @@ export interface CooperativeWrite {
 
 export interface AdminSummary {
   cooperatives: number;
-  routes: number;
-  buses: number;
-}
-
-export interface AdminNavItem {
-  to: string;
-  label: string;
-}
-
-export interface AdminSectionContent {
-  title: string;
-  description: string;
 }

@@ -3,10 +3,10 @@ import type { LoginCredentials } from '../types/auth.types';
 export interface AuthenticatedAccount {
   accountId: number;
   email: string;
-  accountType: 'passenger';
+  accountType: 'passenger' | 'cooperative' | 'super_admin';
 }
 
-export async function loginPassenger(credentials: LoginCredentials): Promise<AuthenticatedAccount> {
+export async function loginAccount(credentials: LoginCredentials): Promise<AuthenticatedAccount> {
   let response: Response;
 
   try {

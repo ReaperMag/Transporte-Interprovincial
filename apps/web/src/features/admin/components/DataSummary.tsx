@@ -10,8 +10,6 @@ export function DataSummary({ summary, error }: DataSummaryProps) {
   const metrics = summary
     ? [
         { id: 'cooperatives', label: 'Cooperativas Registradas:', value: summary.cooperatives },
-        { id: 'routes', label: 'Rutas Totales:', value: summary.routes },
-        { id: 'buses', label: 'Buses en Servicio:', value: summary.buses },
       ]
     : [];
 
@@ -27,12 +25,12 @@ export function DataSummary({ summary, error }: DataSummaryProps) {
         <p className="data-summary__message">Cargando resumen...</p>
       ) : (
         <dl className="data-summary__grid">
-        {metrics.map((metric) => (
-          <div className="data-summary__item" key={metric.id}>
-            <dt>{metric.label}</dt>
-            <dd>{metric.value}</dd>
-          </div>
-        ))}
+          {metrics.map((metric) => (
+            <div className="data-summary__item" key={metric.id}>
+              <dt>{metric.label}</dt>
+              <dd>{metric.value}</dd>
+            </div>
+          ))}
         </dl>
       )}
     </section>

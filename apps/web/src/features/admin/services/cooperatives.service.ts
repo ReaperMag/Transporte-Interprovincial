@@ -54,7 +54,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       // Conserva el mensaje genérico si el servidor no devuelve JSON.
     }
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
+      message = 'Inicia sesión con una cuenta administradora para continuar.';
+    } else if (response.status === 403) {
       message = 'No tienes permisos para administrar cooperativas.';
     } else if (response.status === 503) {
       message = 'El servicio administrativo aún no está habilitado.';

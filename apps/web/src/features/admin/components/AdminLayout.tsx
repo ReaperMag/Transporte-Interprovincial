@@ -1,35 +1,22 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { adminNavItems, adminSession, globalSettingsItems } from '../data/admin.mock';
+import { useState } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/context/useAuth';
 import './AdminLayout.css';
 
 export function AdminLayout() {
-  const location = useLocation();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
-  const activeIndex = Math.max(
-    adminNavItems.findIndex((item) => location.pathname.startsWith(item.to)),
-    0,
-  );
-  const activeSection = adminNavItems[activeIndex]?.label ?? 'Cooperativas';
+  const navigate = useNavigate();
+  const { account, logout } = useAuth();
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isSettingsOpen) {
-      return;
+  const handleLogout = async () => {
+    setLogoutError(null);
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch {
+      setLogoutError('No fue posible cerrar sesión. Inténtalo nuevamente.');
     }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!settingsRef.current?.contains(event.target as Node)) {
-        setIsSettingsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-    };
-  }, [isSettingsOpen]);
+  };
 
   return (
     <div className="admin-layout">
@@ -49,7 +36,7 @@ export function AdminLayout() {
 
         <div className="admin-header__account">
           <p className="admin-header__user">
-            {adminSession.displayName}: {adminSession.email}
+            Administrador: {account?.email}
           </p>
           <span className="admin-header__avatar" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none">
@@ -62,56 +49,19 @@ export function AdminLayout() {
               />
             </svg>
           </span>
-          <Link className="admin-header__logout" to="/login">
+          <button className="admin-header__logout" onClick={() => void handleLogout()} type="button">
             Cerrar sesión
-          </Link>
+          </button>
         </div>
       </header>
 
+      {logoutError && <p role="alert">{logoutError}</p>}
+
       <div className="admin-toolbar">
-        <div className="admin-toolbar__settings" ref={settingsRef}>
-          <button
-            className="admin-toolbar__settings-button"
-            type="button"
-            aria-expanded={isSettingsOpen}
-            aria-haspopup="menu"
-            onClick={() => setIsSettingsOpen((previous) => !previous)}
-          >
-            Configuración Global
-            <span aria-hidden="true">▾</span>
-          </button>
-
-          {isSettingsOpen && (
-            <ul className="admin-toolbar__menu" role="menu">
-              {globalSettingsItems.map((item) => (
-                <li key={item} role="none">
-                  <button className="admin-toolbar__menu-item" type="button" role="menuitem">
-                    {item}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
         <nav className="admin-toolbar__nav" aria-label="Secciones del administrador">
-          {adminNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              className={({ isActive }) =>
-                isActive ? 'admin-toolbar__link admin-toolbar__link--active' : 'admin-toolbar__link'
-              }
-              to={item.to}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <p
-            className="admin-toolbar__hint"
-            style={{ gridColumn: activeIndex + 1 }}
-          >
-            Visibilidad Limitada: {activeSection}
-          </p>
+          <span className="admin-toolbar__link admin-toolbar__link--active">
+            Gestión de cooperativas
+          </span>
         </nav>
       </div>
 
