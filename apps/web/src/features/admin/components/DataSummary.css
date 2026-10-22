@@ -42,6 +42,12 @@
   line-height: 1;
 }
 
+.data-summary__message {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 800px) {
   .data-summary__grid {
     grid-template-columns: 1fr;

@@ -1,22 +1,34 @@
-export interface CooperativeLogo {
-  initials: string;
-  from: string;
-  to: string;
-}
-
 export interface Cooperative {
-  id: string;
+  id: number;
   name: string;
-  email: string;
-  phone: string;
+  ruc: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  logoUrl: string | null;
   isActive: boolean;
-  logo: CooperativeLogo;
 }
 
 export interface AdminSummaryMetric {
   id: string;
   label: string;
-  value: string;
+  value: number;
+}
+
+export interface CooperativeWrite {
+  name: string;
+  ruc: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  logoUrl: string | null;
+  isActive: boolean;
+}
+
+export interface AdminSummary {
+  cooperatives: number;
+  routes: number;
+  buses: number;
 }
 
 export interface AdminNavItem {
