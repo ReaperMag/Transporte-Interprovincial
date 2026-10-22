@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "Transporte Interprovincial API"
     database_url: str = "sqlite:///./transporte.db"
     database_echo: bool = False
+    allow_unauthenticated_admin: bool = False
 
 
 settings = Settings()
