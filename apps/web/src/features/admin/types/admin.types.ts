@@ -19,6 +19,11 @@ export interface CooperativeWrite {
   isActive: boolean;
 }
 
+export interface CooperativeAccountCreate extends CooperativeWrite {
+  accountEmail: string;
+  initialPassword: string;
+}
+
 export interface AdminSummary {
   cooperatives: number;
 }

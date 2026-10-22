@@ -7,6 +7,7 @@ from app.core.permissions import require_admin_access
 from app.modules.cooperatives import repository, service
 from app.modules.cooperatives.schemas import (
     AdminSummary,
+    CooperativeAccountCreate,
     CooperativeCreate,
     CooperativeRead,
     CooperativeStatusUpdate,
@@ -47,13 +48,23 @@ def read_cooperative(
 
 @router.post("", response_model=CooperativeRead, status_code=status.HTTP_201_CREATED)
 def create_cooperative(
-    payload: CooperativeCreate,
+    payload: CooperativeAccountCreate,
     db: Session = Depends(get_db),
     _: None = Depends(validate_request_origin),
 ) -> CooperativeRead:
     try:
-        return service.create_cooperative(db, payload.model_dump())
+        values = payload.model_dump(
+            exclude={"account_email", "initial_password"}
+        )
+        return service.create_cooperative_with_account(
+            db,
+            values,
+            account_email=str(payload.account_email),
+            initial_password=payload.initial_password,
+        )
     except service.DuplicateCooperativeError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except service.DuplicateCooperativeAccountError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 

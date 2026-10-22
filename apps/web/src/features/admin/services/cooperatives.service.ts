@@ -1,4 +1,9 @@
-import type { AdminSummary, Cooperative, CooperativeWrite } from '../types/admin.types';
+import type {
+  AdminSummary,
+  Cooperative,
+  CooperativeAccountCreate,
+  CooperativeWrite,
+} from '../types/admin.types';
 
 const cooperativesUrl = '/api/v1/admin/cooperatives';
 
@@ -88,7 +93,7 @@ export function getAdminSummary(signal?: AbortSignal): Promise<AdminSummary> {
   return request(`${cooperativesUrl}/summary`, { signal });
 }
 
-export function createCooperative(values: CooperativeWrite): Promise<Cooperative> {
+export function createCooperative(values: CooperativeAccountCreate): Promise<Cooperative> {
   return request(cooperativesUrl, {
     method: 'POST',
     body: JSON.stringify(values),

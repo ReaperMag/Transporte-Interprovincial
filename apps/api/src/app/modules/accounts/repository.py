@@ -27,6 +27,7 @@ def create_account(
     email: str,
     password_hash: str,
     account_type: AccountType,
+    cooperative_id: int | None = None,
 ) -> Account:
     """
     Agrega una cuenta a la sesión de base de datos.
@@ -38,6 +39,7 @@ def create_account(
         email=email.strip().lower(),
         password_hash=password_hash,
         account_type=account_type,
+        cooperative_id=cooperative_id,
     )
 
     db.add(account)
@@ -48,4 +50,3 @@ def create_account(
 def get_account_by_id(db: Session, account_id: int) -> Account | None:
     """Busca una cuenta existente mediante su identificador."""
     return db.get(Account, account_id)
-

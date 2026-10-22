@@ -1,6 +1,13 @@
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    field_validator,
+)
 
 
 def to_camel(value: str) -> str:
@@ -37,6 +44,11 @@ class CooperativeCreate(CooperativeSchema):
     email: Email | None = None
     logo_url: LogoUrl | None = None
     is_active: bool = True
+
+
+class CooperativeAccountCreate(CooperativeCreate):
+    account_email: EmailStr
+    initial_password: str = Field(min_length=12, max_length=128)
 
 
 class CooperativeUpdate(CooperativeSchema):

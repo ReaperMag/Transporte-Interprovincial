@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Cooperative, CooperativeWrite } from '../types/admin.types';
+import type {
+  Cooperative,
+  CooperativeAccountCreate,
+  CooperativeWrite,
+} from '../types/admin.types';
 import {
   AdminApiError,
   createCooperative,
@@ -34,6 +38,9 @@ export function CooperativeDialog({
   onSaved,
 }: CooperativeDialogProps) {
   const [values, setValues] = useState(() => toFormValues(cooperative));
+  const [accountEmail, setAccountEmail] = useState('');
+  const [initialPassword, setInitialPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isReadOnly = mode === 'view';
@@ -44,6 +51,12 @@ export function CooperativeDialog({
 
     setIsSaving(true);
     setError(null);
+    if (mode === 'create' && initialPassword !== confirmPassword) {
+      setError('Las contraseñas iniciales no coinciden.');
+      setIsSaving(false);
+      return;
+    }
+
     const payload: CooperativeWrite = {
       ...values,
       name: values.name.trim(),
@@ -58,7 +71,12 @@ export function CooperativeDialog({
       if (mode === 'edit' && cooperative) {
         await updateCooperative(cooperative.id, payload);
       } else {
-        await createCooperative(payload);
+        const createPayload: CooperativeAccountCreate = {
+          ...payload,
+          accountEmail: accountEmail.trim(),
+          initialPassword,
+        };
+        await createCooperative(createPayload);
       }
       onSaved();
     } catch (requestError) {
@@ -144,6 +162,56 @@ export function CooperativeDialog({
                 disabled={isReadOnly || isSaving}
               />
             </label>
+
+            {mode === 'create' && (
+              <>
+                <label>
+                  Correo para iniciar sesión
+                  <input
+                    autoComplete="username"
+                    maxLength={150}
+                    onChange={(event) => setAccountEmail(event.target.value)}
+                    required
+                    type="email"
+                    value={accountEmail}
+                    disabled={isSaving}
+                  />
+                </label>
+
+                <label>
+                  Contraseña inicial (mínimo 12 caracteres)
+                  <input
+                    autoComplete="new-password"
+                    minLength={12}
+                    maxLength={128}
+                    onChange={(event) => setInitialPassword(event.target.value)}
+                    required
+                    type="password"
+                    value={initialPassword}
+                    disabled={isSaving}
+                  />
+                </label>
+
+                <label className="cooperative-dialog__field--wide">
+                  Confirmar contraseña inicial
+                  <input
+                    autoComplete="new-password"
+                    minLength={12}
+                    maxLength={128}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    required
+                    type="password"
+                    value={confirmPassword}
+                    disabled={isSaving}
+                  />
+                </label>
+                <p className="cooperative-dialog__hint cooperative-dialog__field--wide">
+                  Esta cuenta quedará vinculada a la cooperativa. Entrega las
+                  credenciales de forma segura; el panel de cooperativa aún no
+                  está disponible.
+                </p>
+              </>
+            )}
 
             <label>
               Teléfono

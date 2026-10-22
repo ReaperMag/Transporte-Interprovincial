@@ -17,7 +17,11 @@ export function LoginContainer() {
       const account = await loginAccount(credentials);
       await refreshSession();
       navigate(
-        account.accountType === 'super_admin' ? '/admin/cooperativas' : '/comprar-asientos',
+        account.accountType === 'super_admin'
+          ? '/admin/cooperativas'
+          : account.accountType === 'cooperative'
+            ? '/cooperativa/pendiente'
+            : '/comprar-asientos',
         { replace: true },
       );
     } catch (err) {

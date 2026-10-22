@@ -22,6 +22,13 @@ El nombre y el RUC son únicos. Los conflictos de unicidad devuelven `409`;
 una cooperativa con información relacionada tampoco se elimina (debe
 desactivarse para conservar el historial).
 
+Al crear una cooperativa desde el panel, el administrador también registra el
+correo y la contraseña inicial de su cuenta de acceso. La API guarda la
+contraseña como hash y vincula la cuenta de tipo `cooperative` al registro de la
+cooperativa en una sola transacción. Si el correo ya pertenece a otra cuenta,
+no se crea la cooperativa. La cuenta puede iniciar sesión, pero su panel de
+gestión todavía está pendiente de un sprint posterior.
+
 ## Acceso administrativo
 
 Las rutas administrativas requieren una cuenta activa de tipo `super_admin`.

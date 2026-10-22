@@ -2,8 +2,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import hash_password
-from app.modules.accounts.models import AccountType
-from app.modules.accounts.repository import create_account
+from app.modules.accounts.models import Account, AccountType
+from app.modules.accounts.repository import create_account, get_account_by_email
+from app.modules.cooperatives.models import Cooperative
 
 
 def create_account_for_login(engine, *, email: str, account_type: AccountType) -> None:
@@ -76,7 +77,12 @@ def test_admin_mutations_require_the_configured_origin(test_environment):
     )
     assert login(client, email).status_code == 200
 
-    payload = {"name": "Cooperativa Test", "ruc": "1234567890001"}
+    payload = {
+        "name": "Cooperativa Test",
+        "ruc": "1234567890001",
+        "accountEmail": "cooperativa@example.com",
+        "initialPassword": "ClaveCooperativa123!",
+    }
     response = client.post("/api/v1/admin/cooperatives", json=payload)
 
     assert response.status_code == 403
@@ -95,7 +101,12 @@ def test_super_admin_can_create_and_update_cooperatives(test_environment):
     headers = {"Origin": settings.frontend_origin}
     created = client.post(
         "/api/v1/admin/cooperatives",
-        json={"name": "Cooperativa Test", "ruc": "1234567890001"},
+        json={
+            "name": "Cooperativa Test",
+            "ruc": "1234567890001",
+            "accountEmail": "cooperativa@example.com",
+            "initialPassword": "ClaveCooperativa123!",
+        },
         headers=headers,
     )
     assert created.status_code == 201
@@ -109,3 +120,79 @@ def test_super_admin_can_create_and_update_cooperatives(test_environment):
 
     assert updated.status_code == 200
     assert updated.json()["isActive"] is False
+
+
+def test_creating_cooperative_creates_linked_login_account(test_environment):
+    client, engine = test_environment
+    admin_email = "admin@example.com"
+    create_account_for_login(
+        engine,
+        email=admin_email,
+        account_type=AccountType.SUPER_ADMIN,
+    )
+    assert login(client, admin_email).status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/cooperatives",
+        json={
+            "name": "Cooperativa con cuenta",
+            "ruc": "1234567890001",
+            "accountEmail": "cuenta@cooperativa.ec",
+            "initialPassword": "ClaveCooperativa123!",
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 201
+    cooperative_id = response.json()["id"]
+    assert "initialPassword" not in response.json()
+
+    with Session(engine) as db:
+        account = get_account_by_email(db, "cuenta@cooperativa.ec")
+        cooperative = db.get(Cooperative, cooperative_id)
+        assert account is not None
+        assert account.account_type == AccountType.COOPERATIVE
+        assert account.cooperative_id == cooperative_id
+        assert account.password_hash != "ClaveCooperativa123!"
+        assert cooperative is not None
+
+    cooperative_login = login(
+        client,
+        "cuenta@cooperativa.ec",
+        "ClaveCooperativa123!",
+    )
+    assert cooperative_login.status_code == 200
+    assert cooperative_login.json()["accountType"] == "cooperative"
+    assert client.get("/api/v1/auth/me").json()["accountType"] == "cooperative"
+
+
+def test_duplicate_account_email_does_not_create_cooperative(test_environment):
+    client, engine = test_environment
+    admin_email = "admin@example.com"
+    create_account_for_login(
+        engine,
+        email=admin_email,
+        account_type=AccountType.SUPER_ADMIN,
+    )
+    create_account_for_login(
+        engine,
+        email="existing@example.com",
+        account_type=AccountType.PASSENGER,
+    )
+    assert login(client, admin_email).status_code == 200
+
+    response = client.post(
+        "/api/v1/admin/cooperatives",
+        json={
+            "name": "No debe guardarse",
+            "ruc": "1234567890001",
+            "accountEmail": "existing@example.com",
+            "initialPassword": "ClaveCooperativa123!",
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 409
+    with Session(engine) as db:
+        assert db.query(Cooperative).count() == 0
+        assert db.query(Account).count() == 2
