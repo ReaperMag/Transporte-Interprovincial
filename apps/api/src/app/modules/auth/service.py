@@ -77,7 +77,7 @@ def register_passenger(
         # 6. Confirmar ambas operaciones.
         db.commit()
 
-        # 7. Devolver solamente información pública.
+
         return SignupResponse(
             accountId=account.id,
             email=account.email,
@@ -106,39 +106,54 @@ def authenticate_passenger(
     No crea cuentas ni modifica el registro.
     """
 
-    # 1. Buscar la cuenta por correo.
+    account, access_token = _authenticate_account(
+        db,
+        email,
+        password,
+        accepted_types={AccountType.PASSENGER},
+    )
+    return account, access_token
+
+
+def authenticate_account(
+    db: Session,
+    email: str,
+    password: str,
+) -> tuple[Account, str]:
+    """Autentica una cuenta activa y genera un JWT."""
+    return _authenticate_account(
+        db,
+        email,
+        password,
+        accepted_types=set(AccountType),
+    )
+
+
+def _authenticate_account(
+    db: Session,
+    email: str,
+    password: str,
+    *,
+    accepted_types: set[AccountType],
+) -> tuple[Account, str]:
+    # Buscar la cuenta por correo y verificar las credenciales.
     account = get_account_by_email(db, email)
 
-    # 2. Verificar existencia y contraseña.
-    if account is None:
+    if (
+        account is None
+        or not verify_password(password, account.password_hash)
+        or not account.is_active
+        or account.account_type not in accepted_types
+    ):
         raise InvalidCredentialsError(
             "Correo o contraseña incorrectos."
         )
 
-    if not verify_password(password, account.password_hash):
-        raise InvalidCredentialsError(
-            "Correo o contraseña incorrectos."
-        )
-
-    # 3. Verificar que la cuenta esté activa.
-    if not account.is_active:
-        raise InvalidCredentialsError(
-            "Correo o contraseña incorrectos."
-        )
-
-    # 4. Permitir únicamente pasajeros en esta fase.
-    if account.account_type != AccountType.PASSENGER:
-        raise InvalidCredentialsError(
-            "Correo o contraseña incorrectos."
-        )
-
-    # 5. Generar el JWT.
     access_token = create_access_token(
         account_id=account.id,
         account_type=account.account_type.value,
     )
 
-    # 6. Actualizar la fecha del último acceso.
     try:
         account.last_login_at = datetime.now(timezone.utc)
         db.commit()

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.csrf import validate_request_origin
 from app.core.permissions import require_admin_access
 from app.modules.cooperatives import repository, service
 from app.modules.cooperatives.schemas import (
@@ -48,6 +49,7 @@ def read_cooperative(
 def create_cooperative(
     payload: CooperativeCreate,
     db: Session = Depends(get_db),
+    _: None = Depends(validate_request_origin),
 ) -> CooperativeRead:
     try:
         return service.create_cooperative(db, payload.model_dump())
@@ -60,6 +62,7 @@ def replace_cooperative(
     cooperative_id: int,
     payload: CooperativeCreate,
     db: Session = Depends(get_db),
+    _: None = Depends(validate_request_origin),
 ) -> CooperativeRead:
     try:
         return service.update_cooperative(db, cooperative_id, payload.model_dump())
@@ -77,6 +80,7 @@ def patch_cooperative(
     cooperative_id: int,
     payload: CooperativeUpdate,
     db: Session = Depends(get_db),
+    _: None = Depends(validate_request_origin),
 ) -> CooperativeRead:
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
@@ -100,6 +104,7 @@ def change_cooperative_status(
     cooperative_id: int,
     payload: CooperativeStatusUpdate,
     db: Session = Depends(get_db),
+    _: None = Depends(validate_request_origin),
 ) -> CooperativeRead:
     try:
         return service.update_cooperative(
@@ -115,7 +120,11 @@ def change_cooperative_status(
 
 
 @router.delete("/{cooperative_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_cooperative(cooperative_id: int, db: Session = Depends(get_db)) -> Response:
+def remove_cooperative(
+    cooperative_id: int,
+    db: Session = Depends(get_db),
+    _: None = Depends(validate_request_origin),
+) -> Response:
     try:
         service.delete_cooperative(db, cooperative_id)
     except service.CooperativeNotFoundError as exc:

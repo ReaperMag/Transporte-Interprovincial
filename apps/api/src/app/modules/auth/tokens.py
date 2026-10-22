@@ -4,6 +4,7 @@ from uuid import uuid4
 import jwt
 
 from app.core.config import settings
+from app.modules.accounts.models import AccountType
 
 
 class InvalidTokenError(Exception):
@@ -32,8 +33,10 @@ def create_access_token(
     if account_id <= 0:
         raise ValueError("El identificador de cuenta debe ser positivo.")
 
-    if account_type != "passenger":
-        raise ValueError("Solo se permite autenticación de pasajeros.")
+    try:
+        AccountType(account_type)
+    except (TypeError, ValueError) as error:
+        raise ValueError("El tipo de cuenta no es válido.") from error
 
     now = datetime.now(timezone.utc)
 
@@ -81,7 +84,9 @@ def decode_access_token(token: str) -> dict:
         if account_id <= 0:
             raise InvalidTokenError("Token inválido.")
 
-        if payload["account_type"] != "passenger":
+        try:
+            AccountType(payload["account_type"])
+        except (TypeError, ValueError):
             raise InvalidTokenError("Token inválido.")
 
         return payload

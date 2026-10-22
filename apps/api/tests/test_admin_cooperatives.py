@@ -36,7 +36,7 @@ class AdminCooperativeServiceTests(unittest.TestCase):
         summary = repository.get_admin_summary(self.db)
 
         self.assertEqual([cooperative.id], [item.id for item in results])
-        self.assertEqual({"cooperatives": 1, "routes": 0, "buses": 0}, summary)
+        self.assertEqual({"cooperatives": 1}, summary)
 
     def test_duplicate_ruc_raises_conflict(self) -> None:
         self.create_cooperative()

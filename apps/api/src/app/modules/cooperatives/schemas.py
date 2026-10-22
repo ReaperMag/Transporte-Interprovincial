@@ -73,5 +73,3 @@ class CooperativeRead(CooperativeSchema):
 
 class AdminSummary(CooperativeSchema):
     cooperatives: int
-    routes: int
-    buses: int

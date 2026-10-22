@@ -2,7 +2,9 @@
 
 ## Administración de cooperativas
 
-El panel administrador consume estos endpoints bajo `/api/v1/admin/cooperatives`:
+El administrador se limita a crear, consultar, actualizar y eliminar
+cooperativas. El panel consume estos endpoints bajo
+`/api/v1/admin/cooperatives`:
 
 | Método | Ruta | Operación |
 | --- | --- | --- |
@@ -13,7 +15,7 @@ El panel administrador consume estos endpoints bajo `/api/v1/admin/cooperatives`
 | `PATCH` | `/{id}` | Actualizar los campos enviados |
 | `PATCH` | `/{id}/status` | Activar o desactivar |
 | `DELETE` | `/{id}` | Eliminar si no tiene registros relacionados |
-| `GET` | `/summary` | Contadores de cooperativas, rutas y buses activos |
+| `GET` | `/summary` | Total de cooperativas registradas |
 
 El contrato JSON usa camelCase. El RUC es obligatorio y debe tener 13 dígitos.
 El nombre y el RUC son únicos. Los conflictos de unicidad devuelven `409`;
@@ -22,12 +24,26 @@ desactivarse para conservar el historial).
 
 ## Acceso administrativo
 
-El módulo de autenticación actual no proporciona todavía inicio de sesión ni
-validación de rol. Por eso las rutas administrativas están cerradas por defecto
-y devuelven `503`. Para probar en un entorno local aislado se puede definir
-`ALLOW_UNAUTHENTICATED_ADMIN=true` antes de iniciar la API. No actives esa opción
-en redes compartidas ni en producción. Antes de desplegar, sustituye
-`require_admin_access` en `src/app/core/permissions.py` por la validación del
-token y del rol `super_admin`.
+Las rutas administrativas requieren una cuenta activa de tipo `super_admin`.
+El registro público crea exclusivamente cuentas de pasajero; no permite
+registrar administradores.
+
+Para crear la primera cuenta, desde `apps/api` define `ADMIN_EMAIL` y
+`ADMIN_PASSWORD` y ejecuta `python scripts/create_admin.py`. El script crea las
+tablas necesarias si aún no existen y no altera cuentas ya registradas. Usa una
+contraseña de al menos 12 caracteres. En PowerShell, puedes ingresar la
+contraseña sin mostrarla en pantalla:
+
+```powershell
+$env:ADMIN_EMAIL = Read-Host "Correo administrador"
+$securePassword = Read-Host "Contraseña administrador" -AsSecureString
+$env:ADMIN_PASSWORD = [System.Net.NetworkCredential]::new("", $securePassword).Password
+python scripts/create_admin.py
+Remove-Item Env:ADMIN_EMAIL, Env:ADMIN_PASSWORD
+```
+
+El inicio de sesión usa la misma pantalla que el de pasajeros. La API devuelve
+el tipo de cuenta y limita las rutas de administración a `super_admin`; las
+operaciones que modifican cooperativas también validan el origen de la solicitud.
 
 Durante el desarrollo web, Vite reenvía `/api` a `http://127.0.0.1:8000`.

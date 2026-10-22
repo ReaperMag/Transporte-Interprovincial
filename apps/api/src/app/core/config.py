@@ -20,7 +20,6 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./transporte.db"
     database_echo: bool = False
-    allow_unauthenticated_admin: bool = False
 
     # Autenticación JWT
     jwt_secret_key: str | None = None

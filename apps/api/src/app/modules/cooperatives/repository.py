@@ -1,9 +1,7 @@
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.modules.buses.models import Bus
 from app.modules.cooperatives.models import Cooperative
-from app.modules.routes.models import Route
 
 
 def list_cooperatives(
@@ -34,9 +32,4 @@ def get_cooperative(db: Session, cooperative_id: int) -> Cooperative | None:
 def get_admin_summary(db: Session) -> dict[str, int]:
     return {
         "cooperatives": db.scalar(select(func.count()).select_from(Cooperative)) or 0,
-        "routes": db.scalar(select(func.count()).select_from(Route)) or 0,
-        "buses": db.scalar(
-            select(func.count()).select_from(Bus).where(Bus.is_active.is_(True))
-        )
-        or 0,
     }

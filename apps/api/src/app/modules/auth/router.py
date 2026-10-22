@@ -25,7 +25,7 @@ from app.modules.auth.schemas import (
 from app.modules.auth.service import (
     InvalidCredentialsError,
     SignupConflictError,
-    authenticate_passenger,
+    authenticate_account,
     register_passenger,
 )
 
@@ -76,7 +76,7 @@ def login(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[None, Depends(validate_request_origin)],
 ) -> LoginResponse:
-    """Autentica un pasajero y controla los intentos fallidos."""
+    """Autentica una cuenta activa y controla los intentos fallidos."""
 
     # Obtenemos la IP de la conexión.
     # No confiamos en X-Forwarded-For enviado por el cliente.
@@ -95,7 +95,7 @@ def login(
 
     # 2. Verificar las credenciales.
     try:
-        account, access_token = authenticate_passenger(
+        account, access_token = authenticate_account(
             db,
             str(data.email),
             data.password,
@@ -130,7 +130,7 @@ def login(
     return LoginResponse(
         accountId=account.id,
         email=account.email,
-        accountType="passenger",
+        accountType=account.account_type.value,
     )
 
 
@@ -143,14 +143,14 @@ def get_me(
     response: Response,
     account: Annotated[Account, Depends(get_current_account)],
 ) -> LoginResponse:
-    """Devuelve información pública del pasajero autenticado."""
+    """Devuelve información pública de la cuenta autenticada."""
 
     response.headers["Cache-Control"] = "no-store"
 
     return LoginResponse(
         accountId=account.id,
         email=account.email,
-        accountType="passenger",
+        accountType=account.account_type.value,
     )
 
 

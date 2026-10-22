@@ -27,12 +27,17 @@ def test_reject_invalid_token():
         decode_access_token("token-invalido")
 
 
-def test_reject_non_passenger_token():
+def test_create_and_decode_super_admin_token():
+    token = create_access_token(account_id=1, account_type="super_admin")
+
+    payload = decode_access_token(token)
+
+    assert payload["account_type"] == "super_admin"
+
+
+def test_reject_unknown_account_type():
     with pytest.raises(ValueError):
-        create_access_token(
-            account_id=1,
-            account_type="super_admin",
-        )
+        create_access_token(account_id=1, account_type="unknown")
 
 
 def test_reject_invalid_account_id():
