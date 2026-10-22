@@ -44,3 +44,8 @@ def create_account(
     db.flush()
 
     return account
+
+def get_account_by_id(db: Session, account_id: int) -> Account | None:
+    """Busca una cuenta existente mediante su identificador."""
+    return db.get(Account, account_id)
+

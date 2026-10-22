@@ -49,3 +49,17 @@ class SignupResponse(BaseModel):
     accountId: int
     email: EmailStr
     accountType: Literal["passenger"]
+
+class LoginRequest(BaseModel):
+    """Credenciales recibidas para iniciar sesión."""
+
+    email: EmailStr
+    password: str = Field(min_length=1)
+
+
+class LoginResponse(BaseModel):
+    """Información pública de la cuenta autenticada."""
+
+    accountId: int
+    email: EmailStr
+    accountType: Literal["passenger"]

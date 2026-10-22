@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { LoginCredentials, LoginFormProps } from '../types/auth.types';
 import './LoginForm.css';
-
+import { Link } from 'react-router-dom';
 export function LoginForm(props: LoginFormProps) {
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
@@ -97,6 +97,9 @@ export function LoginForm(props: LoginFormProps) {
       <button className="login-form__submit" type="submit" disabled={isPreview || isLoading}>
         {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
       </button>
+      <p className="login-form__register">
+  ¿No tienes una cuenta? <Link to="/signup">Regístrate aquí</Link>
+</p>
     </form>
   );
 }
