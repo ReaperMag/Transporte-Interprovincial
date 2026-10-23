@@ -4,7 +4,7 @@ from pydantic import EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-API_ROOT = Path(__file__).resolve().parents[3]
+API_ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY_ROOT = API_ROOT.parents[1]
 ENV_FILE = API_ROOT / ".env"
 
