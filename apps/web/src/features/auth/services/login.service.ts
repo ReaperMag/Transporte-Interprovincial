@@ -3,10 +3,10 @@ import type { LoginCredentials } from '../types/auth.types';
 export interface AuthenticatedAccount {
   accountId: number;
   email: string;
-  accountType: 'passenger';
+  accountType: 'passenger' | 'cooperative' | 'super_admin';
 }
 
-export async function loginPassenger(credentials: LoginCredentials): Promise<AuthenticatedAccount> {
+export async function loginAccount(credentials: LoginCredentials): Promise<AuthenticatedAccount> {
   let response: Response;
 
   try {
@@ -28,6 +28,12 @@ export async function loginPassenger(credentials: LoginCredentials): Promise<Aut
 
   if (response.status === 429) {
     throw new Error('Demasiados intentos de inicio de sesión. Inténtalo en unos minutos.');
+  }
+
+  if (response.status === 403) {
+    throw new Error(
+      'La API rechazó el origen del frontend',
+    );
   }
 
   if (!response.ok) {

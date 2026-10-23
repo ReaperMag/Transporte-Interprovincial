@@ -1,21 +1,29 @@
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.v1.router import router as api_v1_router
+from app.core.bootstrap import ensure_initial_admin
 from app.core.config import settings
-from app.core.database import import_models
+from app.core.database import SessionLocal, init_db
 
 
-# Registrar todos los modelos de SQLAlchemy.
-import_models()
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    if getattr(application.state, "initialize_database_on_startup", True):
+        init_db()
+    session_factory = getattr(application.state, "session_factory", SessionLocal)
+    with session_factory() as db:
+        ensure_initial_admin(db)
+    yield
 
 
-# Crear la aplicación principal de FastAPI.
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
+    lifespan=lifespan,
 )
 
-
-# Registrar los endpoints de la versión 1.
 app.include_router(api_v1_router)

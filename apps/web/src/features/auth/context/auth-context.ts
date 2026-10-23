@@ -4,7 +4,7 @@ import type { AuthenticatedAccount } from '../services/login.service';
 export interface AuthContextValue {
   account: AuthenticatedAccount | null;
   isCheckingSession: boolean;
-  refreshSession: () => Promise<void>;
+  refreshSession: () => Promise<AuthenticatedAccount | null>;
   logout: () => Promise<void>;
 }
 

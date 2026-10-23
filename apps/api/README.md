@@ -1,0 +1,59 @@
+# API de transporte interprovincial
+
+## Administración de cooperativas
+
+El administrador se limita a crear, consultar, actualizar y eliminar
+cooperativas. El panel consume estos endpoints bajo
+`/api/v1/admin/cooperatives`:
+
+| Método | Ruta | Operación |
+| --- | --- | --- |
+| `GET` | `/` | Listar; admite `search` e `isActive` |
+| `POST` | `/` | Crear |
+| `GET` | `/{id}` | Consultar detalle |
+| `PUT` | `/{id}` | Reemplazar los datos |
+| `PATCH` | `/{id}` | Actualizar los campos enviados |
+| `PATCH` | `/{id}/status` | Activar o desactivar |
+| `DELETE` | `/{id}` | Eliminar si no tiene registros relacionados |
+| `GET` | `/summary` | Total de cooperativas registradas |
+
+El contrato JSON usa camelCase. El RUC es obligatorio y debe tener 13 dígitos.
+El nombre y el RUC son únicos. Los conflictos de unicidad devuelven `409`;
+una cooperativa con información relacionada tampoco se elimina (debe
+desactivarse para conservar el historial).
+
+Al crear una cooperativa desde el panel, el administrador también registra el
+correo y la contraseña inicial de su cuenta de acceso. La API guarda la
+contraseña como hash y vincula la cuenta de tipo `cooperative` al registro de la
+cooperativa en una sola transacción. Si el correo ya pertenece a otra cuenta,
+no se crea la cooperativa. La cuenta puede iniciar sesión, pero su panel de
+gestión todavía está pendiente de un sprint posterior.
+
+## Acceso administrativo
+
+Las rutas administrativas requieren una cuenta activa de tipo `super_admin`.
+El registro público crea exclusivamente cuentas de pasajero; no permite
+registrar administradores.
+
+Al iniciar la API, se crean las tablas que falten y se comprueba si ya existe
+una cuenta `super_admin`. Si no existe, la API crea el administrador inicial
+usando `ADMIN_EMAIL` y `ADMIN_PASSWORD` de `apps/api/.env`. Configura un correo
+válido y una contraseña de 12 a 128 caracteres antes del primer inicio. Si ya
+hay al menos un administrador, no se crea ni modifica ninguna cuenta y esas
+variables no son necesarias.
+
+```powershell
+Set-Location D:\trans-esmeraldas\Transporte-Interprovincial
+if (!(Test-Path apps\api\.env)) { Copy-Item apps\api\.env.example apps\api\.env }
+notepad apps\api\.env
+.\apps\api\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir apps\api\src --reload
+```
+
+El inicio de sesión usa la misma pantalla que el de pasajeros. La API devuelve
+el tipo de cuenta y limita las rutas de administración a `super_admin`; las
+operaciones que modifican cooperativas también validan el origen de la solicitud.
+
+Las rutas SQLite relativas se resuelven desde la raíz del repositorio. Por
+defecto, la base de datos es `transporte.db` en esa ubicación, tanto si Uvicorn
+se ejecuta desde la raíz como desde `apps/api`. Durante el desarrollo web, Vite
+reenvía `/api` a `http://127.0.0.1:8000`.

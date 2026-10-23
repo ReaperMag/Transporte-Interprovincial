@@ -1,10 +1,12 @@
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
+API_ROOT = Path(__file__).resolve().parents[3]
+REPOSITORY_ROOT = API_ROOT.parents[1]
+ENV_FILE = API_ROOT / ".env"
 
 
 class Settings(BaseSettings):
@@ -20,6 +22,8 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./transporte.db"
     database_echo: bool = False
+    admin_email: EmailStr | None = None
+    admin_password: SecretStr | None = None
 
     # Autenticación JWT
     jwt_secret_key: str | None = None

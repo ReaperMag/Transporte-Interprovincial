@@ -14,6 +14,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function refreshSession() {
     const currentAccount = await getCurrentAccount();
     setAccount(currentAccount);
+    return currentAccount;
   }
 
   async function logout() {

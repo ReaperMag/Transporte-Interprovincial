@@ -5,7 +5,7 @@ from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.modules.accounts.models import Account, AccountType
+from app.modules.accounts.models import Account
 from app.modules.accounts.repository import get_account_by_id
 from app.modules.auth.tokens import InvalidTokenError, decode_access_token
 
@@ -35,7 +35,6 @@ def get_current_account(
     if (
         account is None
         or not account.is_active
-        or account.account_type != AccountType.PASSENGER
     ):
         raise unauthorized
 
