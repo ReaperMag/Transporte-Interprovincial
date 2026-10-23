@@ -42,18 +42,18 @@ válido y una contraseña de 12 a 128 caracteres antes del primer inicio. Si ya
 hay al menos un administrador, no se crea ni modifica ninguna cuenta y esas
 variables no son necesarias.
 
-```powershell
-Set-Location D:\trans-esmeraldas\Transporte-Interprovincial
-if (!(Test-Path apps\api\.env)) { Copy-Item apps\api\.env.example apps\api\.env }
-notepad apps\api\.env
-.\apps\api\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir apps\api\src --reload
+```bash
+cd apps/api
+cp .env.example .env
+source .venv/Scripts/activate
+fastapi run
 ```
 
 El inicio de sesión usa la misma pantalla que el de pasajeros. La API devuelve
 el tipo de cuenta y limita las rutas de administración a `super_admin`; las
 operaciones que modifican cooperativas también validan el origen de la solicitud.
 
-Las rutas SQLite relativas se resuelven desde la raíz del repositorio. Por
-defecto, la base de datos es `transporte.db` en esa ubicación, tanto si Uvicorn
-se ejecuta desde la raíz como desde `apps/api`. Durante el desarrollo web, Vite
+Las rutas SQLite relativas se resuelven desde `apps/api`. Por defecto, la API
+usa una sola base de datos, `apps/api/transporte.db`, sin importar la carpeta
+desde la que se ejecuten la API o los scripts. Durante el desarrollo web, Vite
 reenvía `/api` a `http://127.0.0.1:8000`.

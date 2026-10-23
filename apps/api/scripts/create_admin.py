@@ -7,7 +7,7 @@ Usage (from apps/api):
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.bootstrap import ensure_initial_admin  # noqa: E402
 from app.core.database import SessionLocal, init_db  # noqa: E402

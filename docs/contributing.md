@@ -21,56 +21,69 @@ Antes de contribuir, asegúrate de tener instalado:
 
 ## Ejecución local del backend (FastAPI)
 
-**Importante:** Ejecuta todos los comandos de esta sección desde **Git Bash**, ubicado en la raíz del repositorio `Transporte-Interprovincial`. No ejecutes estos comandos en PowerShell ni en CMD, porque la sintaxis utilizada para configurar las variables de entorno corresponde a Git Bash.
+**Importante:** Ejecuta todos los comandos de esta sección desde **Git Bash**, dentro de la carpeta `apps/api` del repositorio `Transporte-Interprovincial`:
+
+```bash
+cd apps/api
+```
 
 ### Instalación de dependencias
 
 Crear el entorno virtual de Python (solo la primera vez):
 
 ```bash
-python -m venv apps/api/.venv
+python -m venv .venv
 ```
 
 Activar el entorno virtual:
 
 ```bash
-source apps/api/.venv/Scripts/activate
+source .venv/Scripts/activate
 ```
 
 Instalar las dependencias del backend:
 
 ```bash
-python -m pip install -r apps/api/requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-### Preparación de la base de datos
+### Configuración
 
-Para desarrollo local se utiliza SQLite mediante SQLAlchemy.
-
-La primera vez, crear las tablas de la base de datos:
+Copiar el archivo de ejemplo de variables de entorno (solo la primera vez):
 
 ```bash
-PYTHONPATH=apps/api/src python -c "from app.core.database import init_db; init_db()"
+cp .env.example .env
 ```
 
-Al iniciar Uvicorn, la API crea automáticamente las tablas que falten y el
-primer `super_admin` si todavía no existe ninguno. Antes del primer inicio,
-configura `ADMIN_EMAIL` y `ADMIN_PASSWORD` en `apps/api/.env`. La contraseña
-debe tener entre 12 y 128 caracteres. Si ya hay un administrador, la API no
-crea ni modifica cuentas.
+Antes del primer inicio, configura en `.env` un `JWT_SECRET_KEY` de al menos
+32 caracteres, junto con `ADMIN_EMAIL` y `ADMIN_PASSWORD`. La contraseña debe
+tener entre 12 y 128 caracteres. Al iniciar, la API crea automáticamente las
+tablas que falten y el primer `super_admin` si todavía no existe ninguno. Si
+ya hay un administrador, la API no crea ni modifica cuentas.
 
-Las rutas SQLite relativas se resuelven desde la raíz del repositorio. La
-configuración predeterminada `sqlite:///./transporte.db` usa el archivo
-`transporte.db` de esa raíz independientemente de la carpeta actual del
-proceso.
+### Base de datos
+
+Para desarrollo local se utiliza SQLite mediante SQLAlchemy. El proyecto usa
+una sola base de datos, `apps/api/transporte.db`. Las rutas SQLite relativas
+se resuelven desde `apps/api`, sin importar la carpeta desde la que se ejecute
+la API o los scripts.
+
+Para borrar todos los datos y volver a crear las tablas:
+
+```bash
+python scripts/reset_db.py --reset
+```
 
 ### Iniciar el backend
 
 Con el entorno virtual activado, ejecutar:
 
 ```bash
-PYTHONPATH=apps/api/src python -m uvicorn app.main:app --reload --reload-dir apps/api/src --host 127.0.0.1 --port 8000
+fastapi run
 ```
+
+Durante el desarrollo también puedes usar `fastapi dev`, que reinicia el
+servidor automáticamente cuando cambia el código.
 
 El servidor estará disponible en:
 
@@ -79,9 +92,14 @@ El servidor estará disponible en:
 
 Para detener el servidor, presionar `Ctrl + C`.
 
-**Nota:** La base SQLite `transporte.db` se guarda en la raíz del repositorio y no se incluye en Git.
+### Ejecutar las pruebas
 
+```bash
+python -m pip install -r requirements-dev.txt
+pytest
+```
 
+**Nota:** La base SQLite `transporte.db` no se incluye en Git.
 
 ## Modelo de ramas (Git Flow)
 
