@@ -150,7 +150,7 @@ def test_rollback_on_error(test_environment, signup_data):
                 json=signup_data,
             )
 
-    # Ambas tablas deben permanecer vacías.
+    # El administrador inicial debe permanecer, pero el registro fallido no crea datos.
     with Session(engine) as db:
         accounts = db.scalar(
             select(func.count()).select_from(Account)
@@ -160,5 +160,10 @@ def test_rollback_on_error(test_environment, signup_data):
             select(func.count()).select_from(Passenger)
         )
 
-        assert accounts == 0
+        assert accounts == 1
+        assert db.scalar(
+            select(func.count())
+            .select_from(Account)
+            .where(Account.email == signup_data["email"])
+        ) == 0
         assert passengers == 0

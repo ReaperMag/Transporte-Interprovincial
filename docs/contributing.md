@@ -50,15 +50,26 @@ Para desarrollo local se utiliza SQLite mediante SQLAlchemy.
 La primera vez, crear las tablas de la base de datos:
 
 ```bash
-DATABASE_URL="sqlite:///./apps/api/.venv/transporte_dev.db" PYTHONPATH=apps/api/src python -c "from app.core.database import init_db; init_db()"
+PYTHONPATH=apps/api/src python -c "from app.core.database import init_db; init_db()"
 ```
+
+Al iniciar Uvicorn, la API crea automáticamente las tablas que falten y el
+primer `super_admin` si todavía no existe ninguno. Antes del primer inicio,
+configura `ADMIN_EMAIL` y `ADMIN_PASSWORD` en `apps/api/.env`. La contraseña
+debe tener entre 12 y 128 caracteres. Si ya hay un administrador, la API no
+crea ni modifica cuentas.
+
+Las rutas SQLite relativas se resuelven desde la raíz del repositorio. La
+configuración predeterminada `sqlite:///./transporte.db` usa el archivo
+`transporte.db` de esa raíz independientemente de la carpeta actual del
+proceso.
 
 ### Iniciar el backend
 
 Con el entorno virtual activado, ejecutar:
 
 ```bash
-DATABASE_URL="sqlite:///./apps/api/.venv/transporte_dev.db" PYTHONPATH=apps/api/src python -m uvicorn app.main:app --reload --reload-dir apps/api/src --host 127.0.0.1 --port 8000
+PYTHONPATH=apps/api/src python -m uvicorn app.main:app --reload --reload-dir apps/api/src --host 127.0.0.1 --port 8000
 ```
 
 El servidor estará disponible en:
@@ -68,7 +79,7 @@ El servidor estará disponible en:
 
 Para detener el servidor, presionar `Ctrl + C`.
 
-**Nota:** La configuración `DATABASE_URL` debe ser la misma al crear las tablas y ejecutar Uvicorn. La base SQLite se guarda dentro de `.venv` y no se incluye en Git.
+**Nota:** La base SQLite `transporte.db` se guarda en la raíz del repositorio y no se incluye en Git.
 
 
 

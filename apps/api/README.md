@@ -35,22 +35,25 @@ Las rutas administrativas requieren una cuenta activa de tipo `super_admin`.
 El registro público crea exclusivamente cuentas de pasajero; no permite
 registrar administradores.
 
-Para crear la primera cuenta, desde `apps/api` define `ADMIN_EMAIL` y
-`ADMIN_PASSWORD` y ejecuta `python scripts/create_admin.py`. El script crea las
-tablas necesarias si aún no existen y no altera cuentas ya registradas. Usa una
-contraseña de al menos 12 caracteres. En PowerShell, puedes ingresar la
-contraseña sin mostrarla en pantalla:
+Al iniciar la API, se crean las tablas que falten y se comprueba si ya existe
+una cuenta `super_admin`. Si no existe, la API crea el administrador inicial
+usando `ADMIN_EMAIL` y `ADMIN_PASSWORD` de `apps/api/.env`. Configura un correo
+válido y una contraseña de 12 a 128 caracteres antes del primer inicio. Si ya
+hay al menos un administrador, no se crea ni modifica ninguna cuenta y esas
+variables no son necesarias.
 
 ```powershell
-$env:ADMIN_EMAIL = Read-Host "Correo administrador"
-$securePassword = Read-Host "Contraseña administrador" -AsSecureString
-$env:ADMIN_PASSWORD = [System.Net.NetworkCredential]::new("", $securePassword).Password
-python scripts/create_admin.py
-Remove-Item Env:ADMIN_EMAIL, Env:ADMIN_PASSWORD
+Set-Location D:\trans-esmeraldas\Transporte-Interprovincial
+if (!(Test-Path apps\api\.env)) { Copy-Item apps\api\.env.example apps\api\.env }
+notepad apps\api\.env
+.\apps\api\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir apps\api\src --reload
 ```
 
 El inicio de sesión usa la misma pantalla que el de pasajeros. La API devuelve
 el tipo de cuenta y limita las rutas de administración a `super_admin`; las
 operaciones que modifican cooperativas también validan el origen de la solicitud.
 
-Durante el desarrollo web, Vite reenvía `/api` a `http://127.0.0.1:8000`.
+Las rutas SQLite relativas se resuelven desde la raíz del repositorio. Por
+defecto, la base de datos es `transporte.db` en esa ubicación, tanto si Uvicorn
+se ejecuta desde la raíz como desde `apps/api`. Durante el desarrollo web, Vite
+reenvía `/api` a `http://127.0.0.1:8000`.

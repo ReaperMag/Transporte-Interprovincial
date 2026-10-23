@@ -1,11 +1,12 @@
 from collections.abc import Generator
 from importlib import import_module
+from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, make_url
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.config import settings
+from app.core.config import REPOSITORY_ROOT, settings
 from app.shared.base_model import Base
 
 # Módulos que definen entidades. Al importarlos, sus tablas se registran en Base.metadata.
@@ -28,8 +29,18 @@ MODEL_MODULES = (
 
 _is_sqlite = settings.database_url.startswith("sqlite")
 
+_database_url = make_url(settings.database_url)
+if (
+    _database_url.drivername.startswith("sqlite")
+    and _database_url.database not in (None, "", ":memory:")
+):
+    _database_path = Path(_database_url.database)
+    if not _database_path.is_absolute():
+        _database_path = (REPOSITORY_ROOT / _database_path).resolve()
+        _database_url = _database_url.set(database=str(_database_path))
+
 engine = create_engine(
-    settings.database_url,
+    _database_url,
     echo=settings.database_echo,
     # SQLite no permite por defecto usar la conexión desde varios hilos (FastAPI sí lo hace).
     connect_args={"check_same_thread": False} if _is_sqlite else {},

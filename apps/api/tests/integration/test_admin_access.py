@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import hash_password
+from app.core.bootstrap import ensure_initial_admin
+from app.core.security import hash_password, verify_password
 from app.modules.accounts.models import Account, AccountType
 from app.modules.accounts.repository import create_account, get_account_by_email
 from app.modules.cooperatives.models import Cooperative
@@ -32,6 +33,30 @@ def test_admin_routes_reject_unauthenticated_requests(test_environment):
     response = client.get("/api/v1/admin/cooperatives/summary")
 
     assert response.status_code == 401
+
+
+def test_startup_creates_only_one_initial_admin(test_environment):
+    client, engine = test_environment
+
+    with Session(engine) as db:
+        admins = db.query(Account).filter(
+            Account.account_type == AccountType.SUPER_ADMIN
+        ).all()
+        assert len(admins) == 1
+        assert admins[0].email == "bootstrap-admin@example.com"
+        assert verify_password("TestBootstrapAdmin123!", admins[0].password_hash)
+        assert ensure_initial_admin(db) is False
+        assert db.query(Account).filter(
+            Account.account_type == AccountType.SUPER_ADMIN
+        ).count() == 1
+
+    login_response = login(
+        client,
+        "bootstrap-admin@example.com",
+        "TestBootstrapAdmin123!",
+    )
+    assert login_response.status_code == 200
+    assert login_response.json()["accountType"] == "super_admin"
 
 
 def test_admin_routes_reject_passenger_accounts(test_environment, signup_data):
@@ -195,4 +220,4 @@ def test_duplicate_account_email_does_not_create_cooperative(test_environment):
     assert response.status_code == 409
     with Session(engine) as db:
         assert db.query(Cooperative).count() == 0
-        assert db.query(Account).count() == 2
+        assert db.query(Account).count() == 3
