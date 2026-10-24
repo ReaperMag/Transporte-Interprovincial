@@ -1,0 +1,85 @@
+.oficinista-dashboard {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.oficinista-dashboard__header {
+  margin-bottom: 2rem;
+}
+
+.oficinista-dashboard__title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.oficinista-dashboard__oficinista-name {
+  font-size: 1rem;
+  color: #555;
+}
+
+.oficinista-dashboard__section {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+  padding: 1.5rem;
+}
+
+.oficinista-dashboard__section-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.oficinista-dashboard__table-wrapper {
+  overflow-x: auto;
+}
+
+.oficinista-dashboard__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.oficinista-dashboard__table thead {
+  background-color: #f7f7f7;
+}
+
+.oficinista-dashboard__table th,
+.oficinista-dashboard__table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.oficinista-dashboard__table th {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.oficinista-dashboard__table td {
+  font-size: 0.95rem;
+}
+
+.oficinista-dashboard__sell-button {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  background-color: #0052cc;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.oficinista-dashboard__sell-button:hover {
+  background-color: #003d99;
+}
+
+.oficinista-dashboard__empty {
+  color: #666;
+}
+
+.oficinista-dashboard__error {
+  color: #d33;
+}
