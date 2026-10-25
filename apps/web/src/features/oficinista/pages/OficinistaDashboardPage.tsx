@@ -34,7 +34,7 @@ export function OficinistaDashboardPage() {
   return (
     <div className="oficinista-dashboard">
       <header className="oficinista-dashboard__header">
-        <h1 className="oficinista-dashboard__title">Panel de Oficinista</h1>
+        <h1 className="oficinista-dashboard__title">Panel Oficinista</h1>
         <p className="oficinista-dashboard__oficinista-name">Oficinista: {oficinista.fullName}</p>
       </header>
 
