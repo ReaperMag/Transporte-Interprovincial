@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './OficinistaDashboardPage.css';
 
 export function OficinistaDashboardPage() {
@@ -7,7 +8,7 @@ export function OficinistaDashboardPage() {
     fullName: 'Juan Carlos Pérez',
   };
 
-  const upcomingTrips = [
+  const [upcomingTrips] = useState([
     {
       tripId: 1,
       departureTime: '08:30',
@@ -29,7 +30,13 @@ export function OficinistaDashboardPage() {
       routeDestination: 'Riobamba',
       busPlate: 'GHI-9012',
     },
-  ];
+  ]);
+
+  const navigate = useNavigate();
+
+  const handleComprar = (tripId: number) => {
+    navigate(`/oficinista/vender-asientos/${tripId}`);
+  };
 
   return (
     <div className="oficinista-dashboard">
@@ -62,12 +69,13 @@ export function OficinistaDashboardPage() {
                     <td>{trip.routeDestination}</td>
                     <td>{trip.busPlate}</td>
                     <td>
-                      <Link
-                        to={`/oficinista/vender-asientos/${trip.tripId}`}
+                      <button
+                        type="button"
                         className="oficinista-dashboard__sell-button"
+                        onClick={() => handleComprar(trip.tripId)}
                       >
-                        Ingresar a comprar asiento
-                      </Link>
+                        Comprar
+                      </button>
                     </td>
                   </tr>
                 ))}
