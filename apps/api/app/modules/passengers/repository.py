@@ -50,3 +50,18 @@ def create_passenger(
     db.flush()
 
     return passenger
+
+
+def get_passenger_by_account_id(
+    db: Session,
+    account_id: int,
+) -> Passenger | None:
+    """
+    Busca el perfil del pasajero vinculado
+    a una cuenta autenticada.
+    """
+    statement = select(Passenger).where(
+        Passenger.account_id == account_id
+    )
+
+    return db.scalar(statement)

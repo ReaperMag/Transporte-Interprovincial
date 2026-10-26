@@ -21,7 +21,7 @@ export function LoginContainer() {
           ? '/admin/cooperativas'
           : account.accountType === 'cooperative'
             ? '/cooperativa/pendiente'
-            : '/comprar-asientos',
+            : '/pasajero',
         { replace: true },
       );
     } catch (err) {
