@@ -1,0 +1,159 @@
+.passenger-profile {
+  max-width: 1050px;
+  margin: 0 auto;
+}
+
+.passenger-profile__header {
+  margin-bottom: 28px;
+}
+
+.passenger-profile__header a {
+  color: #2563eb;
+  font-size: 14px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.passenger-profile__header a:hover {
+  text-decoration: underline;
+}
+
+.passenger-profile__header h1 {
+  margin: 18px 0 8px;
+  color: #10213a;
+  font-size: 32px;
+}
+
+.passenger-profile__header p,
+.passenger-profile__description {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.passenger-profile__card {
+  margin-bottom: 22px;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.passenger-profile__card h2 {
+  margin: 0 0 8px;
+  color: #10213a;
+  font-size: 21px;
+}
+
+.passenger-profile__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 24px;
+}
+
+.passenger-profile__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.passenger-profile__field span,
+.passenger-profile__field label {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.passenger-profile__field strong {
+  color: #10213a;
+  overflow-wrap: anywhere;
+}
+
+.passenger-profile__field input,
+.passenger-profile__field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #10213a;
+  font: inherit;
+}
+
+.passenger-profile__field input:focus,
+.passenger-profile__field select:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.passenger-profile__field input[readonly] {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.passenger-profile__field input:disabled,
+.passenger-profile__field select:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.passenger-profile__field small {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.passenger-profile__save {
+  margin-top: 28px;
+  padding: 12px 22px;
+  background: #2563eb;
+  border: none;
+  border-radius: 9px;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.passenger-profile__save:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.passenger-profile__save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.passenger-profile__success {
+  margin-top: 20px;
+  color: #166534;
+  font-size: 14px;
+}
+
+.passenger-profile__error {
+  margin-top: 20px;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+@media (max-width: 750px) {
+  .passenger-profile__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .passenger-profile__card {
+    padding: 20px;
+  }
+
+  .passenger-profile__header h1 {
+    font-size: 26px;
+  }
+
+  .passenger-profile__save {
+    width: 100%;
+  }
+}
