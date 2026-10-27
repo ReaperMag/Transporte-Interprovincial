@@ -72,6 +72,8 @@ export function SeatSalePage() {
   const [showGlobalError, setShowGlobalError] = useState<string | null>(null);
   const [showSeatSelection, setShowSeatSelection] = useState(false);
   const [assignedSeats, setAssignedSeats] = useState<TemplateSeat[] | null>(null);
+  const [assignmentMode, setAssignmentMode] = useState<'automatic' | 'manual' | null>(null);
+  const [seatAssignments, setSeatAssignments] = useState<Record<number, string>>({});
 
   const handleConfirmCount = (count: number) => {
     setPassengerCount(count);
@@ -81,11 +83,15 @@ export function SeatSalePage() {
     setShowGlobalError(null);
     setShowSeatSelection(false);
     setAssignedSeats(null);
+    setAssignmentMode(null);
+    setSeatAssignments({});
   };
 
   const handleChange = (index: number, field: keyof SalePassengerForm, value: string) => {
     setShowSeatSelection(false);
     setAssignedSeats(null);
+    setAssignmentMode(null);
+    setSeatAssignments({});
     setForms((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -115,6 +121,36 @@ export function SeatSalePage() {
       setShowSeatSelection(true);
       setShowGlobalError(null);
     }
+  };
+
+  const handleConfirmSeatSelection = (seats: TemplateSeat[]) => {
+    setAssignedSeats(seats);
+    setAssignmentMode(null);
+    setSeatAssignments({});
+  };
+
+  const handleAutomaticAssignment = () => {
+    if (!assignedSeats) return;
+
+    setSeatAssignments(Object.fromEntries(assignedSeats.map((seat, index) => [index, seat.id])));
+    setAssignmentMode('automatic');
+  };
+
+  const handleManualAssignment = () => {
+    setSeatAssignments({});
+    setAssignmentMode('manual');
+  };
+
+  const handleSeatAssignmentChange = (passengerIndex: number, seatId: string) => {
+    setSeatAssignments((currentAssignments) => {
+      const nextAssignments = { ...currentAssignments };
+      if (seatId) {
+        nextAssignments[passengerIndex] = seatId;
+      } else {
+        delete nextAssignments[passengerIndex];
+      }
+      return nextAssignments;
+    });
   };
 
   const completedPassengers = passengerCount
@@ -194,8 +230,12 @@ export function SeatSalePage() {
                 continueLabel="Confirmar asignación"
                 note="La selección es una demostración y todavía no se guarda ni procesa el pago."
                 embedded
-                onContinue={setAssignedSeats}
-                onSelectionChange={() => setAssignedSeats(null)}
+                onContinue={handleConfirmSeatSelection}
+                onSelectionChange={() => {
+                  setAssignedSeats(null);
+                  setAssignmentMode(null);
+                  setSeatAssignments({});
+                }}
               />
               {assignedSeats && (
                 <section
@@ -204,21 +244,77 @@ export function SeatSalePage() {
                   aria-live="polite"
                 >
                   <h2 id="seat-assignment-heading">Asignación de asientos</h2>
-                  <ul>
-                    {assignedSeats.map((seat, index) => {
-                      const passenger = forms[index];
-                      return (
-                        <li key={seat.id}>
-                          <span>
-                            {passenger.firstName} {passenger.lastName}
-                          </span>
-                          <span>
-                            Asiento {seat.number} · Piso {seat.floor}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <p>Elige cómo quieres asignar los asientos seleccionados a los pasajeros.</p>
+                  <div className="seat-sale-page__assignment-actions">
+                    <button
+                      type="button"
+                      className="seat-sale-page__button seat-sale-page__button--secondary"
+                      onClick={handleAutomaticAssignment}
+                    >
+                      Asignar automáticamente
+                    </button>
+                    <button
+                      type="button"
+                      className="seat-sale-page__button seat-sale-page__button--secondary"
+                      onClick={handleManualAssignment}
+                    >
+                      Asignar manualmente
+                    </button>
+                  </div>
+                  {assignmentMode && (
+                    <>
+                      <ul>
+                        {forms.map((passenger, index) => {
+                          const assignedSeat = assignedSeats.find(
+                            (seat) => seat.id === seatAssignments[index],
+                          );
+
+                          return (
+                            <li key={index}>
+                              <span>
+                                {passenger.firstName} {passenger.lastName}
+                              </span>
+                              {assignmentMode === 'manual' ? (
+                                <label className="seat-sale-page__assignment-control">
+                                  <span>Asiento</span>
+                                  <select
+                                    value={seatAssignments[index] ?? ''}
+                                    onChange={(event) =>
+                                      handleSeatAssignmentChange(index, event.target.value)
+                                    }
+                                  >
+                                    <option value="">Seleccionar asiento</option>
+                                    {assignedSeats
+                                      .filter(
+                                        (seat) =>
+                                          seat.id === seatAssignments[index] ||
+                                          !Object.values(seatAssignments).includes(seat.id),
+                                      )
+                                      .map((seat) => (
+                                        <option key={seat.id} value={seat.id}>
+                                          Asiento {seat.number} · Piso {seat.floor}
+                                          {seat.seatType === 'vip' ? ' · VIP' : ''}
+                                        </option>
+                                      ))}
+                                  </select>
+                                </label>
+                              ) : (
+                                <span>
+                                  {assignedSeat
+                                    ? `Asiento ${assignedSeat.number} · Piso ${assignedSeat.floor}`
+                                    : 'Sin asignar'}
+                                </span>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <p className="seat-sale-page__assignment-status" aria-live="polite">
+                        {Object.keys(seatAssignments).length} de {forms.length} pasajeros con
+                        asiento asignado.
+                      </p>
+                    </>
+                  )}
                 </section>
               )}
             </>
