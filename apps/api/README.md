@@ -29,6 +29,15 @@ una contraseña inicial que se almacena como hash. El registro público solo
 permite crear cuentas de pasajero. La cuenta cooperativa autenticada consulta
 su propia identidad mediante `GET /api/v1/cooperatives/me`; la API valida el
 tipo de cuenta y su vínculo antes de devolver el identificador, nombre y RUC.
+Su perfil se consulta y actualiza mediante `GET /api/v1/cooperatives/me/profile`
+y `PATCH /api/v1/cooperatives/me/profile`. La API deriva el registro a modificar
+del usuario autenticado y no admite el nombre ni el RUC en las actualizaciones.
+El perfil incluye dirección, teléfono, correo de contacto, redes sociales,
+descripción, logo y colores de marca. El logo debe proporcionarse como una URL
+HTTP(S), ya que el proyecto no dispone de almacenamiento de archivos para
+cargas. Los colores deben usar el formato hexadecimal `#RRGGBB` y los enlaces,
+HTTP(S). Al iniciar, la API añade de forma compatible la columna de descripción
+a bases de datos existentes.
 
 Al crear una cooperativa desde el panel, el administrador también registra el
 correo y la contraseña inicial de su cuenta de acceso. La API guarda la

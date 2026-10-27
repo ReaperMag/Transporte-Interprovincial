@@ -11,6 +11,8 @@ from app.modules.cooperatives.schemas import (
     CooperativeAccountCreate,
     CooperativeCreate,
     CooperativeIdentity,
+    CooperativeProfileRead,
+    CooperativeProfileUpdate,
     CooperativeRead,
     CooperativeStatusUpdate,
     CooperativeUpdate,
@@ -46,6 +48,57 @@ def read_current_cooperative(
             detail="La cuenta no tiene una cooperativa asociada.",
         )
     return cooperative
+
+
+@cooperative_router.get("/me/profile", response_model=CooperativeProfileRead)
+def read_current_cooperative_profile(
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+) -> CooperativeProfileRead:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+
+    cooperative = repository.get_cooperative(db, account.cooperative_id)
+    if cooperative is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    return cooperative
+
+
+@cooperative_router.patch(
+    "/me/profile",
+    response_model=CooperativeProfileRead,
+)
+def update_current_cooperative_profile(
+    payload: CooperativeProfileUpdate,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> CooperativeProfileRead:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Envía al menos un campo para actualizar.",
+        )
+    try:
+        return service.update_cooperative(db, account.cooperative_id, changes)
+    except service.CooperativeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        ) from exc
 
 
 @router.get("", response_model=list[CooperativeRead])
