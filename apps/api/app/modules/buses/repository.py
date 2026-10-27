@@ -31,6 +31,12 @@ def get_bus_group(
     )
 
 
+def count_group_buses(db: Session, group_id: int) -> int:
+    return db.scalar(
+        select(func.count()).select_from(Bus).where(Bus.group_id == group_id)
+    ) or 0
+
+
 def bus_group_name_exists(
     db: Session,
     cooperative_id: int,

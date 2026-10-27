@@ -194,3 +194,147 @@ def test_bus_group_list_reports_number_of_assigned_buses(test_environment):
     listed = client.get(GROUPS_URL)
     assert listed.status_code == 200
     assert listed.json()[0]["busCount"] == 1
+
+
+def test_cooperative_can_edit_group_name_and_description(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(
+        engine,
+        name="Cooperativa Edición",
+        email="edicion@example.com",
+    )
+    assert login(client, "edicion@example.com").status_code == 200
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Rutas largas", "description": "Descripción inicial"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    group_id = created.json()["id"]
+
+    updated = client.patch(
+        f"{GROUPS_URL}/{group_id}",
+        json={"name": " Buses   importados ", "description": "Nueva descripción"},
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert updated.status_code == 200
+    assert updated.json() == {
+        "id": group_id,
+        "name": "Buses importados",
+        "description": "Nueva descripción",
+        "busCount": 0,
+    }
+    with Session(engine) as db:
+        group = db.get(BusGroup, group_id)
+        assert group is not None
+        assert group.cooperative_id == cooperative.id
+        assert group.normalized_name == "buses importados"
+
+
+def test_group_edit_rejects_duplicate_name_and_foreign_group(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(engine, name="Cooperativa Edita", email="edita@example.com")
+    other_cooperative = create_cooperative_account(
+        engine,
+        name="Cooperativa Otra",
+        email="otra-edit@example.com",
+    )
+    assert login(client, "edita@example.com").status_code == 200
+    first = client.post(
+        GROUPS_URL,
+        json={"name": "Rancheras"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    second = client.post(
+        GROUPS_URL,
+        json={"name": "Importados"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    with Session(engine) as db:
+        foreign = BusGroup(
+            cooperative_id=other_cooperative.id,
+            name="Grupo privado",
+        )
+        db.add(foreign)
+        db.commit()
+        db.refresh(foreign)
+        foreign_group_id = foreign.id
+
+    duplicate = client.patch(
+        f"{GROUPS_URL}/{second.json()['id']}",
+        json={"name": " rancheras "},
+        headers={"Origin": settings.frontend_origin},
+    )
+    foreign_response = client.patch(
+        f"{GROUPS_URL}/{foreign_group_id}",
+        json={"name": "Nombre expuesto"},
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert first.status_code == second.status_code == 201
+    assert duplicate.status_code == 409
+    assert foreign_response.status_code == 404
+
+
+def test_group_edit_validates_fields_and_rejects_empty_updates(test_environment):
+    client, _engine = test_environment
+    create_cooperative_account(
+        _engine,
+        name="Cooperativa Validar edición",
+        email="validar-edicion@example.com",
+    )
+    assert login(client, "validar-edicion@example.com").status_code == 200
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Temporales"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    url = f"{GROUPS_URL}/{created.json()['id']}"
+
+    empty = client.patch(url, json={}, headers={"Origin": settings.frontend_origin})
+    blank_name = client.patch(
+        url,
+        json={"name": "  "},
+        headers={"Origin": settings.frontend_origin},
+    )
+    null_name = client.patch(
+        url,
+        json={"name": None},
+        headers={"Origin": settings.frontend_origin},
+    )
+    long_description = client.patch(
+        url,
+        json={"description": "x" * 256},
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert created.status_code == 201
+    assert empty.status_code == 422
+    assert blank_name.status_code == 422
+    assert null_name.status_code == 422
+    assert long_description.status_code == 422
+
+
+def test_cooperative_can_edit_description_without_changing_name(test_environment):
+    client, _engine = test_environment
+    create_cooperative_account(
+        _engine,
+        name="Cooperativa Descripción",
+        email="descripcion@example.com",
+    )
+    assert login(client, "descripcion@example.com").status_code == 200
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Urbanos", "description": "Anterior"},
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    updated = client.patch(
+        f"{GROUPS_URL}/{created.json()['id']}",
+        json={"description": None},
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "Urbanos"
+    assert updated.json()["description"] is None
