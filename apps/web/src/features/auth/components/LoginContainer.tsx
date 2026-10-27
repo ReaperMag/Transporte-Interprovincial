@@ -20,7 +20,7 @@ export function LoginContainer() {
         account.accountType === 'super_admin'
           ? '/admin/cooperativas'
           : account.accountType === 'cooperative'
-            ? '/cooperativa/pendiente'
+            ? '/cooperativa/panel'
             : '/pasajero',
         { replace: true },
       );

@@ -2,7 +2,7 @@ from collections.abc import Generator
 from importlib import import_module
 from pathlib import Path
 
-from sqlalchemy import create_engine, event, make_url
+from sqlalchemy import create_engine, event, inspect, make_url, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -65,9 +65,17 @@ def import_models() -> None:
 
 
 def init_db() -> None:
-    """Crea las tablas que aún no existen."""
+    """Crea las tablas que aún no existen y aplica cambios aditivos de esquema."""
     import_models()
     Base.metadata.create_all(bind=engine)
+    columns = {
+        column["name"] for column in inspect(engine).get_columns("cooperatives")
+    }
+    if "description" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE cooperatives ADD COLUMN description VARCHAR(1000)")
+            )
 
 
 def reset_db() -> None:

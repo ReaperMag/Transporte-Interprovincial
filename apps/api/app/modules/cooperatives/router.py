@@ -3,15 +3,24 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.csrf import validate_request_origin
-from app.core.permissions import require_admin_access
+from app.core.permissions import require_admin_access, require_cooperative_access
+from app.modules.accounts.models import Account
 from app.modules.cooperatives import repository, service
 from app.modules.cooperatives.schemas import (
     AdminSummary,
     CooperativeAccountCreate,
     CooperativeCreate,
+    CooperativeIdentity,
+    CooperativeProfileRead,
+    CooperativeProfileUpdate,
     CooperativeRead,
     CooperativeStatusUpdate,
     CooperativeUpdate,
+)
+
+cooperative_router = APIRouter(
+    prefix="/cooperatives",
+    tags=["Cooperative"],
 )
 
 router = APIRouter(
@@ -19,6 +28,77 @@ router = APIRouter(
     tags=["Admin - Cooperatives"],
     dependencies=[Depends(require_admin_access)],
 )
+
+
+@cooperative_router.get("/me", response_model=CooperativeIdentity)
+def read_current_cooperative(
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+) -> CooperativeIdentity:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+
+    cooperative = repository.get_cooperative(db, account.cooperative_id)
+    if cooperative is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    return cooperative
+
+
+@cooperative_router.get("/me/profile", response_model=CooperativeProfileRead)
+def read_current_cooperative_profile(
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+) -> CooperativeProfileRead:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+
+    cooperative = repository.get_cooperative(db, account.cooperative_id)
+    if cooperative is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    return cooperative
+
+
+@cooperative_router.patch(
+    "/me/profile",
+    response_model=CooperativeProfileRead,
+)
+def update_current_cooperative_profile(
+    payload: CooperativeProfileUpdate,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> CooperativeProfileRead:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Envía al menos un campo para actualizar.",
+        )
+    try:
+        return service.update_cooperative(db, account.cooperative_id, changes)
+    except service.CooperativeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        ) from exc
 
 
 @router.get("", response_model=list[CooperativeRead])

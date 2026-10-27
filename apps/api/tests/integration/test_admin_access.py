@@ -190,6 +190,15 @@ def test_creating_cooperative_creates_linked_login_account(test_environment):
     assert cooperative_login.json()["accountType"] == "cooperative"
     assert client.get("/api/v1/auth/me").json()["accountType"] == "cooperative"
 
+    identity = client.get("/api/v1/cooperatives/me")
+    assert identity.status_code == 200
+    assert identity.json() == {
+        "id": cooperative_id,
+        "name": "Cooperativa con cuenta",
+        "ruc": "1234567890001",
+    }
+    assert client.get("/api/v1/admin/cooperatives/summary").status_code == 403
+
 
 def test_duplicate_account_email_does_not_create_cooperative(test_environment):
     client, engine = test_environment
@@ -221,3 +230,32 @@ def test_duplicate_account_email_does_not_create_cooperative(test_environment):
     with Session(engine) as db:
         assert db.query(Cooperative).count() == 0
         assert db.query(Account).count() == 3
+
+
+def test_cooperative_identity_rejects_non_cooperative_accounts(
+    test_environment,
+    signup_data,
+):
+    client, _ = test_environment
+    signup = client.post("/api/v1/auth/signup", json=signup_data)
+    assert signup.status_code == 201
+    assert login(client, signup_data["email"], signup_data["password"]).status_code == 200
+
+    response = client.get("/api/v1/cooperatives/me")
+
+    assert response.status_code == 403
+
+
+def test_cooperative_identity_rejects_unlinked_cooperative_account(test_environment):
+    client, engine = test_environment
+    email = "unlinked@example.com"
+    create_account_for_login(
+        engine,
+        email=email,
+        account_type=AccountType.COOPERATIVE,
+    )
+    assert login(client, email).status_code == 200
+
+    response = client.get("/api/v1/cooperatives/me")
+
+    assert response.status_code == 403

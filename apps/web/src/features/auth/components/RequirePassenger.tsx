@@ -18,7 +18,7 @@ export function RequirePassenger({ children }: { children: ReactNode }) {
   }
 
   if (account.accountType === 'cooperative') {
-    return <Navigate to="/cooperativa/pendiente" replace />;
+    return <Navigate to="/cooperativa/panel" replace />;
   }
 
   if (account.accountType !== 'passenger') {

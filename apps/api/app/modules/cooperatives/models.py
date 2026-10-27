@@ -13,7 +13,7 @@ class BankAccountType(enum.StrEnum):
 
 
 class Cooperative(BaseModel):
-    """Cooperativa de transporte. El administrador la crea; la cooperativa edita todo menos el nombre."""
+    """Cooperativa de transporte. El nombre y el RUC solo los modifica el administrador."""
 
     __tablename__ = "cooperatives"
 
@@ -33,6 +33,7 @@ class Cooperative(BaseModel):
     instagram_url: Mapped[str | None] = mapped_column(String(500))
     tiktok_url: Mapped[str | None] = mapped_column(String(500))
     website_url: Mapped[str | None] = mapped_column(String(500))
+    description: Mapped[str | None] = mapped_column(String(1000))
 
     # Minutos que un asiento queda reservado antes de liberarse si no se sube el comprobante
     reservation_timeout_minutes: Mapped[int] = mapped_column(default=15)

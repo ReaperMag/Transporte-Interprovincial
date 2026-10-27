@@ -1,0 +1,72 @@
+.cooperative-dashboard {
+  width: min(100%, 70rem);
+  margin: 0 auto;
+}
+
+.cooperative-dashboard__header {
+  margin-bottom: 1.5rem;
+}
+
+.cooperative-dashboard__eyebrow {
+  margin: 0 0 0.35rem;
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cooperative-dashboard__title {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.2rem);
+}
+
+.cooperative-dashboard__description {
+  margin: 0.5rem 0 0;
+  color: #475569;
+}
+
+.cooperative-dashboard__identity {
+  border: 1px solid #dbe5f0;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 5%);
+}
+
+.cooperative-dashboard__identity h3 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+}
+
+.cooperative-dashboard__identity dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.cooperative-dashboard__identity dl div {
+  min-width: 0;
+}
+
+.cooperative-dashboard__identity dt {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.cooperative-dashboard__identity dd {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cooperative-dashboard__error {
+  color: #991b1b;
+}
+
+.cooperative-dashboard__notice {
+  margin: 1.25rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
