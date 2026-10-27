@@ -12,6 +12,13 @@
     sans-serif;
 }
 
+.seat-purchase-page--embedded {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  font-family: inherit;
+}
+
 .seat-purchase-page__content {
   width: min(100%, 70rem);
   margin: 0 auto;
@@ -205,6 +212,16 @@
   cursor: not-allowed;
   font: inherit;
   font-weight: 700;
+}
+
+.seat-purchase-page__continue:not(:disabled) {
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+.seat-purchase-page__continue:not(:disabled):hover {
+  background: #1d4ed8;
 }
 
 .seat-purchase-page__demo-note {

@@ -1,0 +1,134 @@
+body:has(.oficinista-layout) {
+  margin: 0;
+}
+
+.oficinista-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #eaf2fb;
+  color: #0f172a;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+.oficinista-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.75rem;
+  padding: 0.75rem 1.5rem;
+  background: #0b1f3a;
+  color: #f8fafc;
+}
+
+.oficinista-header__brand,
+.oficinista-header__account {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.oficinista-header__logo {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+}
+
+.oficinista-header__logo svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.oficinista-header__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.oficinista-header__user {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.oficinista-header__avatar {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: #cbd5e1;
+}
+
+.oficinista-header__avatar svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.oficinista-header__logout {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: transparent;
+  color: #f8fafc;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.oficinista-header__logout:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+.oficinista-header__logout:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.oficinista-toolbar {
+  min-height: 3.1rem;
+  padding: 0.35rem 1.5rem;
+  background: #fff;
+  box-shadow: 0 1px 0 #e2e8f0;
+}
+
+.oficinista-toolbar__nav {
+  display: flex;
+}
+
+.oficinista-toolbar__link {
+  position: relative;
+  padding: 0.55rem 0.1rem;
+  color: #334155;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: default;
+}
+
+.oficinista-toolbar__link--active {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.oficinista-layout__content {
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+@media (max-width: 900px) {
+  .oficinista-header,
+  .oficinista-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .oficinista-header__user {
+    display: none;
+  }
+}
