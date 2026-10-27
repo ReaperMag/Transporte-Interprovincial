@@ -99,6 +99,42 @@
   font-size: 0.9rem;
 }
 
+.seat-sale-page__assignment {
+  padding: 1rem 1.2rem;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+}
+
+.seat-sale-page__assignment h2 {
+  margin: 0 0 0.8rem;
+  font-size: 1rem;
+}
+
+.seat-sale-page__assignment ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seat-sale-page__assignment li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #166534;
+  font-size: 0.9rem;
+}
+
 .seat-sale-page__hint {
   color: #475569;
+}
+
+@media (max-width: 600px) {
+  .seat-sale-page__header,
+  .seat-sale-page__progress-header,
+  .seat-sale-page__assignment li {
+    flex-direction: column;
+  }
 }
