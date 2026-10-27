@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
@@ -116,3 +116,32 @@ def edit_bus_group(
         description=group.description,
         bus_count=repository.count_group_buses(db, group.id),
     )
+
+
+@cooperative_bus_groups_router.delete(
+    "/{group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_bus_group(
+    group_id: int,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> Response:
+    cooperative_id = _require_cooperative_id(account)
+    try:
+        service.delete_bus_group(db, cooperative_id, group_id)
+    except service.BusGroupNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Grupo no encontrado.",
+        ) from exc
+    except service.BusGroupInUseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "No se puede eliminar el grupo porque tiene buses o hojas de "
+                "ruta asociados."
+            ),
+        ) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

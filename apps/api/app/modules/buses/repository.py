@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.modules.buses.models import Bus, BusGroup
+from app.modules.schedules.models import RouteSheet
 
 
 def list_bus_groups(
@@ -35,6 +36,12 @@ def count_group_buses(db: Session, group_id: int) -> int:
     return db.scalar(
         select(func.count()).select_from(Bus).where(Bus.group_id == group_id)
     ) or 0
+
+
+def has_group_route_sheets(db: Session, group_id: int) -> bool:
+    return db.scalar(
+        select(RouteSheet.id).where(RouteSheet.bus_group_id == group_id).limit(1)
+    ) is not None
 
 
 def bus_group_name_exists(

@@ -3,7 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.modules.buses.group_names import normalize_group_name
 from app.modules.buses.models import BusGroup
-from app.modules.buses.repository import bus_group_name_exists, get_bus_group
+from app.modules.buses.repository import (
+    bus_group_name_exists,
+    count_group_buses,
+    get_bus_group,
+    has_group_route_sheets,
+)
 
 
 class DuplicateBusGroupNameError(Exception):
@@ -11,6 +16,10 @@ class DuplicateBusGroupNameError(Exception):
 
 
 class BusGroupNotFoundError(Exception):
+    pass
+
+
+class BusGroupInUseError(Exception):
     pass
 
 
@@ -70,3 +79,22 @@ def update_bus_group(
         raise DuplicateBusGroupNameError from exc
     db.refresh(group)
     return group
+
+
+def delete_bus_group(
+    db: Session,
+    cooperative_id: int,
+    group_id: int,
+) -> None:
+    group = get_bus_group(db, cooperative_id, group_id)
+    if group is None:
+        raise BusGroupNotFoundError
+    if count_group_buses(db, group_id) or has_group_route_sheets(db, group_id):
+        raise BusGroupInUseError
+
+    db.delete(group)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise BusGroupInUseError from exc

@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -6,6 +8,7 @@ from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
 from app.modules.buses.models import Bus, BusGroup, BusTemplate
 from app.modules.cooperatives.models import Cooperative
+from app.modules.schedules.models import RouteSheet
 
 
 PASSWORD = "ClaveCooperativa123!"
@@ -338,3 +341,139 @@ def test_cooperative_can_edit_description_without_changing_name(test_environment
     assert updated.status_code == 200
     assert updated.json()["name"] == "Urbanos"
     assert updated.json()["description"] is None
+
+
+def test_cooperative_can_delete_an_empty_group(test_environment):
+    client, _engine = test_environment
+    create_cooperative_account(
+        _engine,
+        name="Cooperativa Elimina",
+        email="elimina@example.com",
+    )
+    assert login(client, "elimina@example.com").status_code == 200
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Grupo vacío"},
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    deleted = client.delete(
+        f"{GROUPS_URL}/{created.json()['id']}",
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert created.status_code == 201
+    assert deleted.status_code == 204
+    assert client.get(GROUPS_URL).json() == []
+
+
+def test_group_with_buses_cannot_be_deleted(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(
+        engine,
+        name="Cooperativa Protege buses",
+        email="protege-buses@example.com",
+    )
+    assert login(client, "protege-buses@example.com").status_code == 200
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "En servicio"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    group_id = created.json()["id"]
+    with Session(engine) as db:
+        template = BusTemplate(
+            cooperative_id=cooperative.id,
+            name="Plantilla protección",
+            rows=2,
+            columns=2,
+        )
+        db.add(template)
+        db.flush()
+        db.add(
+            Bus(
+                cooperative_id=cooperative.id,
+                number="02",
+                plate="DEF-5678",
+                chassis_brand="Marca",
+                body_brand="Carrocería",
+                template_id=template.id,
+                group_id=group_id,
+            )
+        )
+        db.commit()
+
+    deleted = client.delete(
+        f"{GROUPS_URL}/{group_id}",
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert deleted.status_code == 409
+    assert client.get(GROUPS_URL).json()[0]["id"] == group_id
+    assert client.get(GROUPS_URL).json()[0]["busCount"] == 1
+
+
+def test_group_with_route_sheet_cannot_be_deleted(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(
+        engine,
+        name="Cooperativa Protege hoja",
+        email="protege-hoja@example.com",
+    )
+    assert login(client, "protege-hoja@example.com").status_code == 200
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Con hoja de ruta"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    group_id = created.json()["id"]
+    with Session(engine) as db:
+        db.add(
+            RouteSheet(
+                cooperative_id=cooperative.id,
+                bus_group_id=group_id,
+                service_date=date(2026, 10, 28),
+            )
+        )
+        db.commit()
+
+    deleted = client.delete(
+        f"{GROUPS_URL}/{group_id}",
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert deleted.status_code == 409
+    assert client.get(GROUPS_URL).json()[0]["id"] == group_id
+
+
+def test_cooperative_cannot_delete_group_from_another_tenant(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine,
+        name="Cooperativa A",
+        email="coop-a-delete@example.com",
+    )
+    other = create_cooperative_account(
+        engine,
+        name="Cooperativa B",
+        email="coop-b-delete@example.com",
+    )
+    with Session(engine) as db:
+        foreign = BusGroup(
+            cooperative_id=other.id,
+            name="Privado",
+        )
+        db.add(foreign)
+        db.commit()
+        db.refresh(foreign)
+        foreign_group_id = foreign.id
+
+    assert login(client, "coop-a-delete@example.com").status_code == 200
+    deleted = client.delete(
+        f"{GROUPS_URL}/{foreign_group_id}",
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert deleted.status_code == 404
+    with Session(engine) as db:
+        assert db.get(BusGroup, foreign_group_id) is not None
