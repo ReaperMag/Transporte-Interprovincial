@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/context/useAuth';
 import './CooperativeLayout.css';
 
@@ -58,18 +58,22 @@ export function CooperativeLayout() {
 
       <div className="cooperative-toolbar">
         <nav className="cooperative-toolbar__nav" aria-label="Secciones de la cooperativa">
-          <Link
-            className="cooperative-toolbar__link cooperative-toolbar__link--active"
+          <NavLink
+            className={({ isActive }) =>
+              `cooperative-toolbar__link${isActive ? ' cooperative-toolbar__link--active' : ''}`
+            }
             to="/cooperativa/panel"
           >
             Panel
-          </Link>
-          <span
-            className="cooperative-toolbar__link cooperative-toolbar__link--disabled"
-            aria-disabled="true"
+          </NavLink>
+          <NavLink
+            className={({ isActive }) =>
+              `cooperative-toolbar__link${isActive ? ' cooperative-toolbar__link--active' : ''}`
+            }
+            to="/cooperativa/configuracion"
           >
-            Configuración <span>Próximamente</span>
-          </span>
+            Configuración
+          </NavLink>
           <span
             className="cooperative-toolbar__link cooperative-toolbar__link--disabled"
             aria-disabled="true"
