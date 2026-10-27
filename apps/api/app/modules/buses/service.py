@@ -44,7 +44,9 @@ def create_bus_group(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise DuplicateBusGroupNameError from exc
+        if bus_group_name_exists(db, cooperative_id, normalized):
+            raise DuplicateBusGroupNameError from exc
+        raise
     db.refresh(group)
     return group
 
@@ -76,7 +78,14 @@ def update_bus_group(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise DuplicateBusGroupNameError from exc
+        if isinstance(name, str) and bus_group_name_exists(
+            db,
+            cooperative_id,
+            normalize_group_name(name),
+            excluding_group_id=group_id,
+        ):
+            raise DuplicateBusGroupNameError from exc
+        raise
     db.refresh(group)
     return group
 
@@ -97,4 +106,6 @@ def delete_bus_group(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise BusGroupInUseError from exc
+        if count_group_buses(db, group_id) or has_group_route_sheets(db, group_id):
+            raise BusGroupInUseError from exc
+        raise
