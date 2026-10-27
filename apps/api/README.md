@@ -22,12 +22,19 @@ El nombre y el RUC son únicos. Los conflictos de unicidad devuelven `409`;
 una cooperativa con información relacionada tampoco se elimina (debe
 desactivarse para conservar el historial).
 
+## Acceso de cooperativas
+
+El administrador crea la cuenta `cooperative` junto con la cooperativa, usando
+una contraseña inicial que se almacena como hash. El registro público solo
+permite crear cuentas de pasajero. La cuenta cooperativa autenticada consulta
+su propia identidad mediante `GET /api/v1/cooperatives/me`; la API valida el
+tipo de cuenta y su vínculo antes de devolver el identificador, nombre y RUC.
+
 Al crear una cooperativa desde el panel, el administrador también registra el
 correo y la contraseña inicial de su cuenta de acceso. La API guarda la
 contraseña como hash y vincula la cuenta de tipo `cooperative` al registro de la
 cooperativa en una sola transacción. Si el correo ya pertenece a otra cuenta,
-no se crea la cooperativa. La cuenta puede iniciar sesión, pero su panel de
-gestión todavía está pendiente de un sprint posterior.
+no se crea la cooperativa.
 
 ## Acceso administrativo
 

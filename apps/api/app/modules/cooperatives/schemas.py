@@ -83,5 +83,11 @@ class CooperativeRead(CooperativeSchema):
     is_active: bool
 
 
+class CooperativeIdentity(CooperativeSchema):
+    id: int
+    name: str
+    ruc: str
+
+
 class AdminSummary(CooperativeSchema):
     cooperatives: int
