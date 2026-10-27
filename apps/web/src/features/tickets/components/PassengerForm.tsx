@@ -7,9 +7,17 @@ interface PassengerFormProps {
   form: SalePassengerForm;
   onChange: (field: keyof SalePassengerForm, value: string) => void;
   errors: Partial<Record<keyof SalePassengerForm, string>>;
+  disabled?: boolean;
 }
 
-export function PassengerForm({ index, total, form, onChange, errors }: PassengerFormProps) {
+export function PassengerForm({
+  index,
+  total,
+  form,
+  onChange,
+  errors,
+  disabled = false,
+}: PassengerFormProps) {
   return (
     <div className="passenger-form">
       <header className="passenger-form__header">
@@ -26,6 +34,7 @@ export function PassengerForm({ index, total, form, onChange, errors }: Passenge
             id={`cedula-${index}`}
             type="text"
             value={form.cedula}
+            disabled={disabled}
             onChange={(e) => onChange('cedula', e.target.value.toUpperCase())}
             className="passenger-form__input"
             placeholder="Ej. 0102030405"
@@ -41,6 +50,7 @@ export function PassengerForm({ index, total, form, onChange, errors }: Passenge
             id={`firstName-${index}`}
             type="text"
             value={form.firstName}
+            disabled={disabled}
             onChange={(e) => onChange('firstName', e.target.value)}
             className="passenger-form__input"
             placeholder="Nombres"
@@ -56,6 +66,7 @@ export function PassengerForm({ index, total, form, onChange, errors }: Passenge
             id={`lastName-${index}`}
             type="text"
             value={form.lastName}
+            disabled={disabled}
             onChange={(e) => onChange('lastName', e.target.value)}
             className="passenger-form__input"
             placeholder="Apellidos"
@@ -71,6 +82,7 @@ export function PassengerForm({ index, total, form, onChange, errors }: Passenge
             id={`birthDate-${index}`}
             type="date"
             value={form.birthDate}
+            disabled={disabled}
             onChange={(e) => onChange('birthDate', e.target.value)}
             className="passenger-form__input"
           />
@@ -85,6 +97,7 @@ export function PassengerForm({ index, total, form, onChange, errors }: Passenge
             id={`phone-${index}`}
             type="tel"
             value={form.phone}
+            disabled={disabled}
             onChange={(e) => onChange('phone', e.target.value)}
             className="passenger-form__input"
             placeholder="0999999999"
@@ -100,6 +113,7 @@ export function PassengerForm({ index, total, form, onChange, errors }: Passenge
             id={`email-${index}`}
             type="email"
             value={form.email}
+            disabled={disabled}
             onChange={(e) => onChange('email', e.target.value)}
             className="passenger-form__input"
             placeholder="correo@ejemplo.com"

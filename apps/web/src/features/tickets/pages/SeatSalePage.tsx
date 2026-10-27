@@ -1,11 +1,27 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SeatSelectionForm } from '../../buses/components/SeatSelectionForm';
+import { busTemplates } from '../../buses/data/busTemplates.mock';
 import type { TemplateSeat } from '../../buses/types/busTemplate.types';
+import { InvoiceModal } from '../components/InvoiceModal';
 import { PassengerCountModal } from '../components/PassengerCountModal';
 import { PassengerForm } from '../components/PassengerForm';
+import type { InvoiceData, InvoiceItem } from '../types/invoice.types';
 import type { SalePassengerForm } from '../types/ticketSale.types';
 import './SeatSalePage.css';
+
+const exampleSeatPrices: Record<string, number> = Object.fromEntries(
+  busTemplates.flatMap((template, templateIndex) =>
+    template.seats.map((seat) => [
+      seat.id,
+      Number(
+        (10 + templateIndex * 2 + seat.number * 0.25 + (seat.seatType === 'vip' ? 5 : 0)).toFixed(
+          2,
+        ),
+      ),
+    ]),
+  ),
+);
 
 function createEmptyForm(): SalePassengerForm {
   return {
@@ -74,6 +90,9 @@ export function SeatSalePage() {
   const [assignedSeats, setAssignedSeats] = useState<TemplateSeat[] | null>(null);
   const [assignmentMode, setAssignmentMode] = useState<'automatic' | 'manual' | null>(null);
   const [seatAssignments, setSeatAssignments] = useState<Record<number, string>>({});
+  const [invoice, setInvoice] = useState<InvoiceData | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
 
   const handleConfirmCount = (count: number) => {
     setPassengerCount(count);
@@ -85,6 +104,9 @@ export function SeatSalePage() {
     setAssignedSeats(null);
     setAssignmentMode(null);
     setSeatAssignments({});
+    setInvoice(null);
+    setIsInvoiceOpen(false);
+    setIsPaid(false);
   };
 
   const handleChange = (index: number, field: keyof SalePassengerForm, value: string) => {
@@ -92,6 +114,9 @@ export function SeatSalePage() {
     setAssignedSeats(null);
     setAssignmentMode(null);
     setSeatAssignments({});
+    setInvoice(null);
+    setIsInvoiceOpen(false);
+    setIsPaid(false);
     setForms((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
@@ -127,6 +152,8 @@ export function SeatSalePage() {
     setAssignedSeats(seats);
     setAssignmentMode(null);
     setSeatAssignments({});
+    setInvoice(null);
+    setIsPaid(false);
   };
 
   const handleAutomaticAssignment = () => {
@@ -142,6 +169,8 @@ export function SeatSalePage() {
   };
 
   const handleSeatAssignmentChange = (passengerIndex: number, seatId: string) => {
+    setInvoice(null);
+    setIsPaid(false);
     setSeatAssignments((currentAssignments) => {
       const nextAssignments = { ...currentAssignments };
       if (seatId) {
@@ -152,6 +181,41 @@ export function SeatSalePage() {
       return nextAssignments;
     });
   };
+
+  const handleOpenInvoice = () => {
+    if (!assignedSeats || forms.length === 0) return;
+
+    const items: InvoiceItem[] = [];
+    forms.forEach((passenger, index) => {
+      const seat = assignedSeats.find((candidate) => candidate.id === seatAssignments[index]);
+      if (!seat) return;
+
+      items.push({
+        passengerName: `${passenger.firstName} ${passenger.lastName}`.trim(),
+        seatNumber: `${seat.number} · Piso ${seat.floor}`,
+        price: exampleSeatPrices[seat.id],
+      });
+    });
+
+    if (items.length !== forms.length) return;
+
+    const exampleInvoiceData: InvoiceData = {
+      number: `DEMO-${Date.now()}`,
+      issuedAt: new Date().toISOString(),
+      currency: 'USD',
+      items,
+    };
+
+    setInvoice(exampleInvoiceData);
+    setIsInvoiceOpen(true);
+  };
+
+  const handleConfirmPayment = () => {
+    setIsPaid(true);
+  };
+
+  const allPassengersAssigned =
+    forms.length > 0 && forms.every((_, index) => Boolean(seatAssignments[index]));
 
   const completedPassengers = passengerCount
     ? forms.filter((form) => {
@@ -209,6 +273,7 @@ export function SeatSalePage() {
               form={form}
               onChange={(field, value) => handleChange(index, field, value)}
               errors={errors[index] || {}}
+              disabled={isPaid}
             />
           ))}
           <div className="seat-sale-page__actions">
@@ -221,7 +286,7 @@ export function SeatSalePage() {
             </button>
           </div>
           {showGlobalError && <p className="seat-sale-page__global-error">{showGlobalError}</p>}
-          {showSeatSelection && passengerCount && (
+          {showSeatSelection && passengerCount && !isPaid && (
             <>
               <SeatSelectionForm
                 title="Asigna los asientos a los pasajeros"
@@ -250,6 +315,7 @@ export function SeatSalePage() {
                       type="button"
                       className="seat-sale-page__button seat-sale-page__button--secondary"
                       onClick={handleAutomaticAssignment}
+                      disabled={isPaid}
                     >
                       Asignar automáticamente
                     </button>
@@ -257,6 +323,7 @@ export function SeatSalePage() {
                       type="button"
                       className="seat-sale-page__button seat-sale-page__button--secondary"
                       onClick={handleManualAssignment}
+                      disabled={isPaid}
                     >
                       Asignar manualmente
                     </button>
@@ -279,6 +346,7 @@ export function SeatSalePage() {
                                   <span>Asiento</span>
                                   <select
                                     value={seatAssignments[index] ?? ''}
+                                    disabled={isPaid}
                                     onChange={(event) =>
                                       handleSeatAssignmentChange(index, event.target.value)
                                     }
@@ -313,6 +381,34 @@ export function SeatSalePage() {
                         {Object.keys(seatAssignments).length} de {forms.length} pasajeros con
                         asiento asignado.
                       </p>
+                      {isPaid ? (
+                        <div className="seat-sale-page__payment-complete" role="status">
+                          <p>La compra está pagada.</p>
+                          <button
+                            type="button"
+                            className="seat-sale-page__button seat-sale-page__button--secondary"
+                            onClick={() => setIsInvoiceOpen(true)}
+                          >
+                            Ver factura
+                          </button>
+                          <button
+                            type="button"
+                            className="seat-sale-page__button seat-sale-page__button--disabled"
+                            disabled
+                          >
+                            Descargar factura (PDF) · Próximamente
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="seat-sale-page__button seat-sale-page__button--primary"
+                          disabled={!allPassengersAssigned}
+                          onClick={handleOpenInvoice}
+                        >
+                          Confirmar compra
+                        </button>
+                      )}
                     </>
                   )}
                 </section>
@@ -331,6 +427,14 @@ export function SeatSalePage() {
         }}
         onConfirm={handleConfirmCount}
       />
+      {invoice && isInvoiceOpen && (
+        <InvoiceModal
+          invoice={invoice}
+          isPaid={isPaid}
+          onCancel={() => setIsInvoiceOpen(false)}
+          onConfirmPayment={handleConfirmPayment}
+        />
+      )}
     </div>
   );
 }
