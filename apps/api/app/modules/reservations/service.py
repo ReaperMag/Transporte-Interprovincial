@@ -227,3 +227,46 @@ def get_occupied_seat_ids(
             occupied.add(item.seat_id)
 
     return occupied
+
+
+def get_trip_seats(
+    db: Session,
+    trip_id: int,
+    origin_city_id: int,
+    destination_city_id: int,
+) -> TripSeatsResponse:
+    """
+    Devuelve el mapa de asientos del bus del viaje,
+    indicando cuáles están libres para el tramo consultado.
+    """
+    trip = get_bookable_trip(db, trip_id)
+    segment = get_segment(trip.frequency.route, origin_city_id, destination_city_id)
+    occupied = get_occupied_seat_ids(db, trip, segment)
+
+    template: BusTemplate = trip.bus.template
+    seats = sorted(
+        template.seats,
+        key=lambda seat: (seat.floor, seat.number),
+    )
+
+    return TripSeatsResponse(
+        tripId=trip.id,
+        originCityId=origin_city_id,
+        destinationCityId=destination_city_id,
+        busTemplateId=template.id,
+        floors=template.floors,
+        rows=template.rows,
+        columns=template.columns,
+        seats=[
+            SeatAvailability(
+                seatId=seat.id,
+                number=seat.number,
+                floor=seat.floor,
+                row=seat.row,
+                column=seat.column,
+                seatType=seat.seat_type,
+                isAvailable=seat.id not in occupied,
+            )
+            for seat in seats
+        ],
+    )
