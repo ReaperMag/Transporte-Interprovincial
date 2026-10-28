@@ -74,12 +74,14 @@ export function CooperativeLayout() {
           >
             Configuración
           </NavLink>
-          <span
-            className="cooperative-toolbar__link cooperative-toolbar__link--disabled"
-            aria-disabled="true"
+          <NavLink
+            className={({ isActive }) =>
+              `cooperative-toolbar__link${isActive ? ' cooperative-toolbar__link--active' : ''}`
+            }
+            to="/cooperativa/grupos"
           >
-            Grupos <span>Próximamente</span>
-          </span>
+            Grupos
+          </NavLink>
           <span
             className="cooperative-toolbar__link cooperative-toolbar__link--disabled"
             aria-disabled="true"

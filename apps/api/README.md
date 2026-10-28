@@ -39,6 +39,12 @@ cargas. Los colores deben usar el formato hexadecimal `#RRGGBB` y los enlaces,
 HTTP(S). Al iniciar, la API añade de forma compatible la columna de descripción
 a bases de datos existentes.
 
+La cooperativa administra sus grupos mediante `GET`, `POST`, `PATCH` y `DELETE`
+en `/api/v1/cooperatives/me/groups`. La lista incluye `busCount`, y la API
+asigna cada grupo exclusivamente a la cooperativa autenticada. Los nombres se
+normalizan y deben ser únicos por cooperativa ignorando mayúsculas y espacios.
+No se eliminan grupos con buses u hojas de ruta asociados.
+
 Al crear una cooperativa desde el panel, el administrador también registra el
 correo y la contraseña inicial de su cuenta de acceso. La API guarda la
 contraseña como hash y vincula la cuenta de tipo `cooperative` al registro de la

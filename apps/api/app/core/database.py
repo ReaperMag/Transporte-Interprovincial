@@ -68,6 +68,9 @@ def init_db() -> None:
     """Crea las tablas que aún no existen y aplica cambios aditivos de esquema."""
     import_models()
     Base.metadata.create_all(bind=engine)
+    from app.modules.buses.group_schema import ensure_bus_group_name_index
+
+    ensure_bus_group_name_index(engine)
     columns = {
         column["name"] for column in inspect(engine).get_columns("cooperatives")
     }

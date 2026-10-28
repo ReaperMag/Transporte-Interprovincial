@@ -1,7 +1,7 @@
 import enum
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.shared.base_model import BaseModel, str_enum
 from app.shared.tenant_model import TenantModel
@@ -48,9 +48,24 @@ class BusGroup(TenantModel):
     """Grupo de buses, por ejemplo 'Buses cómodos' o 'Buses cantonales'. La hoja de ruta es por grupo."""
 
     __tablename__ = "bus_groups"
+    __table_args__ = (
+        Index(
+            "uq_bus_groups_cooperative_normalized_name",
+            "cooperative_id",
+            "normalized_name",
+            unique=True,
+        ),
+    )
 
     name: Mapped[str] = mapped_column(String(100))
+    normalized_name: Mapped[str] = mapped_column(String(100), default="")
     description: Mapped[str | None] = mapped_column(String(255))
+
+    @validates("name")
+    def normalize_name(self, _key: str, value: str) -> str:
+        normalized = " ".join(value.split())
+        self.normalized_name = normalized.casefold()
+        return normalized
 
 
 class Bus(TenantModel):
