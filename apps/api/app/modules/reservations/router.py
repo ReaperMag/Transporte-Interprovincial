@@ -188,6 +188,22 @@ def create_office_reservation(
 
 
 @router.get(
+    "/me",
+    response_model=list[ReservationRead],
+)
+def list_my_reservations(
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_passenger)],
+):
+    """Lista las reservas del pasajero autenticado."""
+    reservations = service.list_account_reservations(db, account.id)
+    return [
+        service.build_reservation_read(db, reservation)
+        for reservation in reservations
+    ]
+
+
+@router.get(
     "/{reservation_id}",
     response_model=ReservationRead,
 )

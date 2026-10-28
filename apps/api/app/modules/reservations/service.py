@@ -496,6 +496,20 @@ def get_reservation_cooperative_id(db: Session, reservation: Reservation) -> int
     return trip.cooperative_id
 
 
+def list_account_reservations(db: Session, account_id: int) -> list[Reservation]:
+    """Reservas hechas por un pasajero con cuenta, de la más reciente a la más antigua."""
+    release_expired_reservations(db)
+
+    return list(
+        db.scalars(
+            select(Reservation)
+            .where(Reservation.buyer_account_id == account_id)
+            .options(selectinload(Reservation.seats))
+            .order_by(Reservation.created_at.desc(), Reservation.id.desc())
+        ).all()
+    )
+
+
 def cancel_reservation(db: Session, reservation: Reservation) -> Reservation:
     """Cancela una reserva que todavía no tiene boletos emitidos."""
     release_expired_reservations(db)
