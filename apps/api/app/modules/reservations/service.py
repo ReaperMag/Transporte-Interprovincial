@@ -360,14 +360,19 @@ def create_reservation(
     payload: ReservationCreate,
     *,
     buyer_account_id: int | None = None,
+    sold_by: Staff | None = None,
 ) -> Reservation:
     """
     Aparta los asientos de un viaje para uno o varios pasajeros.
 
     La reserva queda pendiente de pago y vence según el tiempo
-    configurado por la cooperativa.
+    configurado por la cooperativa. Si la vende un oficinista,
+    queda registrado quién la vendió.
     """
     trip = get_bookable_trip(db, payload.tripId)
+
+    if sold_by is not None and sold_by.cooperative_id != trip.cooperative_id:
+        raise TripNotFoundError("El viaje no pertenece a tu cooperativa.")
 
     route = trip.frequency.route
     segment = get_segment(route, payload.originCityId, payload.destinationCityId)
@@ -421,6 +426,7 @@ def create_reservation(
     reservation = Reservation(
         trip_id=trip.id,
         buyer_account_id=buyer_account_id,
+        sold_by_id=sold_by.id if sold_by is not None else None,
         status=ReservationStatus.PENDING_PAYMENT,
         expires_at=expires_at,
         total=total,

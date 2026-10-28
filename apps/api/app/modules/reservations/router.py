@@ -23,6 +23,12 @@ router = APIRouter(
     tags=["Reservas"],
 )
 
+# Puestos que pueden vender asientos en la oficina.
+OFFICE_SALE_POSITIONS = (
+    StaffPosition.CLERK,
+    StaffPosition.ADMIN,
+)
+
 
 def require_passenger(
     account: Annotated[Account, Depends(get_current_account)],
@@ -34,6 +40,36 @@ def require_passenger(
             detail="Esta operación es exclusiva para pasajeros.",
         )
     return account
+
+
+def get_office_staff(db: Session, account: Account) -> Staff | None:
+    """Devuelve el oficinista activo vinculado a la cuenta, si existe."""
+    if account.account_type != AccountType.COOPERATIVE:
+        return None
+
+    staff = db.scalar(select(Staff).where(Staff.account_id == account.id))
+    if (
+        staff is None
+        or not staff.is_active
+        or staff.position not in OFFICE_SALE_POSITIONS
+    ):
+        return None
+
+    return staff
+
+
+def require_office_staff(
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+) -> Staff:
+    """Permite la operación solo al personal de oficina de una cooperativa."""
+    staff = get_office_staff(db, account)
+    if staff is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Esta operación es exclusiva para el personal de oficina.",
+        )
+    return staff
 
 
 def raise_reservation_error(exc: service.ReservationError) -> None:
@@ -95,6 +131,30 @@ def create_passenger_reservation(
             db,
             payload,
             buyer_account_id=account.id,
+        )
+    except service.ReservationError as exc:
+        raise_reservation_error(exc)
+
+    return service.build_reservation_read(db, reservation)
+
+
+@router.post(
+    "/office",
+    response_model=ReservationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_office_reservation(
+    payload: ReservationCreate,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    _: None = Depends(validate_request_origin),
+):
+    """El oficinista aparta asientos para pasajeros que compran en la oficina."""
+    try:
+        reservation = service.create_reservation(
+            db,
+            payload,
+            sold_by=staff,
         )
     except service.ReservationError as exc:
         raise_reservation_error(exc)
