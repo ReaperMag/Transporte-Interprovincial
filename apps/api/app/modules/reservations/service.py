@@ -314,3 +314,158 @@ def calculate_discount(base_price: Decimal, passenger: Passenger) -> Decimal:
         return Decimal("0.00")
 
     return (base_price * DISCOUNT_RATE).quantize(CENTS, rounding=ROUND_HALF_UP)
+
+
+# ---------------------------------------------------------------------------
+# Crear reservas
+# ---------------------------------------------------------------------------
+
+
+def get_or_create_passenger(
+    db: Session,
+    data: ReservationPassengerInput,
+) -> Passenger:
+    """
+    Reutiliza al pasajero si su cédula ya está registrada.
+    Si no existe, lo registra sin cuenta, como acompañante.
+    """
+    passenger = get_passenger_by_id_number(db, data.idNumber)
+
+    if passenger is not None:
+        # Solo completa los datos que faltan; no reemplaza los existentes.
+        if passenger.birth_date is None and data.birthDate is not None:
+            passenger.birth_date = data.birthDate
+        if passenger.phone is None and data.phone:
+            passenger.phone = data.phone.strip()
+        if passenger.email is None and data.email:
+            passenger.email = data.email.strip().lower()
+        return passenger
+
+    passenger = Passenger(
+        id_number=data.idNumber.upper(),
+        first_name=data.firstName,
+        last_name=data.lastName,
+        birth_date=data.birthDate,
+        phone=data.phone.strip() if data.phone else None,
+        email=data.email.strip().lower() if data.email else None,
+    )
+    db.add(passenger)
+    db.flush()
+
+    return passenger
+
+
+def create_reservation(
+    db: Session,
+    payload: ReservationCreate,
+    *,
+    buyer_account_id: int | None = None,
+) -> Reservation:
+    """
+    Aparta los asientos de un viaje para uno o varios pasajeros.
+
+    La reserva queda pendiente de pago y vence según el tiempo
+    configurado por la cooperativa.
+    """
+    trip = get_bookable_trip(db, payload.tripId)
+
+    route = trip.frequency.route
+    segment = get_segment(route, payload.originCityId, payload.destinationCityId)
+    occupied = get_occupied_seat_ids(db, trip, segment)
+
+    template_seats = {seat.id: seat for seat in trip.bus.template.seats}
+
+    reservation_seats: list[ReservationSeat] = []
+    total = Decimal("0.00")
+
+    for item in payload.seats:
+        seat = template_seats.get(item.seatId)
+        if seat is None:
+            raise SeatUnavailableError("El asiento no pertenece al bus de este viaje.")
+
+        if seat.id in occupied:
+            raise SeatUnavailableError(f"El asiento {seat.number} ya está ocupado.")
+
+        passenger = get_or_create_passenger(db, item.passenger)
+
+        base_price = get_fare_price(
+            db,
+            route.id,
+            payload.originCityId,
+            payload.destinationCityId,
+            seat,
+        )
+        discount = calculate_discount(base_price, passenger)
+        price = base_price - discount
+
+        reservation_seats.append(
+            ReservationSeat(
+                seat_id=seat.id,
+                passenger_id=passenger.id,
+                origin_city_id=payload.originCityId,
+                destination_city_id=payload.destinationCityId,
+                seat_type=seat.seat_type,
+                passenger_category=passenger.category,
+                base_price=base_price,
+                discount_amount=discount,
+                price=price,
+            )
+        )
+        total += price
+
+    cooperative = db.get(Cooperative, trip.cooperative_id)
+    expires_at = now_local() + timedelta(
+        minutes=cooperative.reservation_timeout_minutes
+    )
+
+    reservation = Reservation(
+        trip_id=trip.id,
+        buyer_account_id=buyer_account_id,
+        status=ReservationStatus.PENDING_PAYMENT,
+        expires_at=expires_at,
+        total=total,
+        seats=reservation_seats,
+    )
+    db.add(reservation)
+    db.commit()
+    db.refresh(reservation)
+
+    return reservation
+
+
+def build_reservation_read(db: Session, reservation: Reservation) -> ReservationRead:
+    """Arma la respuesta de una reserva con sus asientos y pasajeros."""
+    trip = db.get(Trip, reservation.trip_id)
+    seats = sorted(reservation.seats, key=lambda item: item.id)
+    first_seat = seats[0]
+
+    seat_rows: list[ReservationSeatRead] = []
+    for item in seats:
+        template_seat = db.get(TemplateSeat, item.seat_id)
+        passenger = db.get(Passenger, item.passenger_id)
+        seat_rows.append(
+            ReservationSeatRead(
+                seatId=item.seat_id,
+                seatNumber=template_seat.number,
+                seatType=item.seat_type,
+                passengerId=passenger.id,
+                passengerIdNumber=passenger.id_number,
+                passengerName=f"{passenger.first_name} {passenger.last_name}",
+                passengerCategory=item.passenger_category,
+                basePrice=item.base_price,
+                discountAmount=item.discount_amount,
+                price=item.price,
+            )
+        )
+
+    return ReservationRead(
+        id=reservation.id,
+        tripId=reservation.trip_id,
+        status=reservation.status,
+        originCityId=first_seat.origin_city_id,
+        destinationCityId=first_seat.destination_city_id,
+        departureAt=trip.departure_at,
+        expiresAt=reservation.expires_at,
+        total=reservation.total,
+        seats=seat_rows,
+    )

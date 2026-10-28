@@ -24,6 +24,18 @@ router = APIRouter(
 )
 
 
+def require_passenger(
+    account: Annotated[Account, Depends(get_current_account)],
+) -> Account:
+    """Permite la operación solo a cuentas de pasajero."""
+    if account.account_type != AccountType.PASSENGER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Esta operación es exclusiva para pasajeros.",
+        )
+    return account
+
+
 def raise_reservation_error(exc: service.ReservationError) -> None:
     """Traduce los errores de negocio a respuestas HTTP."""
     status_by_error = {
@@ -64,3 +76,27 @@ def get_trip_seats(
         )
     except service.ReservationError as exc:
         raise_reservation_error(exc)
+
+
+@router.post(
+    "",
+    response_model=ReservationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_passenger_reservation(
+    payload: ReservationCreate,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_passenger)],
+    _: None = Depends(validate_request_origin),
+):
+    """El pasajero aparta asientos para él y sus acompañantes."""
+    try:
+        reservation = service.create_reservation(
+            db,
+            payload,
+            buyer_account_id=account.id,
+        )
+    except service.ReservationError as exc:
+        raise_reservation_error(exc)
+
+    return service.build_reservation_read(db, reservation)

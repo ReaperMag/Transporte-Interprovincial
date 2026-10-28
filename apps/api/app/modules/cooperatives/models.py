@@ -35,8 +35,9 @@ class Cooperative(BaseModel):
     website_url: Mapped[str | None] = mapped_column(String(500))
     description: Mapped[str | None] = mapped_column(String(1000))
 
-    # Minutos que un asiento queda reservado antes de liberarse si no se sube el comprobante
-    reservation_timeout_minutes: Mapped[int] = mapped_column(default=15)
+    # Minutos que un asiento queda reservado antes de liberarse si no se sube el comprobante.
+    # El proyecto pide de 3 a 5 minutos; cada cooperativa puede ajustarlo.
+    reservation_timeout_minutes: Mapped[int] = mapped_column(default=5)
     is_active: Mapped[bool] = mapped_column(default=True)
 
     bank_accounts: Mapped[list["CooperativeBankAccount"]] = relationship(
