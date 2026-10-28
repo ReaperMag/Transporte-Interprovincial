@@ -45,6 +45,40 @@ contraseña como hash y vincula la cuenta de tipo `cooperative` al registro de l
 cooperativa en una sola transacción. Si el correo ya pertenece a otra cuenta,
 no se crea la cooperativa.
 
+## Reservas de asientos
+
+Las rutas viven bajo `/api/v1/reservations` y requieren una sesión iniciada.
+Las operaciones que crean o cancelan reservas también validan el origen de la
+solicitud.
+
+| Método | Ruta | Quién la usa | Operación |
+| --- | --- | --- | --- |
+| `GET` | `/trips/{trip_id}/seats` | Pasajero y oficinista | Mapa de asientos del viaje con su disponibilidad para un tramo (`origin_city_id` y `destination_city_id`) |
+| `POST` | `/` | Pasajero | Reservar asientos para el pasajero y sus acompañantes |
+| `POST` | `/office` | Oficinista | Reservar asientos en la oficina |
+| `GET` | `/me` | Pasajero | Listar sus reservas |
+| `GET` | `/{id}` | Pasajero y oficinista | Consultar el detalle de una reserva |
+| `POST` | `/{id}/cancel` | Pasajero y oficinista | Cancelar una reserva y liberar sus asientos |
+
+Reglas principales:
+
+- Solo se reservan viajes programados, con salida futura y de una cooperativa
+  activa.
+- En las rutas con paradas, un asiento se ocupa solo en el tramo comprado. Si
+  alguien viaja de Quito a Latacunga, el mismo asiento sigue libre de Latacunga
+  a Loja. En una ruta directa solo se vende desde la ciudad de origen.
+- Cada asiento lleva los datos del pasajero que lo ocupa. Si la cédula ya está
+  registrada se reutiliza; si no, se registra como pasajero sin cuenta.
+- El precio sale de la tarifa del tramo según el tipo de asiento. Los menores
+  de edad, la tercera edad y las personas con discapacidad pagan la mitad, solo
+  si su categoría ya fue verificada.
+- La reserva queda pendiente de pago y vence según el tiempo configurado por la
+  cooperativa (`reservation_timeout_minutes`, 5 minutos por defecto). Al
+  vencer, sus asientos se liberan.
+- El pasajero solo ve y cancela sus propias reservas. El personal de oficina
+  (oficinista o administrador de la cooperativa) solo vende y gestiona viajes
+  de su cooperativa.
+
 ## Acceso administrativo
 
 Las rutas administrativas requieren una cuenta activa de tipo `super_admin`.
