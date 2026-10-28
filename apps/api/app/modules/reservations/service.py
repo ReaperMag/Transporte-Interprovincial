@@ -270,3 +270,47 @@ def get_trip_seats(
             for seat in seats
         ],
     )
+
+
+# ---------------------------------------------------------------------------
+# Precio
+# ---------------------------------------------------------------------------
+
+
+def get_fare_price(
+    db: Session,
+    route_id: int,
+    origin_city_id: int,
+    destination_city_id: int,
+    seat: TemplateSeat,
+) -> Decimal:
+    """Busca la tarifa del tramo según el tipo de asiento."""
+    fare = db.scalar(
+        select(Fare).where(
+            Fare.route_id == route_id,
+            Fare.origin_city_id == origin_city_id,
+            Fare.destination_city_id == destination_city_id,
+            Fare.seat_type == seat.seat_type,
+        )
+    )
+
+    if fare is None:
+        raise FareNotFoundError(
+            f"No hay una tarifa registrada para el asiento {seat.number} en este tramo."
+        )
+
+    return fare.price
+
+
+def calculate_discount(base_price: Decimal, passenger: Passenger) -> Decimal:
+    """
+    Aplica el descuento de ley solo si la categoría del pasajero
+    ya fue verificada con su cédula.
+    """
+    if (
+        passenger.category == PassengerCategory.REGULAR
+        or not passenger.category_verified
+    ):
+        return Decimal("0.00")
+
+    return (base_price * DISCOUNT_RATE).quantize(CENTS, rounding=ROUND_HALF_UP)
