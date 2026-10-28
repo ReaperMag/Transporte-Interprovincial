@@ -88,6 +88,31 @@ def raise_reservation_error(exc: service.ReservationError) -> None:
     ) from exc
 
 
+def ensure_can_access(
+    db: Session,
+    account: Account,
+    reservation: Reservation,
+) -> None:
+    """
+    El pasajero solo ve sus propias reservas.
+    El personal de oficina ve las reservas de los viajes de su cooperativa.
+    """
+    if account.account_type == AccountType.PASSENGER:
+        if reservation.buyer_account_id == account.id:
+            return
+    else:
+        staff = get_office_staff(db, account)
+        trip_cooperative_id = service.get_reservation_cooperative_id(db, reservation)
+        if staff is not None and staff.cooperative_id == trip_cooperative_id:
+            return
+
+    # Se responde 404 para no revelar reservas de otras personas.
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Reserva no encontrada.",
+    )
+
+
 @router.get(
     "/trips/{trip_id}/seats",
     response_model=TripSeatsResponse,
@@ -156,6 +181,48 @@ def create_office_reservation(
             payload,
             sold_by=staff,
         )
+    except service.ReservationError as exc:
+        raise_reservation_error(exc)
+
+    return service.build_reservation_read(db, reservation)
+
+
+@router.get(
+    "/{reservation_id}",
+    response_model=ReservationRead,
+)
+def get_reservation(
+    reservation_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+):
+    """Muestra el detalle de una reserva."""
+    service.release_expired_reservations(db)
+
+    try:
+        reservation = service.get_reservation(db, reservation_id)
+    except service.ReservationError as exc:
+        raise_reservation_error(exc)
+
+    ensure_can_access(db, account, reservation)
+    return service.build_reservation_read(db, reservation)
+
+
+@router.post(
+    "/{reservation_id}/cancel",
+    response_model=ReservationRead,
+)
+def cancel_reservation(
+    reservation_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+    _: None = Depends(validate_request_origin),
+):
+    """Cancela una reserva y libera sus asientos."""
+    try:
+        reservation = service.get_reservation(db, reservation_id)
+        ensure_can_access(db, account, reservation)
+        reservation = service.cancel_reservation(db, reservation)
     except service.ReservationError as exc:
         raise_reservation_error(exc)
 

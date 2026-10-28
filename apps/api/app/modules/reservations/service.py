@@ -474,6 +474,45 @@ def create_reservation(
     return reservation
 
 
+# ---------------------------------------------------------------------------
+# Consultar y cancelar
+# ---------------------------------------------------------------------------
+
+
+def get_reservation(db: Session, reservation_id: int) -> Reservation:
+    reservation = db.scalar(
+        select(Reservation)
+        .where(Reservation.id == reservation_id)
+        .options(selectinload(Reservation.seats))
+    )
+    if reservation is None:
+        raise ReservationNotFoundError("Reserva no encontrada.")
+    return reservation
+
+
+def get_reservation_cooperative_id(db: Session, reservation: Reservation) -> int:
+    """Cooperativa dueña del viaje de la reserva."""
+    trip = db.get(Trip, reservation.trip_id)
+    return trip.cooperative_id
+
+
+def cancel_reservation(db: Session, reservation: Reservation) -> Reservation:
+    """Cancela una reserva que todavía no tiene boletos emitidos."""
+    release_expired_reservations(db)
+    db.refresh(reservation)
+
+    if reservation.status not in CANCELLABLE_STATUSES:
+        raise ReservationNotCancellableError(
+            "Solo se pueden cancelar reservas pendientes de pago o en revisión."
+        )
+
+    reservation.status = ReservationStatus.CANCELLED
+    db.commit()
+    db.refresh(reservation)
+
+    return reservation
+
+
 def build_reservation_read(db: Session, reservation: Reservation) -> ReservationRead:
     """Arma la respuesta de una reserva con sus asientos y pasajeros."""
     trip = db.get(Trip, reservation.trip_id)
