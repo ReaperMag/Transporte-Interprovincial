@@ -179,6 +179,37 @@ def segments_overlap(first: tuple[int, int], second: tuple[int, int]) -> bool:
     return first[0] < second[1] and second[0] < first[1]
 
 
+# ---------------------------------------------------------------------------
+# Asientos ocupados
+# ---------------------------------------------------------------------------
+
+
+def release_expired_reservations(db: Session) -> int:
+    """
+    Marca como vencidas las reservas que no se pagaron a tiempo.
+    Sus asientos quedan libres para otros pasajeros.
+    """
+    current_time = now_local()
+
+    pending = db.scalars(
+        select(Reservation).where(
+            Reservation.status == ReservationStatus.PENDING_PAYMENT,
+            Reservation.expires_at.is_not(None),
+        )
+    ).all()
+
+    expired = 0
+    for reservation in pending:
+        if as_local(reservation.expires_at) <= current_time:
+            reservation.status = ReservationStatus.EXPIRED
+            expired += 1
+
+    if expired:
+        db.commit()
+
+    return expired
+
+
 def get_occupied_seat_ids(
     db: Session,
     trip: Trip,
@@ -239,6 +270,8 @@ def get_trip_seats(
     Devuelve el mapa de asientos del bus del viaje,
     indicando cuáles están libres para el tramo consultado.
     """
+    release_expired_reservations(db)
+
     trip = get_bookable_trip(db, trip_id)
     segment = get_segment(trip.frequency.route, origin_city_id, destination_city_id)
     occupied = get_occupied_seat_ids(db, trip, segment)
@@ -369,6 +402,8 @@ def create_reservation(
     configurado por la cooperativa. Si la vende un oficinista,
     queda registrado quién la vendió.
     """
+    release_expired_reservations(db)
+
     trip = get_bookable_trip(db, payload.tripId)
 
     if sold_by is not None and sold_by.cooperative_id != trip.cooperative_id:
