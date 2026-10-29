@@ -417,6 +417,18 @@ def reject_payment(
     return payment
 
 
+def get_category_document(db: Session, document_id: int) -> CategoryDocument:
+    document = db.get(CategoryDocument, document_id)
+    if document is None:
+        raise PaymentNotFoundError("Documento no encontrado.")
+    return document
+
+
+def get_document_reservation(db: Session, document: CategoryDocument) -> Reservation:
+    seat = db.get(ReservationSeat, document.reservation_seat_id)
+    return db.get(Reservation, seat.reservation_id)
+
+
 def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
     reservation = db.get(Reservation, payment.reservation_id)
     seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}

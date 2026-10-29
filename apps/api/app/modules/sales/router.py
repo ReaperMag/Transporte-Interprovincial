@@ -64,6 +64,18 @@ def can_access_reservation(db: Session, account: Account, reservation: Reservati
     )
 
 
+def file_response(relative_path: str | None) -> FileResponse:
+    try:
+        if relative_path is None:
+            raise FileNotFoundError
+        return FileResponse(resolve_upload(relative_path))
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archivo no encontrado.",
+        ) from None
+
+
 @router.get(
     "/methods",
     response_model=PaymentInfo,
@@ -208,3 +220,41 @@ def reject_payment(
     except service.PaymentError as exc:
         raise_payment_error(exc)
     return service.build_payment_read(db, payment)
+
+
+@router.get("/{payment_id}/receipt")
+def download_receipt(
+    payment_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+):
+    """Archivo del comprobante. Solo para el dueño y el personal de su cooperativa."""
+    payment = db.get(Payment, payment_id)
+    reservation = db.get(Reservation, payment.reservation_id) if payment else None
+    if reservation is None or not can_access_reservation(db, account, reservation):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archivo no encontrado.",
+        )
+    return file_response(payment.receipt_url)
+
+
+@router.get("/documents/{document_id}")
+def download_category_document(
+    document_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+):
+    """Cédula o carné de un pasajero. Solo para el dueño y el personal de su cooperativa."""
+    try:
+        document = service.get_category_document(db, document_id)
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+
+    reservation = service.get_document_reservation(db, document)
+    if not can_access_reservation(db, account, reservation):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Archivo no encontrado.",
+        )
+    return file_response(document.file_path)
