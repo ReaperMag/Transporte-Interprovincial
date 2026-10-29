@@ -280,6 +280,55 @@ def list_reservation_payments(db: Session, reservation: Reservation) -> list[Pay
     )
 
 
+def get_payment_for_staff(db: Session, payment_id: int, staff: Staff) -> Payment:
+    """Pago de un viaje de la cooperativa del oficinista."""
+    payment = db.get(Payment, payment_id)
+    if payment is None:
+        raise PaymentNotFoundError("Pago no encontrado.")
+
+    reservation = db.get(Reservation, payment.reservation_id)
+    if get_trip_cooperative_id(db, reservation) != staff.cooperative_id:
+        raise PaymentNotFoundError("Pago no encontrado.")
+
+    return payment
+
+
+def get_pending_payment_for_staff(db: Session, payment_id: int, staff: Staff) -> Payment:
+    payment = get_payment_for_staff(db, payment_id, staff)
+    if payment.status != PaymentStatus.PENDING:
+        raise PaymentConflictError("El pago ya fue revisado.")
+    return payment
+
+
+def approve_payment(db: Session, payment_id: int, staff: Staff) -> Payment:
+    """
+    El oficinista aprueba el comprobante y la reserva queda confirmada.
+    Desde ese momento se pueden emitir los boletos.
+    """
+    payment = get_pending_payment_for_staff(db, payment_id, staff)
+    reservation = db.get(Reservation, payment.reservation_id)
+
+    payment.status = PaymentStatus.APPROVED
+    payment.reviewed_by_id = staff.id
+    payment.reviewed_at = now_local()
+
+    reservation.status = ReservationStatus.CONFIRMED
+    reservation.expires_at = None
+
+    notify(
+        db,
+        account_id=reservation.buyer_account_id,
+        event=NotificationEvent.PAYMENT_APPROVED,
+        title="Pago aprobado",
+        message="Tu pago fue aprobado y tu compra está confirmada.",
+        reservation_id=reservation.id,
+    )
+
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
 def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
     reservation = db.get(Reservation, payment.reservation_id)
     seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}

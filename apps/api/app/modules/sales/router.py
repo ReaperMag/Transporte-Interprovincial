@@ -165,3 +165,21 @@ def list_reservation_payments(
         service.build_payment_read(db, payment)
         for payment in service.list_reservation_payments(db, reservation)
     ]
+
+
+@router.post(
+    "/{payment_id}/approve",
+    response_model=PaymentRead,
+)
+def approve_payment(
+    payment_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    _: None = Depends(validate_request_origin),
+):
+    """El oficinista aprueba el comprobante y la compra queda confirmada."""
+    try:
+        payment = service.approve_payment(db, payment_id, staff)
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+    return service.build_payment_read(db, payment)
