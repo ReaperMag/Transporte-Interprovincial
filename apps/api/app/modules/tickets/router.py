@@ -129,3 +129,22 @@ def get_ticket(
     """Detalle de un boleto con su vigencia."""
     ticket = get_accessible_ticket(db, account, ticket_id)
     return service.build_ticket_read(db, ticket)
+
+
+@router.get(
+    "/{ticket_id}/qr",
+    response_class=Response,
+    responses={200: {"content": {"image/png": {}}}},
+)
+def get_ticket_qr(
+    ticket_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+):
+    """Imagen PNG del QR del boleto."""
+    ticket = get_accessible_ticket(db, account, ticket_id)
+    return Response(
+        content=render_qr_png(ticket.code),
+        media_type="image/png",
+        headers={"Cache-Control": "private, no-store"},
+    )
