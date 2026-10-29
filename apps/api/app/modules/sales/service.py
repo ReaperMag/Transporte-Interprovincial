@@ -254,6 +254,32 @@ def submit_receipt(
     return payment
 
 
+def list_pending_payments(db: Session, staff: Staff) -> list[Payment]:
+    """Comprobantes por revisar de los viajes de la cooperativa del oficinista."""
+    return list(
+        db.scalars(
+            select(Payment)
+            .join(Reservation, Payment.reservation_id == Reservation.id)
+            .join(Trip, Reservation.trip_id == Trip.id)
+            .where(
+                Payment.status == PaymentStatus.PENDING,
+                Trip.cooperative_id == staff.cooperative_id,
+            )
+            .order_by(Payment.created_at, Payment.id)
+        ).all()
+    )
+
+
+def list_reservation_payments(db: Session, reservation: Reservation) -> list[Payment]:
+    return list(
+        db.scalars(
+            select(Payment)
+            .where(Payment.reservation_id == reservation.id)
+            .order_by(Payment.created_at, Payment.id)
+        ).all()
+    )
+
+
 def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
     reservation = db.get(Reservation, payment.reservation_id)
     seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}

@@ -49,6 +49,21 @@ def raise_payment_error(exc: service.PaymentError) -> None:
     ) from exc
 
 
+def can_access_reservation(db: Session, account: Account, reservation: Reservation) -> bool:
+    """
+    El pasajero accede a sus propias reservas.
+    El personal de oficina accede a las de los viajes de su cooperativa.
+    """
+    if account.account_type == AccountType.PASSENGER:
+        return reservation.buyer_account_id == account.id
+
+    staff = get_office_staff(db, account)
+    return (
+        staff is not None
+        and staff.cooperative_id == service.get_trip_cooperative_id(db, reservation)
+    )
+
+
 @router.get(
     "/methods",
     response_model=PaymentInfo,
@@ -113,3 +128,40 @@ def upload_receipt(
     except service.PaymentError as exc:
         raise_payment_error(exc)
     return service.build_payment_read(db, payment)
+
+
+@router.get(
+    "/pending",
+    response_model=list[PaymentRead],
+)
+def list_pending_payments(
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+):
+    """Comprobantes que el oficinista debe revisar."""
+    return [
+        service.build_payment_read(db, payment)
+        for payment in service.list_pending_payments(db, staff)
+    ]
+
+
+@router.get(
+    "/reservations/{reservation_id}",
+    response_model=list[PaymentRead],
+)
+def list_reservation_payments(
+    reservation_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+):
+    """Pagos de una reserva, con el motivo del rechazo si lo hubo."""
+    reservation = db.get(Reservation, reservation_id)
+    if reservation is None or not can_access_reservation(db, account, reservation):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reserva no encontrada.",
+        )
+    return [
+        service.build_payment_read(db, payment)
+        for payment in service.list_reservation_payments(db, reservation)
+    ]
