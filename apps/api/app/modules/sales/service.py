@@ -72,3 +72,97 @@ def get_payment_info() -> PaymentInfo:
             "Sube el comprobante antes de que termine el tiempo de tu reserva."
         ),
     )
+
+
+def get_trip_cooperative_id(db: Session, reservation: Reservation) -> int:
+    return db.get(Trip, reservation.trip_id).cooperative_id
+
+
+def load_reservation(db: Session, reservation_id: int) -> Reservation:
+    """Carga la reserva después de liberar las que vencieron."""
+    release_expired_reservations(db)
+
+    try:
+        return get_reservation(db, reservation_id)
+    except ReservationNotFoundError as exc:
+        raise PaymentNotFoundError("Reserva no encontrada.") from exc
+
+
+def ensure_payable(reservation: Reservation) -> None:
+    """
+    Verifica que la reserva todavía espere su pago dentro del tiempo límite.
+    Se llama después de comprobar el acceso, para no revelar el estado
+    de reservas ajenas.
+    """
+    if reservation.status == ReservationStatus.EXPIRED:
+        raise PaymentConflictError(
+            "El tiempo de la reserva terminó y los asientos se liberaron."
+        )
+
+    if reservation.status != ReservationStatus.PENDING_PAYMENT:
+        raise PaymentConflictError("La reserva no está pendiente de pago.")
+
+
+def pay_in_cash(db: Session, reservation_id: int, staff: Staff) -> Payment:
+    """
+    El oficinista cobra en efectivo una reserva hecha en la oficina.
+    El pago queda aprobado y la reserva confirmada en el mismo momento.
+    """
+    reservation = load_reservation(db, reservation_id)
+
+    if get_trip_cooperative_id(db, reservation) != staff.cooperative_id:
+        raise PaymentNotFoundError("Reserva no encontrada.")
+
+    ensure_payable(reservation)
+
+    if reservation.sold_by_id is None:
+        raise PaymentNotAllowedError(
+            "El efectivo solo se acepta en reservas hechas en la oficina."
+        )
+
+    current_time = now_local()
+    payment = Payment(
+        reservation_id=reservation.id,
+        method=PaymentMethod.CASH,
+        amount=reservation.total,
+        status=PaymentStatus.APPROVED,
+        reviewed_by_id=staff.id,
+        reviewed_at=current_time,
+    )
+    db.add(payment)
+
+    reservation.status = ReservationStatus.CONFIRMED
+    reservation.expires_at = None
+
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
+def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
+    reservation = db.get(Reservation, payment.reservation_id)
+    seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}
+    documents = db.scalars(
+        select(CategoryDocument)
+        .where(CategoryDocument.payment_id == payment.id)
+        .order_by(CategoryDocument.id)
+    ).all()
+
+    return PaymentRead(
+        id=payment.id,
+        reservationId=reservation.id,
+        tripId=reservation.trip_id,
+        method=payment.method,
+        amount=payment.amount,
+        status=payment.status,
+        receiptReference=payment.receipt_reference,
+        hasReceipt=payment.receipt_url is not None,
+        documents=[
+            CategoryDocumentRead(id=document.id, seatId=seat_ids[document.reservation_seat_id])
+            for document in documents
+        ],
+        rejectionReason=payment.rejection_reason,
+        reviewedAt=payment.reviewed_at,
+        createdAt=payment.created_at,
+        reservationStatus=reservation.status,
+    )

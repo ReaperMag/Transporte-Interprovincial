@@ -35,6 +35,20 @@ router = APIRouter(
 )
 
 
+def raise_payment_error(exc: service.PaymentError) -> None:
+    """Traduce los errores de negocio a respuestas HTTP."""
+    status_by_error = {
+        service.PaymentNotFoundError: status.HTTP_404_NOT_FOUND,
+        service.PaymentNotAllowedError: status.HTTP_403_FORBIDDEN,
+        service.PaymentConflictError: status.HTTP_409_CONFLICT,
+        service.PaymentValidationError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    }
+    raise HTTPException(
+        status_code=status_by_error.get(type(exc), status.HTTP_400_BAD_REQUEST),
+        detail=str(exc),
+    ) from exc
+
+
 @router.get(
     "/methods",
     response_model=PaymentInfo,
@@ -44,3 +58,22 @@ def get_payment_methods(
 ):
     """Datos de demostración para pagar por depósito, transferencia o DeUna."""
     return service.get_payment_info()
+
+
+@router.post(
+    "/reservations/{reservation_id}/cash",
+    response_model=PaymentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def pay_reservation_in_cash(
+    reservation_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    _: None = Depends(validate_request_origin),
+):
+    """El oficinista cobra en efectivo una reserva hecha en la oficina."""
+    try:
+        payment = service.pay_in_cash(db, reservation_id, staff)
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+    return service.build_payment_read(db, payment)
