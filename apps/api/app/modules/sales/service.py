@@ -139,6 +139,121 @@ def pay_in_cash(db: Session, reservation_id: int, staff: Staff) -> Payment:
     return payment
 
 
+def submit_receipt(
+    db: Session,
+    reservation_id: int,
+    account_id: int,
+    *,
+    method: PaymentMethod,
+    receipt: UploadFile,
+    receipt_reference: str | None,
+    documents: list[UploadFile],
+    document_seat_ids: list[int],
+) -> Payment:
+    """
+    El pasajero sube el comprobante de su depósito o transferencia.
+
+    Si algún asiento tiene una categoría con descuento, también sube la cédula
+    o el carné de esa persona, salvo que ya lo haya subido antes. La reserva
+    pasa a revisión y deja de vencer mientras el oficinista la revisa.
+    """
+    if method == PaymentMethod.CASH:
+        raise PaymentValidationError(
+            "El efectivo solo se registra en la oficina."
+        )
+
+    reservation = load_reservation(db, reservation_id)
+
+    if reservation.buyer_account_id != account_id:
+        raise PaymentNotFoundError("Reserva no encontrada.")
+
+    ensure_payable(reservation)
+
+    if len(documents) != len(document_seat_ids):
+        raise PaymentValidationError(
+            "Cada documento debe indicar a qué asiento pertenece."
+        )
+
+    seats_by_id = {seat.seat_id: seat for seat in reservation.seats}
+    already_uploaded = {
+        document.reservation_seat_id
+        for document in db.scalars(
+            select(CategoryDocument).where(
+                CategoryDocument.reservation_seat_id.in_(
+                    [seat.id for seat in reservation.seats]
+                )
+            )
+        ).all()
+    }
+
+    documents_by_seat: dict[int, UploadFile] = {}
+    for seat_id, document in zip(document_seat_ids, documents):
+        seat = seats_by_id.get(seat_id)
+        if seat is None:
+            raise PaymentValidationError("El documento es de un asiento que no está en la reserva.")
+        if seat.passenger_category == PassengerCategory.REGULAR:
+            raise PaymentValidationError(
+                "Solo se suben documentos para asientos con categoría de descuento."
+            )
+        documents_by_seat[seat.id] = document
+
+    missing = [
+        seat
+        for seat in reservation.seats
+        if seat.passenger_category != PassengerCategory.REGULAR
+        and seat.id not in already_uploaded
+        and seat.id not in documents_by_seat
+    ]
+    if missing:
+        raise PaymentValidationError(
+            "Falta la cédula o el carné de los pasajeros con descuento."
+        )
+
+    try:
+        receipt_path = save_upload(receipt, "receipts")
+        document_paths = {
+            reservation_seat_id: save_upload(document, "documents")
+            for reservation_seat_id, document in documents_by_seat.items()
+        }
+    except InvalidUploadError as exc:
+        raise PaymentValidationError(str(exc)) from exc
+
+    payment = Payment(
+        reservation_id=reservation.id,
+        method=method,
+        amount=reservation.total,
+        status=PaymentStatus.PENDING,
+        receipt_url=receipt_path,
+        receipt_reference=receipt_reference.strip() if receipt_reference else None,
+    )
+    db.add(payment)
+    db.flush()
+
+    for reservation_seat_id, path in document_paths.items():
+        db.add(
+            CategoryDocument(
+                reservation_seat_id=reservation_seat_id,
+                payment_id=payment.id,
+                file_path=path,
+            )
+        )
+
+    reservation.status = ReservationStatus.PAYMENT_REVIEW
+
+    notify(
+        db,
+        account_id=reservation.buyer_account_id,
+        event=NotificationEvent.RECEIPT_UPLOADED,
+        title="Comprobante recibido",
+        message="Tu comprobante está en revisión. Te avisaremos cuando el oficinista lo revise.",
+        reservation_id=reservation.id,
+    )
+
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
 def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
     reservation = db.get(Reservation, payment.reservation_id)
     seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}

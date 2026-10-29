@@ -77,3 +77,39 @@ def pay_reservation_in_cash(
     except service.PaymentError as exc:
         raise_payment_error(exc)
     return service.build_payment_read(db, payment)
+
+
+@router.post(
+    "/reservations/{reservation_id}/receipt",
+    response_model=PaymentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def upload_receipt(
+    reservation_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_passenger)],
+    method: Annotated[PaymentMethod, Form()],
+    receipt: Annotated[UploadFile, File()],
+    receiptReference: Annotated[str | None, Form(max_length=100)] = None,
+    documents: Annotated[list[UploadFile] | None, File()] = None,
+    documentSeatIds: Annotated[list[int] | None, Form()] = None,
+    _: None = Depends(validate_request_origin),
+):
+    """
+    El pasajero sube el comprobante de su depósito o transferencia y,
+    si corresponde, la cédula o el carné de los pasajeros con descuento.
+    """
+    try:
+        payment = service.submit_receipt(
+            db,
+            reservation_id,
+            account.id,
+            method=method,
+            receipt=receipt,
+            receipt_reference=receiptReference,
+            documents=documents or [],
+            document_seat_ids=documentSeatIds or [],
+        )
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+    return service.build_payment_read(db, payment)
