@@ -40,5 +40,17 @@ class Settings(BaseSettings):
     # Origen permitido para solicitudes autenticadas en desarrollo
     frontend_origin: str = "http://localhost:5173"
 
+    # Archivos subidos (comprobantes y documentos). La carpeta es relativa a apps/api.
+    uploads_dir: str = "uploads"
+    max_upload_size_mb: int = Field(default=5, gt=0)
+
+    # Datos de pago de demostración que se muestran al comprar.
+    # Son ficticios: no corresponden a una cuenta real.
+    payment_bank_name: str = "Banco Pichincha"
+    payment_account_type: str = "Ahorros"
+    payment_account_number: str = "2200000000"
+    payment_account_holder: str = "Transporte Interprovincial (demostración)"
+    payment_deuna_qr: str = "DEMO-DEUNA-TRANSPORTE-INTERPROVINCIAL"
+
 
 settings = Settings()

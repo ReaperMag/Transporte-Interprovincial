@@ -120,3 +120,53 @@ Las rutas SQLite relativas se resuelven desde `apps/api`. Por defecto, la API
 usa una sola base de datos, `apps/api/transporte.db`, sin importar la carpeta
 desde la que se ejecuten la API o los scripts. Durante el desarrollo web, Vite
 reenvía `/api` a `http://127.0.0.1:8000`.
+
+## Pagos
+
+Las rutas viven bajo `/api/v1/payments` y requieren una sesión iniciada. Las
+operaciones que registran o revisan pagos también validan el origen de la
+solicitud.
+
+| Método | Ruta | Quién la usa | Operación |
+| --- | --- | --- | --- |
+| `GET` | `/methods` | Pasajero y oficinista | Datos de pago de demostración: cuenta del Banco Pichincha y QR de DeUna |
+| `POST` | `/reservations/{id}/cash` | Oficinista | Cobrar en efectivo una reserva hecha en la oficina |
+| `POST` | `/reservations/{id}/receipt` | Pasajero | Subir el comprobante y, si corresponde, la cédula o el carné |
+| `GET` | `/pending` | Oficinista | Comprobantes por revisar de su cooperativa |
+| `GET` | `/reservations/{id}` | Pasajero y oficinista | Pagos de una reserva, con el motivo del rechazo |
+| `POST` | `/{id}/approve` | Oficinista | Aprobar el comprobante |
+| `POST` | `/{id}/reject` | Oficinista | Rechazar el comprobante indicando el motivo |
+| `GET` | `/{id}/receipt` | Pasajero y oficinista | Descargar el comprobante |
+| `GET` | `/documents/{id}` | Pasajero y oficinista | Descargar la cédula o el carné |
+
+Reglas principales:
+
+- **Efectivo:** solo para reservas hechas en la oficina. El oficinista cobra y
+  la reserva queda confirmada en el mismo momento.
+- **Depósito o transferencia:** el pasajero sube el comprobante antes de que
+  termine el tiempo de su reserva. La reserva pasa a revisión y deja de vencer
+  mientras el oficinista la revisa.
+- **Documentos:** si un asiento tiene una categoría con descuento (menor de
+  edad, tercera edad o discapacidad), el pasajero sube la cédula o el carné de
+  esa persona junto con el comprobante. El chofer verifica a la persona al
+  subir al bus.
+- **Archivos:** se aceptan PDF, JPG y PNG de hasta 5 MB. Se revisa el contenido
+  real del archivo, no solo su extensión. Se guardan en `apps/api/uploads`, que
+  no se incluye en Git, y solo los ven el dueño de la reserva y el personal de
+  oficina de su cooperativa.
+- **Aprobación:** la reserva queda confirmada y lista para emitir los boletos.
+- **Rechazo:** el oficinista elige el motivo y puede agregar un comentario.
+  - `payment_not_received`: la reserva se cancela y los asientos se liberan.
+  - `receipt_unverifiable`: la reserva vuelve a esperar el pago con un nuevo
+    tiempo límite para subir otro comprobante. Solo hay una segunda
+    oportunidad; si vuelve a pasar, la reserva se cancela.
+- **Datos de pago:** son de demostración y se configuran en `apps/api/.env`.
+  No corresponden a una cuenta real.
+
+## Notificaciones
+
+Cada cambio en el pago registra un aviso para el pasajero con cuenta:
+comprobante recibido, pago aprobado o pago rechazado, con el motivo. Se
+consultan en `GET /api/v1/notifications/me` y se marcan como leídos con
+`POST /api/v1/notifications/{id}/read`. Las ventas en oficina no generan
+avisos porque el pasajero no tiene cuenta. El envío por correo queda pendiente.
