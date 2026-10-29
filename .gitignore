@@ -69,4 +69,7 @@ dist/
 dev.db
 local.db
 
+# Archivos subidos por los usuarios (comprobantes y documentos)
+apps/api/uploads/
+
 *.tsbuildinfo

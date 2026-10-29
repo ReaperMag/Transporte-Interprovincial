@@ -40,5 +40,9 @@ class Settings(BaseSettings):
     # Origen permitido para solicitudes autenticadas en desarrollo
     frontend_origin: str = "http://localhost:5173"
 
+    # Archivos subidos (comprobantes y documentos). La carpeta es relativa a apps/api.
+    uploads_dir: str = "uploads"
+    max_upload_size_mb: int = Field(default=5, gt=0)
+
 
 settings = Settings()
