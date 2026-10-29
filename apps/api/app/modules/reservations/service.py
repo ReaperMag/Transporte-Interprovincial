@@ -335,15 +335,15 @@ def get_fare_price(
     return fare.price
 
 
-def calculate_discount(base_price: Decimal, passenger: Passenger) -> Decimal:
+def calculate_discount(base_price: Decimal, category: PassengerCategory) -> Decimal:
     """
-    Aplica el descuento de ley solo si la categoría del pasajero
-    ya fue verificada con su cédula.
+    Aplica el descuento de ley según la categoría que declara quien compra.
+
+    En la oficina, el oficinista confía en lo que dice el comprador; en línea,
+    el pasajero sube su documento con el comprobante de pago. En ambos casos el chofer verifica la categoría
+    al subir al bus, y si no corresponde, el pasajero cambia el boleto en oficina.
     """
-    if (
-        passenger.category == PassengerCategory.REGULAR
-        or not passenger.category_verified
-    ):
+    if category == PassengerCategory.REGULAR:
         return Decimal("0.00")
 
     return (base_price * DISCOUNT_RATE).quantize(CENTS, rounding=ROUND_HALF_UP)
@@ -381,6 +381,7 @@ def get_or_create_passenger(
         birth_date=data.birthDate,
         phone=data.phone.strip() if data.phone else None,
         email=data.email.strip().lower() if data.email else None,
+        category=data.category,
     )
     db.add(passenger)
     db.flush()
@@ -435,7 +436,7 @@ def create_reservation(
             payload.destinationCityId,
             seat,
         )
-        discount = calculate_discount(base_price, passenger)
+        discount = calculate_discount(base_price, item.passenger.category)
         price = base_price - discount
 
         reservation_seats.append(
@@ -445,7 +446,7 @@ def create_reservation(
                 origin_city_id=payload.originCityId,
                 destination_city_id=payload.destinationCityId,
                 seat_type=seat.seat_type,
-                passenger_category=passenger.category,
+                passenger_category=item.passenger.category,
                 base_price=base_price,
                 discount_amount=discount,
                 price=price,

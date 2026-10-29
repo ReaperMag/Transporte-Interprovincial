@@ -309,29 +309,18 @@ def test_cannot_reserve_an_occupied_seat(scenario):
     assert repeated.status_code == 409
 
 
-def test_discount_applies_only_to_verified_categories(scenario):
+def test_discount_follows_the_declared_category(scenario):
     client, engine, data = scenario
 
+    # Elena ya existe como pasajera regular y sin verificar.
     with Session(engine) as db:
-        db.add_all(
-            [
-                Passenger(
-                    id_number="1755555555",
-                    first_name="Elena",
-                    last_name="Vaca",
-                    category=PassengerCategory.SENIOR,
-                    category_verified=True,
-                ),
-                Passenger(
-                    id_number="1766666666",
-                    first_name="Mario",
-                    last_name="Vaca",
-                    category=PassengerCategory.SENIOR,
-                    category_verified=False,
-                ),
-            ]
-        )
+        db.add(Passenger(id_number="1755555555", first_name="Elena", last_name="Vaca"))
         db.commit()
+
+    senior = passenger("1755555555", "Elena", "Vaca")
+    senior["category"] = "senior"
+    child = passenger("1766666666", "Mateo", "Vaca")
+    child["category"] = "minor"
 
     login(client, "ana@example.com")
     response = client.post(
@@ -340,20 +329,43 @@ def test_discount_applies_only_to_verified_categories(scenario):
             data,
             "quito",
             "loja",
-            [
-                (3, passenger("1755555555", "Elena", "Vaca")),
-                (4, passenger("1766666666", "Mario", "Vaca")),
-            ],
+            [(1, senior), (3, child), (4, passenger("1777777770", "Rosa", "Vaca"))],
         ),
         headers=ORIGIN,
     )
 
     assert response.status_code == 201, response.text
-    prices = {seat["seatNumber"]: seat for seat in response.json()["seats"]}
-    assert Decimal(prices[3]["discountAmount"]) == Decimal("8.00")
-    assert Decimal(prices[3]["price"]) == Decimal("8.00")
-    assert Decimal(prices[4]["discountAmount"]) == Decimal("0.00")
-    assert Decimal(response.json()["total"]) == Decimal("24.00")
+    seats = {seat["seatNumber"]: seat for seat in response.json()["seats"]}
+
+    # Asiento 1 VIP: 18.00 con 50 % de descuento.
+    assert seats[1]["passengerCategory"] == "senior"
+    assert Decimal(seats[1]["discountAmount"]) == Decimal("9.00")
+    assert Decimal(seats[1]["price"]) == Decimal("9.00")
+    # Asiento 3 normal: 16.00 con 50 % de descuento.
+    assert seats[3]["passengerCategory"] == "minor"
+    assert Decimal(seats[3]["price"]) == Decimal("8.00")
+    # Sin categoría declarada se cobra la tarifa completa.
+    assert seats[4]["passengerCategory"] == "regular"
+    assert Decimal(seats[4]["discountAmount"]) == Decimal("0.00")
+    assert Decimal(response.json()["total"]) == Decimal("33.00")
+
+
+def test_clerk_applies_the_category_the_buyer_declares(scenario):
+    client, _, data = scenario
+    login(client, "oficina@andina.ec")
+
+    person = passenger("1788888880", "Luz", "Mora")
+    person["category"] = "disability"
+    response = client.post(
+        "/api/v1/reservations/office",
+        json=reservation_payload(data, "quito", "loja", [(4, person)]),
+        headers=ORIGIN,
+    )
+
+    assert response.status_code == 201, response.text
+    seat = response.json()["seats"][0]
+    assert seat["passengerCategory"] == "disability"
+    assert Decimal(seat["price"]) == Decimal("8.00")
 
 
 def test_expired_reservation_releases_its_seats(scenario):
