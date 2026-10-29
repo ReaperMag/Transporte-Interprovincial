@@ -148,3 +148,36 @@ def get_ticket_qr(
         media_type="image/png",
         headers={"Cache-Control": "private, no-store"},
     )
+
+
+@router.post(
+    "/{ticket_id}/change",
+    response_model=TicketChangeResult,
+)
+def change_ticket(
+    ticket_id: int,
+    payload: TicketChange,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    _: None = Depends(validate_request_origin),
+):
+    """
+    El oficinista cambia la categoría o el asiento de un boleto.
+    Se cancela el anterior, se emite uno nuevo y se cobra la diferencia.
+    """
+    try:
+        previous, new, charged = service.change_ticket(
+            db,
+            ticket_id,
+            staff,
+            payload.category,
+            payload.seatId,
+        )
+    except service.TicketError as exc:
+        raise_ticket_error(exc)
+
+    return TicketChangeResult(
+        previousTicket=service.build_ticket_read(db, previous),
+        newTicket=service.build_ticket_read(db, new),
+        amountCharged=charged,
+    )

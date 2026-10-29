@@ -204,3 +204,120 @@ def list_reservation_tickets(db: Session, reservation: Reservation) -> list[Tick
             .order_by(Ticket.id)
         ).all()
     )
+
+
+def change_ticket(
+    db: Session,
+    ticket_id: int,
+    staff: Staff,
+    category: PassengerCategory,
+    new_seat_id: int | None,
+) -> tuple[Ticket, Ticket, Decimal]:
+    """
+    Cambia un boleto en la oficina, por ejemplo cuando el chofer detecta
+    que la categoría declarada no corresponde o el pasajero quiere otro asiento.
+
+    El boleto anterior se cancela y se emite uno nuevo con otro código.
+    Si el nuevo cuesta más, se registra el cobro de la diferencia en efectivo;
+    si cuesta menos, no hay devolución.
+    """
+    ticket = get_ticket(db, ticket_id)
+    trip = db.get(Trip, ticket.trip_id)
+
+    if trip.cooperative_id != staff.cooperative_id:
+        raise TicketNotFoundError("Boleto no encontrado.")
+
+    route = db.get(Route, db.get(Frequency, trip.frequency_id).route_id)
+    if get_ticket_validity(ticket, trip, route) != TicketValidity.VALID:
+        raise TicketConflictError("Solo se pueden cambiar boletos vigentes.")
+
+    reservation = get_ticket_reservation(db, ticket)
+    if reservation is None:
+        raise TicketValidationError("Solo se pueden cambiar boletos emitidos desde una reserva.")
+
+    reservation_seat = db.get(ReservationSeat, ticket.reservation_seat_id)
+    seat = db.get(TemplateSeat, ticket.seat_id)
+
+    if new_seat_id is not None and new_seat_id != seat.id:
+        bus = db.get(Bus, trip.bus_id)
+        new_seat = db.get(TemplateSeat, new_seat_id)
+        if new_seat is None or new_seat.template_id != bus.template_id:
+            raise TicketValidationError("El asiento no pertenece al bus de este viaje.")
+
+        city_order = get_route_city_order(route)
+        segment = (
+            city_order.index(ticket.origin_city_id),
+            city_order.index(ticket.destination_city_id),
+        )
+        if new_seat.id in get_occupied_seat_ids(db, trip, segment):
+            raise TicketConflictError(f"El asiento {new_seat.number} ya está ocupado.")
+        seat = new_seat
+
+    base_price = get_fare_price(
+        db,
+        route.id,
+        ticket.origin_city_id,
+        ticket.destination_city_id,
+        seat,
+    )
+    discount = calculate_discount(base_price, category)
+    new_price = base_price - discount
+    amount_charged = max(new_price - ticket.price, Decimal("0.00"))
+
+    # El boleto anterior queda cancelado y libera su vínculo con el asiento reservado.
+    ticket.status = TicketStatus.CANCELLED
+    ticket.reservation_seat_id = None
+    db.flush()
+
+    reservation_seat.seat_id = seat.id
+    reservation_seat.seat_type = seat.seat_type
+    reservation_seat.passenger_category = category
+    reservation_seat.base_price = base_price
+    reservation_seat.discount_amount = discount
+    reservation_seat.price = new_price
+
+    new_ticket = Ticket(
+        code=generate_ticket_code(),
+        trip_id=trip.id,
+        seat_id=seat.id,
+        passenger_id=ticket.passenger_id,
+        reservation_seat_id=reservation_seat.id,
+        channel=SaleChannel.OFFICE,
+        origin_city_id=ticket.origin_city_id,
+        destination_city_id=ticket.destination_city_id,
+        passenger_category=category,
+        price=new_price,
+        status=TicketStatus.ISSUED,
+        sold_by_id=staff.id,
+    )
+    db.add(new_ticket)
+
+    if amount_charged > 0:
+        db.add(
+            Payment(
+                reservation_id=reservation.id,
+                method=PaymentMethod.CASH,
+                amount=amount_charged,
+                status=PaymentStatus.APPROVED,
+                reviewed_by_id=staff.id,
+                reviewed_at=now_local(),
+            )
+        )
+        reservation.total = reservation.total + amount_charged
+
+    notify(
+        db,
+        account_id=reservation.buyer_account_id,
+        event=NotificationEvent.TICKET_ISSUED,
+        title="Boleto cambiado",
+        message=(
+            f"Se cambió el boleto del asiento {db.get(TemplateSeat, ticket.seat_id).number}. "
+            "El boleto anterior ya no es válido; usa el nuevo de Mis boletos."
+        ),
+        reservation_id=reservation.id,
+    )
+
+    db.commit()
+    db.refresh(ticket)
+    db.refresh(new_ticket)
+    return ticket, new_ticket, amount_charged
