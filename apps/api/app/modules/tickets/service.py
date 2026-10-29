@@ -91,3 +91,63 @@ def issue_tickets(db: Session, reservation: Reservation) -> list[Ticket]:
     )
 
     return tickets
+
+
+def get_ticket_validity(ticket: Ticket, trip: Trip, route: Route) -> TicketValidity:
+    """
+    Indica si el boleto todavía sirve para subir al bus.
+    Deja de servir cuando se usa, se cancela o el viaje termina.
+    """
+    if ticket.status == TicketStatus.CANCELLED:
+        return TicketValidity.CANCELLED
+
+    if ticket.status == TicketStatus.USED:
+        return TicketValidity.USED
+
+    if trip.status in (TripStatus.FINISHED, TripStatus.CANCELLED):
+        return TicketValidity.EXPIRED
+
+    duration = (
+        timedelta(minutes=route.duration_minutes)
+        if route.duration_minutes
+        else DEFAULT_TRIP_DURATION
+    )
+    if now_local() > as_local(trip.departure_at) + duration:
+        return TicketValidity.EXPIRED
+
+    return TicketValidity.VALID
+
+
+def build_ticket_read(db: Session, ticket: Ticket) -> TicketRead:
+    trip = db.get(Trip, ticket.trip_id)
+    route = db.get(Route, db.get(Frequency, trip.frequency_id).route_id)
+    seat = db.get(TemplateSeat, ticket.seat_id)
+    passenger = db.get(Passenger, ticket.passenger_id)
+    reservation_seat = (
+        db.get(ReservationSeat, ticket.reservation_seat_id)
+        if ticket.reservation_seat_id
+        else None
+    )
+
+    return TicketRead(
+        id=ticket.id,
+        code=ticket.code,
+        status=ticket.status,
+        validity=get_ticket_validity(ticket, trip, route),
+        channel=ticket.channel,
+        reservationId=reservation_seat.reservation_id if reservation_seat else None,
+        tripId=trip.id,
+        cooperativeName=db.get(Cooperative, trip.cooperative_id).name,
+        busNumber=db.get(Bus, trip.bus_id).number,
+        departureAt=trip.departure_at,
+        originCityName=db.get(City, ticket.origin_city_id).name,
+        destinationCityName=db.get(City, ticket.destination_city_id).name,
+        seatId=seat.id,
+        seatNumber=seat.number,
+        seatType=seat.seat_type,
+        passengerName=f"{passenger.first_name} {passenger.last_name}",
+        passengerIdNumber=passenger.id_number,
+        passengerCategory=ticket.passenger_category,
+        price=ticket.price,
+        issuedAt=ticket.created_at,
+    )
