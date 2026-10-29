@@ -183,3 +183,28 @@ def approve_payment(
     except service.PaymentError as exc:
         raise_payment_error(exc)
     return service.build_payment_read(db, payment)
+
+
+@router.post(
+    "/{payment_id}/reject",
+    response_model=PaymentRead,
+)
+def reject_payment(
+    payment_id: int,
+    payload: PaymentRejection,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    _: None = Depends(validate_request_origin),
+):
+    """El oficinista rechaza el comprobante indicando el motivo."""
+    try:
+        payment = service.reject_payment(
+            db,
+            payment_id,
+            staff,
+            payload.reason,
+            payload.comment,
+        )
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+    return service.build_payment_read(db, payment)

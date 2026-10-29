@@ -329,6 +329,94 @@ def approve_payment(db: Session, payment_id: int, staff: Staff) -> Payment:
     return payment
 
 
+REJECTION_MESSAGES = {
+    RejectionReason.PAYMENT_NOT_RECEIVED: (
+        "No se recibió el pago. Los asientos se liberaron; vuelve a hacer la reserva."
+    ),
+    RejectionReason.RECEIPT_UNVERIFIABLE: (
+        "No se pudo verificar la transferencia. Vuelve a subir el comprobante."
+    ),
+}
+
+SECOND_REJECTION_MESSAGE = (
+    "No se pudo verificar el comprobante por segunda vez. "
+    "Los asientos se liberaron; vuelve a hacer la reserva."
+)
+
+
+def count_previous_rejections(db: Session, reservation_id: int, payment_id: int) -> int:
+    return db.scalar(
+        select(func.count())
+        .select_from(Payment)
+        .where(
+            Payment.reservation_id == reservation_id,
+            Payment.status == PaymentStatus.REJECTED,
+            Payment.id != payment_id,
+        )
+    ) or 0
+
+
+def reject_payment(
+    db: Session,
+    payment_id: int,
+    staff: Staff,
+    reason: RejectionReason,
+    comment: str | None,
+) -> Payment:
+    """
+    El oficinista rechaza el comprobante.
+
+    - Pago no recibido: la reserva se cancela y los asientos se liberan.
+    - Comprobante no verificable: la reserva vuelve a esperar el pago con
+      un nuevo tiempo límite. Solo hay una segunda oportunidad; si vuelve
+      a pasar, la reserva se cancela.
+    """
+    payment = get_pending_payment_for_staff(db, payment_id, staff)
+    reservation = db.get(Reservation, payment.reservation_id)
+
+    gives_new_chance = (
+        reason == RejectionReason.RECEIPT_UNVERIFIABLE
+        and count_previous_rejections(db, reservation.id, payment.id) == 0
+    )
+
+    if gives_new_chance:
+        message = REJECTION_MESSAGES[reason]
+        cooperative = db.get(Cooperative, get_trip_cooperative_id(db, reservation))
+        reservation.status = ReservationStatus.PENDING_PAYMENT
+        reservation.expires_at = now_local() + timedelta(
+            minutes=cooperative.reservation_timeout_minutes
+        )
+    else:
+        message = (
+            REJECTION_MESSAGES[reason]
+            if reason == RejectionReason.PAYMENT_NOT_RECEIVED
+            else SECOND_REJECTION_MESSAGE
+        )
+        reservation.status = ReservationStatus.CANCELLED
+        reservation.expires_at = None
+
+    if comment and comment.strip():
+        message = f"{message} Comentario del oficinista: {comment.strip()}"
+
+    payment.status = PaymentStatus.REJECTED
+    payment.reviewed_by_id = staff.id
+    payment.reviewed_at = now_local()
+    payment.rejection_reason = message[:255]
+
+    notify(
+        db,
+        account_id=reservation.buyer_account_id,
+        event=NotificationEvent.PAYMENT_REJECTED,
+        title="Pago rechazado",
+        message=message,
+        reservation_id=reservation.id,
+    )
+
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
 def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
     reservation = db.get(Reservation, payment.reservation_id)
     seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}
