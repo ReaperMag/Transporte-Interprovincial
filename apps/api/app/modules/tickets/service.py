@@ -151,3 +151,56 @@ def build_ticket_read(db: Session, ticket: Ticket) -> TicketRead:
         price=ticket.price,
         issuedAt=ticket.created_at,
     )
+
+
+def get_ticket_reservation(db: Session, ticket: Ticket) -> Reservation | None:
+    if ticket.reservation_seat_id is None:
+        return None
+    seat = db.get(ReservationSeat, ticket.reservation_seat_id)
+    return db.get(Reservation, seat.reservation_id)
+
+
+def get_ticket(db: Session, ticket_id: int) -> Ticket:
+    ticket = db.get(Ticket, ticket_id)
+    if ticket is None:
+        raise TicketNotFoundError("Boleto no encontrado.")
+    return ticket
+
+
+def list_account_tickets(db: Session, account_id: int) -> list[Ticket]:
+    """
+    Historial de boletos de un pasajero con cuenta: los que compró, incluidos
+    los de sus acompañantes, y los emitidos a su nombre en oficina o como
+    venta extra antes de que se registrara.
+    """
+    bought = (
+        select(ReservationSeat.id)
+        .join(Reservation, ReservationSeat.reservation_id == Reservation.id)
+        .where(Reservation.buyer_account_id == account_id)
+    )
+    own_passenger = select(Passenger.id).where(Passenger.account_id == account_id)
+
+    return list(
+        db.scalars(
+            select(Ticket)
+            .join(Trip, Ticket.trip_id == Trip.id)
+            .where(
+                or_(
+                    Ticket.reservation_seat_id.in_(bought),
+                    Ticket.passenger_id.in_(own_passenger),
+                )
+            )
+            .order_by(Trip.departure_at.desc(), Ticket.id)
+        ).all()
+    )
+
+
+def list_reservation_tickets(db: Session, reservation: Reservation) -> list[Ticket]:
+    seat_ids = [seat.id for seat in reservation.seats]
+    return list(
+        db.scalars(
+            select(Ticket)
+            .where(Ticket.reservation_seat_id.in_(seat_ids))
+            .order_by(Ticket.id)
+        ).all()
+    )
