@@ -39,12 +39,6 @@ cargas. Los colores deben usar el formato hexadecimal `#RRGGBB` y los enlaces,
 HTTP(S). Al iniciar, la API añade de forma compatible la columna de descripción
 a bases de datos existentes.
 
-La cooperativa administra sus grupos mediante `GET`, `POST`, `PATCH` y `DELETE`
-en `/api/v1/cooperatives/me/groups`. La lista incluye `busCount`, y la API
-asigna cada grupo exclusivamente a la cooperativa autenticada. Los nombres se
-normalizan y deben ser únicos por cooperativa ignorando mayúsculas y espacios.
-No se eliminan grupos con buses u hojas de ruta asociados.
-
 Al crear una cooperativa desde el panel, el administrador también registra el
 correo y la contraseña inicial de su cuenta de acceso. La API guarda la
 contraseña como hash y vincula la cuenta de tipo `cooperative` al registro de la
@@ -75,15 +69,28 @@ Reglas principales:
   a Loja. En una ruta directa solo se vende desde la ciudad de origen.
 - Cada asiento lleva los datos del pasajero que lo ocupa. Si la cédula ya está
   registrada se reutiliza; si no, se registra como pasajero sin cuenta.
-- El precio sale de la tarifa del tramo según el tipo de asiento. Los menores
-  de edad, la tercera edad y las personas con discapacidad pagan la mitad, solo
-  si su categoría ya fue verificada.
+- El precio sale de la tarifa del tramo según el tipo de asiento. Quien compra
+  declara la categoría de cada pasajero; los menores de edad, la tercera edad y
+  las personas con discapacidad pagan la mitad. En la oficina, el oficinista
+  confía en lo que declara el comprador. El chofer verifica la categoría al
+  subir al bus; si no corresponde, el pasajero cambia el boleto en oficina y
+  paga la diferencia.
 - La reserva queda pendiente de pago y vence según el tiempo configurado por la
   cooperativa (`reservation_timeout_minutes`, 5 minutos por defecto). Al
   vencer, sus asientos se liberan.
 - El pasajero solo ve y cancela sus propias reservas. El personal de oficina
   (oficinista o administrador de la cooperativa) solo vende y gestiona viajes
   de su cooperativa.
+
+Pendiente para otras ramas:
+
+- **Pagos:** en la compra en línea, el pasajero debe subir el comprobante de
+  pago y, si declaró una categoría con descuento, su cédula o carné. Por ahora
+  la reserva acepta la categoría declarada sin pedir el documento.
+- **Boletos:** el cambio de tipo de boleto en oficina, con el cobro de la
+  diferencia, cuando el chofer detecta que la categoría no corresponde.
+- **Chofer:** la verificación al subir al bus. La categoría declarada queda
+  guardada en cada asiento reservado para cuando exista ese módulo.
 
 ## Acceso administrativo
 

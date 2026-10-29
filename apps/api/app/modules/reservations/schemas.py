@@ -38,6 +38,8 @@ class ReservationPassengerInput(BaseModel):
     birthDate: date | None = None
     phone: str | None = Field(default=None, max_length=20)
     email: str | None = Field(default=None, max_length=150)
+    # Categoría que declara quien compra. El chofer la verifica al subir al bus.
+    category: PassengerCategory = PassengerCategory.REGULAR
 
     @field_validator("idNumber", "firstName", "lastName")
     @classmethod
