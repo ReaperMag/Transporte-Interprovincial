@@ -8,6 +8,7 @@ from app.modules.cooperatives.router import (
     cooperative_router,
     router as cooperatives_router,
 )
+from app.modules.notifications.router import router as notifications_router
 from app.modules.passengers.router import router as passengers_router
 from app.modules.reservations.router import router as reservations_router
 from app.modules.sales.router import router as payments_router
@@ -20,6 +21,7 @@ router.include_router(auth_router)
 router.include_router(cooperative_bus_groups_router)
 router.include_router(cooperative_router)
 router.include_router(cooperatives_router)
+router.include_router(notifications_router)
 router.include_router(passengers_router)
 router.include_router(payments_router)
 router.include_router(reservations_router)
