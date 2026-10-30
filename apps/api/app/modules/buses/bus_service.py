@@ -9,6 +9,10 @@ class DuplicateBusPlateError(Exception):
     pass
 
 
+class DuplicateBusNumberError(Exception):
+    pass
+
+
 class BusNotFoundError(Exception):
     pass
 
@@ -37,10 +41,29 @@ def _plate_exists(
     return db.scalar(statement.limit(1)) is not None
 
 
+def _number_exists(
+    db: Session,
+    cooperative_id: int,
+    number: str,
+    *,
+    excluding_bus_id: int | None = None,
+) -> bool:
+    from sqlalchemy import select
+
+    statement = select(Bus.id).where(
+        Bus.cooperative_id == cooperative_id,
+        Bus.number == number,
+    )
+    if excluding_bus_id is not None:
+        statement = statement.where(Bus.id != excluding_bus_id)
+    return db.scalar(statement.limit(1)) is not None
+
+
 def create_bus(
     db: Session,
     cooperative_id: int,
     *,
+    number: str,
     plate: str,
     brand: str,
     model: str,
@@ -52,10 +75,13 @@ def create_bus(
     group_id: int,
 ) -> Bus:
     _validate_group(db, cooperative_id, group_id)
+    if _number_exists(db, cooperative_id, number):
+        raise DuplicateBusNumberError
     if _plate_exists(db, plate):
         raise DuplicateBusPlateError
     bus = Bus(
         cooperative_id=cooperative_id,
+        number=number,
         plate=plate,
         chassis_brand=brand,
         body_brand=brand,
@@ -74,6 +100,8 @@ def create_bus(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
+        if _number_exists(db, cooperative_id, number):
+            raise DuplicateBusNumberError from exc
         if _plate_exists(db, plate):
             raise DuplicateBusPlateError from exc
         raise
@@ -92,6 +120,10 @@ def update_bus(
         raise BusNotFoundError
     if "group_id" in changes and changes["group_id"] is not None:
         _validate_group(db, cooperative_id, int(changes["group_id"]))
+    if "number" in changes and changes["number"] != bus.number and _number_exists(
+        db, cooperative_id, str(changes["number"]), excluding_bus_id=bus_id
+    ):
+        raise DuplicateBusNumberError
     if "plate" in changes and changes["plate"] != bus.plate and _plate_exists(
         db, str(changes["plate"]), excluding_bus_id=bus_id
     ):
@@ -104,6 +136,10 @@ def update_bus(
         db.commit()
     except IntegrityError as exc:
         db.rollback()
+        if "number" in changes and _number_exists(
+            db, cooperative_id, str(changes["number"]), excluding_bus_id=bus_id
+        ):
+            raise DuplicateBusNumberError from exc
         if "plate" in changes and _plate_exists(
             db, str(changes["plate"]), excluding_bus_id=bus_id
         ):

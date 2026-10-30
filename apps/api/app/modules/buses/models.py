@@ -83,7 +83,7 @@ class Bus(TenantModel):
     __tablename__ = "buses"
     __table_args__ = (UniqueConstraint("cooperative_id", "number"),)
 
-    number: Mapped[str | None] = mapped_column(String(10), nullable=True)  # Número de disco
+    number: Mapped[str] = mapped_column(String(10), nullable=False)  # Número de disco
     plate: Mapped[str] = mapped_column(String(10), unique=True)
     chassis_brand: Mapped[str] = mapped_column(String(50))
     chassis_number: Mapped[str | None] = mapped_column(String(50))

@@ -70,9 +70,11 @@ class BusGroupRead(BusGroupSchema):
 
 BusText = Annotated[str, StringConstraints(min_length=1, max_length=50)]
 BusPlate = Annotated[str, StringConstraints(min_length=3, max_length=10)]
+BusNumber = Annotated[str, StringConstraints(min_length=1, max_length=10)]
 
 
 class BusCreate(BusGroupSchema):
+    number: BusNumber
     plate: BusPlate
     brand: BusText
     model: BusText
@@ -101,8 +103,17 @@ class BusCreate(BusGroupSchema):
             raise ValueError("La placa es obligatoria.")
         return normalized
 
+    @field_validator("number")
+    @classmethod
+    def normalize_number(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("El número de disco es obligatorio.")
+        return normalized
+
 
 class BusUpdate(BusGroupSchema):
+    number: BusNumber | None = None
     plate: BusPlate | None = None
     brand: BusText | None = None
     model: BusText | None = None
@@ -132,9 +143,20 @@ class BusUpdate(BusGroupSchema):
     def normalize_update_plate(cls, value: str | None) -> str | None:
         return " ".join(value.split()).upper() if value is not None else None
 
+    @field_validator("number")
+    @classmethod
+    def normalize_update_number(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("El número de disco no puede estar vacío.")
+        return normalized
+
 
 class BusRead(BusGroupSchema):
     id: int
+    number: str
     plate: str
     brand: str
     model: str

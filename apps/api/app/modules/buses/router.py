@@ -53,6 +53,7 @@ def _bus_read(bus) -> BusRead:
         )
     return BusRead(
         id=bus.id,
+        number=bus.number,
         plate=bus.plate,
         brand=bus.brand,
         model=bus.model,
@@ -105,6 +106,11 @@ def create_cooperative_bus(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ya existe un bus con esa placa.",
         ) from exc
+    except bus_service.DuplicateBusNumberError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe un bus con ese número de disco en esta cooperativa.",
+        ) from exc
     except bus_service.BusGroupNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -137,6 +143,11 @@ def edit_cooperative_bus(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ya existe un bus con esa placa.",
+        ) from exc
+    except bus_service.DuplicateBusNumberError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe un bus con ese número de disco en esta cooperativa.",
         ) from exc
     except bus_service.BusGroupNotFoundError as exc:
         raise HTTPException(
