@@ -3,6 +3,7 @@ export type BusStatus = 'operativo' | 'mantenimiento' | 'fuera_de_servicio';
 
 export interface CooperativeBus {
   id: number;
+  number: string;
   plate: string;
   brand: string;
   model: string;
@@ -16,6 +17,7 @@ export interface CooperativeBus {
 }
 
 export interface BusInput {
+  number: string;
   plate: string;
   brand: string;
   model: string;

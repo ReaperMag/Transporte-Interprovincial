@@ -14,6 +14,7 @@ import {
 import './CooperativeBusesPage.css';
 
 const initialForm: BusInput = {
+  number: '',
   plate: '',
   brand: '',
   model: '',
@@ -97,7 +98,7 @@ export function CooperativeBusesPage() {
 
   const edit = (bus: CooperativeBus) => {
     setEditingId(bus.id);
-    setForm({ plate: bus.plate, brand: bus.brand, model: bus.model, year: bus.year, capacity: bus.capacity, floors: 2, origin: bus.origin, status: bus.status, groupId: bus.groupId });
+    setForm({ number: bus.number, plate: bus.plate, brand: bus.brand, model: bus.model, year: bus.year, capacity: bus.capacity, floors: 2, origin: bus.origin, status: bus.status, groupId: bus.groupId });
     setError(null);
   };
 
@@ -119,6 +120,7 @@ export function CooperativeBusesPage() {
       {success && <p className="cooperative-buses__message cooperative-buses__message--success" role="status">{success}</p>}
       <form className="cooperative-buses__form" onSubmit={(event) => void submit(event)}>
         <h3>{editingId === null ? 'Registrar bus' : 'Editar bus'}</h3>
+        <label>Número de disco<input required maxLength={10} value={form.number} onChange={(event) => change('number', event.target.value)} /></label>
         <label>Placa<input required maxLength={10} value={form.plate} onChange={(event) => change('plate', event.target.value)} /></label>
         <label>Marca<input required maxLength={50} value={form.brand} onChange={(event) => change('brand', event.target.value)} /></label>
         <label>Modelo<input required maxLength={50} value={form.model} onChange={(event) => change('model', event.target.value)} /></label>
@@ -132,7 +134,7 @@ export function CooperativeBusesPage() {
         {editingId !== null && <button type="button" onClick={() => { setEditingId(null); setForm(initialForm); }}>Cancelar</button>}
       </form>
       <div className="cooperative-buses__filters"><label>Buscar por placa<input value={plateFilter} onChange={(event) => setPlateFilter(event.target.value)} /></label><label>Grupo<select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)}><option value="">Todos</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><label>Estado<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as BusStatus | '')}><option value="">Todos</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-      {loading ? <p role="status">Cargando buses...</p> : buses.length === 0 ? <p>No hay buses que coincidan con los filtros.</p> : <div className="cooperative-buses__table-wrap"><table><thead><tr><th>Placa</th><th>Marca / modelo</th><th>Capacidad</th><th>Procedencia</th><th>Grupo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{buses.map((bus) => <tr key={bus.id}><td>{bus.plate}</td><td>{bus.brand} {bus.model}</td><td>{bus.capacity}</td><td>{bus.origin}</td><td>{bus.groupName}</td><td><select aria-label={`Estado de ${bus.plate}`} value={bus.status} onChange={(event) => void updateCooperativeBusStatus(bus.id, event.target.value as BusStatus).then(load).catch((updateError) => setError(updateError instanceof Error ? updateError.message : 'No fue posible cambiar el estado.'))}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><button type="button" onClick={() => edit(bus)}>Editar</button><button type="button" onClick={() => void remove(bus)}>Eliminar</button></td></tr>)}</tbody></table></div>}
+      {loading ? <p role="status">Cargando buses...</p> : buses.length === 0 ? <p>No hay buses que coincidan con los filtros.</p> : <div className="cooperative-buses__table-wrap"><table><thead><tr><th>Número de disco</th><th>Placa</th><th>Marca / modelo</th><th>Capacidad</th><th>Procedencia</th><th>Grupo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{buses.map((bus) => <tr key={bus.id}><td>{bus.number}</td><td>{bus.plate}</td><td>{bus.brand} {bus.model}</td><td>{bus.capacity}</td><td>{bus.origin}</td><td>{bus.groupName}</td><td><select aria-label={`Estado de ${bus.plate}`} value={bus.status} onChange={(event) => void updateCooperativeBusStatus(bus.id, event.target.value as BusStatus).then(load).catch((updateError) => setError(updateError instanceof Error ? updateError.message : 'No fue posible cambiar el estado.'))}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><button type="button" onClick={() => edit(bus)}>Editar</button><button type="button" onClick={() => void remove(bus)}>Eliminar</button></td></tr>)}</tbody></table></div>}
     </section>
   );
 }
