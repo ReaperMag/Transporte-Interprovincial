@@ -123,7 +123,7 @@ def delete_bus(db: Session, cooperative_id: int, bus_id: int) -> None:
     bus = repository.get_bus(db, cooperative_id, bus_id)
     if bus is None:
         raise BusNotFoundError
-    if repository.has_bus_relations(db, bus_id):
+    if not repository.can_delete_bus(db, bus_id):
         raise BusInUseError
     db.delete(bus)
     try:

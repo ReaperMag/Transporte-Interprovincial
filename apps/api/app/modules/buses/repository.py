@@ -100,6 +100,11 @@ def has_bus_relations(db: Session, bus_id: int) -> bool:
             .where(route_sheet_standby_buses.c.bus_id == bus_id)
             .limit(1)
         )
+
+
+def can_delete_bus(db: Session, bus_id: int) -> bool:
+        """Keep buses referenced by historical trips or operational assignments."""
+        return not has_bus_relations(db, bus_id)
         is not None
         or db.scalar(select(Staff.id).where(Staff.assigned_bus_id == bus_id).limit(1))
         is not None
