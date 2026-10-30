@@ -13,6 +13,7 @@ from app.modules.buses.schemas import (
     BusGroupRead,
     BusGroupUpdate,
     BusRead,
+    BusStatusUpdate,
     BusUpdate,
 )
 
@@ -142,6 +143,23 @@ def edit_cooperative_bus(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="El grupo de buses no existe en tu cooperativa.",
         ) from exc
+    return _bus_read(bus)
+
+
+@cooperative_buses_router.patch("/{bus_id}/status", response_model=BusRead)
+def change_cooperative_bus_status(
+    bus_id: int,
+    payload: BusStatusUpdate,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> BusRead:
+    try:
+        bus = bus_service.update_bus_status(
+            db, _require_cooperative_id(account), bus_id, payload.status
+        )
+    except bus_service.BusNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bus no encontrado.") from exc
     return _bus_read(bus)
 
 

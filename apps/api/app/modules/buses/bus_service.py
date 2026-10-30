@@ -57,6 +57,8 @@ def create_bus(
     bus = Bus(
         cooperative_id=cooperative_id,
         plate=plate,
+        chassis_brand=brand,
+        body_brand=brand,
         brand=brand,
         model=model,
         year=year,
@@ -109,6 +111,12 @@ def update_bus(
         raise
     db.refresh(bus)
     return bus
+
+
+def update_bus_status(
+    db: Session, cooperative_id: int, bus_id: int, status: BusStatus
+) -> Bus:
+    return update_bus(db, cooperative_id, bus_id, {"status": status})
 
 
 def delete_bus(db: Session, cooperative_id: int, bus_id: int) -> None:

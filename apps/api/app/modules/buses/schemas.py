@@ -145,3 +145,7 @@ class BusRead(BusGroupSchema):
     status: BusStatus
     group_id: int = Field(serialization_alias="groupId")
     group_name: str = Field(serialization_alias="groupName")
+
+
+class BusStatusUpdate(BusGroupSchema):
+    status: BusStatus
