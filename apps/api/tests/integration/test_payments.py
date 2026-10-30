@@ -226,7 +226,7 @@ def test_clerk_approves_and_the_passenger_is_notified(payments):
 
     login(client, "ana@example.com")
     events = [item["event"] for item in client.get("/api/v1/notifications/me").json()]
-    assert events == ["payment_approved", "receipt_uploaded"]
+    assert events == ["ticket_issued", "payment_approved", "receipt_uploaded"]
 
 
 def test_payment_not_received_cancels_and_releases_seats(payments):
