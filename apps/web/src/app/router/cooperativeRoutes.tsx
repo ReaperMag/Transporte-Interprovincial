@@ -4,6 +4,7 @@ import { CooperativeDashboardPage } from '../../features/cooperatives/pages/Coop
 import { CooperativeBusGroupsPage } from '../../features/cooperatives/pages/CooperativeBusGroupsPage';
 import { CooperativeConfigurationPage } from '../../features/cooperatives/pages/CooperativeConfigurationPage';
 import { CooperativeLayout } from '../../features/cooperatives/components/CooperativeLayout';
+import { CooperativeBusesPage } from '../../features/cooperatives/pages/CooperativeBusesPage';
 
 export const cooperativeRoutes = (
   <Route
@@ -18,5 +19,6 @@ export const cooperativeRoutes = (
     <Route path="panel" element={<CooperativeDashboardPage />} />
     <Route path="configuracion" element={<CooperativeConfigurationPage />} />
     <Route path="grupos" element={<CooperativeBusGroupsPage />} />
+    <Route path="buses" element={<CooperativeBusesPage />} />
   </Route>
 );
