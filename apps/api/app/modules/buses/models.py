@@ -12,6 +12,17 @@ class SeatType(enum.StrEnum):
     VIP = "vip"
 
 
+class BusOrigin(enum.StrEnum):
+    NATIONAL = "nacional"
+    IMPORTED = "importado"
+
+
+class BusStatus(enum.StrEnum):
+    OPERATIONAL = "operativo"
+    MAINTENANCE = "mantenimiento"
+    OUT_OF_SERVICE = "fuera_de_servicio"
+
+
 class BusTemplate(TenantModel):
     """Plantilla de estructura del bus: pisos, baño y distribución de asientos."""
 
@@ -72,16 +83,28 @@ class Bus(TenantModel):
     __tablename__ = "buses"
     __table_args__ = (UniqueConstraint("cooperative_id", "number"),)
 
-    number: Mapped[str] = mapped_column(String(10))  # Número de disco
+    number: Mapped[str | None] = mapped_column(String(10), nullable=True)  # Número de disco
     plate: Mapped[str] = mapped_column(String(10), unique=True)
     chassis_brand: Mapped[str] = mapped_column(String(50))
     chassis_number: Mapped[str | None] = mapped_column(String(50))
     body_brand: Mapped[str] = mapped_column(String(50))  # Carrocería
     year: Mapped[int | None]
     photo_url: Mapped[str | None] = mapped_column(String(500))
-    template_id: Mapped[int] = mapped_column(ForeignKey("bus_templates.id", ondelete="RESTRICT"))
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bus_templates.id", ondelete="RESTRICT"), nullable=True
+    )
     group_id: Mapped[int | None] = mapped_column(ForeignKey("bus_groups.id", ondelete="SET NULL"))
     is_active: Mapped[bool] = mapped_column(default=True)
+    brand: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    passenger_capacity: Mapped[int | None] = mapped_column(nullable=True)
+    floors: Mapped[int] = mapped_column(default=2, server_default="2")
+    origin: Mapped[BusOrigin | None] = mapped_column(
+        str_enum(BusOrigin), nullable=True
+    )
+    status: Mapped[BusStatus] = mapped_column(
+        str_enum(BusStatus), default=BusStatus.OPERATIONAL, server_default="operativo"
+    )
 
     template: Mapped[BusTemplate] = relationship()
     group: Mapped[BusGroup | None] = relationship()

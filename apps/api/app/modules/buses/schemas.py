@@ -1,6 +1,9 @@
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+
+from app.modules.buses.models import BusOrigin, BusStatus
 
 def to_camel(value: str) -> str:
     first, *rest = value.split("_")
@@ -63,3 +66,82 @@ class BusGroupRead(BusGroupSchema):
     name: str
     description: str | None
     bus_count: int = Field(serialization_alias="busCount")
+
+
+BusText = Annotated[str, StringConstraints(min_length=1, max_length=50)]
+BusPlate = Annotated[str, StringConstraints(min_length=3, max_length=10)]
+
+
+class BusCreate(BusGroupSchema):
+    plate: BusPlate
+    brand: BusText
+    model: BusText
+    year: int = Field(ge=1950, le=date.today().year + 1)
+    passenger_capacity: int = Field(
+        ge=1, le=200, validation_alias="capacity", serialization_alias="capacity"
+    )
+    floors: Literal[2] = 2
+    origin: BusOrigin
+    status: BusStatus = BusStatus.OPERATIONAL
+    group_id: int = Field(validation_alias="groupId", serialization_alias="groupId")
+
+    @field_validator("brand", "model")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("El campo es obligatorio.")
+        return normalized
+
+    @field_validator("plate")
+    @classmethod
+    def normalize_plate(cls, value: str) -> str:
+        normalized = " ".join(value.split()).upper()
+        if not normalized:
+            raise ValueError("La placa es obligatoria.")
+        return normalized
+
+
+class BusUpdate(BusGroupSchema):
+    plate: BusPlate | None = None
+    brand: BusText | None = None
+    model: BusText | None = None
+    year: int | None = Field(default=None, ge=1950, le=date.today().year + 1)
+    passenger_capacity: int | None = Field(
+        default=None, ge=1, le=200, validation_alias="capacity", serialization_alias="capacity"
+    )
+    floors: Literal[2] | None = None
+    origin: BusOrigin | None = None
+    status: BusStatus | None = None
+    group_id: int | None = Field(
+        default=None, validation_alias="groupId", serialization_alias="groupId"
+    )
+
+    @field_validator("brand", "model")
+    @classmethod
+    def normalize_update_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("El campo no puede estar vacío.")
+        return normalized
+
+    @field_validator("plate")
+    @classmethod
+    def normalize_update_plate(cls, value: str | None) -> str | None:
+        return " ".join(value.split()).upper() if value is not None else None
+
+
+class BusRead(BusGroupSchema):
+    id: int
+    plate: str
+    brand: str
+    model: str
+    year: int
+    passenger_capacity: int = Field(serialization_alias="capacity")
+    floors: Literal[2]
+    origin: BusOrigin
+    status: BusStatus
+    group_id: int = Field(serialization_alias="groupId")
+    group_name: str = Field(serialization_alias="groupName")
