@@ -52,6 +52,7 @@ def create_group(engine, cooperative_id: int, name: str) -> int:
 
 def bus_payload(group_id: int, **changes):
     payload = {
+        "number": "025",
         "plate": "ABC-1234",
         "brand": "Hino",
         "model": "AK",
@@ -78,17 +79,20 @@ def test_cooperative_can_create_filter_update_status_and_delete_bus(test_environ
         headers={"Origin": settings.frontend_origin},
     )
     assert created.status_code == 201
+    assert created.json()["number"] == "025"
     assert created.json()["floors"] == 2
     assert created.json()["groupId"] == group_id
 
     assert client.get(f"{BUSES_URL}?plate=abc").json()[0]["plate"] == "ABC-1234"
     updated = client.patch(
         f"{BUSES_URL}/{created.json()['id']}",
-        json={"model": "AK-2024", "status": "mantenimiento"},
+        json={"number": " 001 ", "model": "AK-2024", "status": "mantenimiento"},
         headers={"Origin": settings.frontend_origin},
     )
     assert updated.status_code == 200
+    assert updated.json()["number"] == "001"
     assert updated.json()["status"] == "mantenimiento"
+    assert client.get(BUSES_URL).json()[0]["number"] == "001"
 
     removed = client.delete(
         f"{BUSES_URL}/{created.json()['id']}",
@@ -113,7 +117,12 @@ def test_bus_plates_are_unique_and_groups_are_tenant_scoped(test_environment):
     ).status_code == 201
     assert client.post(
         BUSES_URL,
-        json=bus_payload(first_group, plate="ABC-1234"),
+        json=bus_payload(first_group, number="026", plate="ABC-1234"),
+        headers={"Origin": settings.frontend_origin},
+    ).status_code == 409
+    assert client.post(
+        BUSES_URL,
+        json=bus_payload(first_group, number="025", plate="XYZ-9999"),
         headers={"Origin": settings.frontend_origin},
     ).status_code == 409
     assert client.post(
@@ -123,7 +132,12 @@ def test_bus_plates_are_unique_and_groups_are_tenant_scoped(test_environment):
     ).status_code == 404
 
     assert login(client, "segunda-bus@example.com").status_code == 200
-    assert client.get(BUSES_URL).json() == []
+    assert client.post(
+        BUSES_URL,
+        json=bus_payload(second_group, number="025", plate="XYZ-9999"),
+        headers={"Origin": settings.frontend_origin},
+    ).status_code == 201
+    assert client.get(BUSES_URL).json()[0]["number"] == "025"
 
 
 def test_bus_validation_rejects_invalid_values(test_environment):
@@ -134,13 +148,21 @@ def test_bus_validation_rejects_invalid_values(test_environment):
     group_id = create_group(engine, cooperative.id, "Validos")
     assert login(client, "validacion-bus@example.com").status_code == 200
 
-    invalid = bus_payload(group_id, capacity=0, floors=1, origin="desconocido")
+    invalid = bus_payload(
+        group_id, number="   ", capacity=0, floors=1, origin="desconocido"
+    )
     response = client.post(
         BUSES_URL,
         json=invalid,
         headers={"Origin": settings.frontend_origin},
     )
     assert response.status_code == 422
+    blank_update = client.patch(
+        f"{BUSES_URL}/999",
+        json={"number": "   "},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert blank_update.status_code == 422
 
 
 def test_bus_with_staff_assignment_cannot_be_deleted(test_environment):
