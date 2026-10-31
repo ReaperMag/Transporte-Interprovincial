@@ -13,6 +13,7 @@ from app.modules.notifications.router import router as notifications_router
 from app.modules.passengers.router import router as passengers_router
 from app.modules.reservations.router import router as reservations_router
 from app.modules.sales.router import router as payments_router
+from app.modules.tickets.router import router as tickets_router
 from app.modules.trips.router import router as trips_router
 
 
@@ -27,4 +28,5 @@ router.include_router(notifications_router)
 router.include_router(passengers_router)
 router.include_router(payments_router)
 router.include_router(reservations_router)
+router.include_router(tickets_router)
 router.include_router(trips_router)
