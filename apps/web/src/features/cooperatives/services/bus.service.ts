@@ -9,7 +9,7 @@ export interface CooperativeBus {
   model: string;
   year: number;
   capacity: number;
-  floors: 2;
+  floors: number;
   origin: BusOrigin;
   status: BusStatus;
   groupId: number;
@@ -29,6 +29,24 @@ export interface BusInput {
   status: BusStatus;
   groupId: number;
   templateId: number;
+}
+
+export interface CooperativeBusCreateInput extends Omit<BusInput, 'floors' | 'templateId'> {
+  floors: number;
+  template: {
+    name: string;
+    floors: number;
+    hasBathroom: boolean;
+    rows: number;
+    columns: number;
+    seats: Array<{
+      number: number;
+      floor: number;
+      row: number;
+      column: number;
+      seatType: 'normal' | 'vip';
+    }>;
+  };
 }
 
 const busesUrl = '/api/v1/cooperatives/me/buses';
@@ -97,11 +115,36 @@ export function getCooperativeBuses(filters?: {
   return request<CooperativeBus[]>(query ? `${busesUrl}?${query}` : busesUrl);
 }
 
-export function createCooperativeBus(input: BusInput): Promise<CooperativeBus> {
+export function createCooperativeBus(input: CooperativeBusCreateInput): Promise<CooperativeBus> {
   return request<CooperativeBus>(busesUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      number: input.number,
+      plate: input.plate,
+      brand: input.brand,
+      model: input.model,
+      year: input.year,
+      capacity: input.capacity,
+      floors: input.floors,
+      origin: input.origin,
+      status: input.status,
+      groupId: input.groupId,
+      template: {
+        name: input.template.name,
+        floors: input.template.floors,
+        hasBathroom: input.template.hasBathroom,
+        rows: input.template.rows,
+        columns: input.template.columns,
+        seats: input.template.seats.map(({ number, floor, row, column, seatType }) => ({
+          number,
+          floor,
+          row,
+          column,
+          seatType,
+        })),
+      },
+    }),
   });
 }
 

@@ -1,10 +1,14 @@
 .cooperative-buses { max-width: 1180px; margin: 0 auto; padding: 2rem; }
+.cooperative-buses__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.cooperative-buses__header h2 { margin-bottom: .4rem; }
+.cooperative-buses__header > div > p:last-child { color: #64748b; }
 .cooperative-buses__eyebrow { color: #2563eb; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .cooperative-buses__form, .cooperative-buses__filters { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); padding: 1.25rem; margin: 1.5rem 0; background: #f8fafc; border-radius: .75rem; }
 .cooperative-buses__form h3 { grid-column: 1 / -1; margin: 0; }
 .cooperative-buses label { display: flex; flex-direction: column; gap: .35rem; font-weight: 600; }
 .cooperative-buses input, .cooperative-buses select, .cooperative-buses button { min-height: 2.4rem; padding: .45rem .6rem; border: 1px solid #cbd5e1; border-radius: .35rem; background: white; }
 .cooperative-buses button { cursor: pointer; font-weight: 600; }
+.cooperative-buses__create { min-height: 2.6rem; padding: .55rem 1rem; border: 1px solid #1d4ed8 !important; border-radius: .45rem !important; background: #1d4ed8 !important; color: #fff; font-weight: 700; }
 .cooperative-buses__message { padding: .75rem; border-radius: .35rem; }
 .cooperative-buses__message--error { color: #991b1b; background: #fee2e2; }
 .cooperative-buses__message--success { color: #166534; background: #dcfce7; }
@@ -12,3 +16,7 @@
 .cooperative-buses table { width: 100%; border-collapse: collapse; }
 .cooperative-buses th, .cooperative-buses td { padding: .75rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
 .cooperative-buses td button { margin-right: .4rem; }
+@media (max-width: 560px) {
+  .cooperative-buses { padding: 1rem; }
+  .cooperative-buses__header { flex-direction: column; }
+}

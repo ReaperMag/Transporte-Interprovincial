@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { CooperativeBusCreateWizard } from '../components/CooperativeBusCreateWizard';
 import { getCooperativeBusGroups, type CooperativeBusGroup } from '../services/busGroup.service';
 import {
+  createCooperativeBus,
   deleteCooperativeBus,
   getCooperativeBuses,
   updateCooperativeBus,
   updateCooperativeBusStatus,
   type BusInput,
+  type CooperativeBusCreateInput,
   type CooperativeBus,
   type BusOrigin,
   type BusStatus,
@@ -41,6 +44,7 @@ export function CooperativeBusesPage() {
   const [groups, setGroups] = useState<CooperativeBusGroup[]>([]);
   const [form, setForm] = useState<BusForm>(createInitialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const [plateFilter, setPlateFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
@@ -51,8 +55,7 @@ export function CooperativeBusesPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const isCreating = editingId === null;
-  const canSave = !saving && !isCreating && form.templateId !== null;
+  const canSave = !saving && form.templateId !== null;
 
   const load = useCallback(async () => {
     try {
@@ -92,22 +95,14 @@ export function CooperativeBusesPage() {
   const resetForm = () => {
     setForm(createInitialForm());
     setEditingId(null);
+    setCreating(false);
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (form.templateId === null) {
-      setError('Debes seleccionar una plantilla de asientos antes de guardar el bus.');
-      return;
-    }
-
-    // La creación permanecerá deshabilitada hasta integrar
-    // el selector de plantillas con datos reales.
-    if (editingId === null) {
-      setError(
-        'El registro de buses estará disponible cuando se integre la selección de plantillas.',
-      );
+      setError('Este bus no tiene una plantilla de asientos asignada.');
       return;
     }
 
@@ -126,6 +121,7 @@ export function CooperativeBusesPage() {
         templateId: form.templateId,
       };
 
+      if (editingId === null) return;
       await updateCooperativeBus(editingId, input);
 
       setSuccess('Los cambios del bus se guardaron.');
@@ -138,8 +134,26 @@ export function CooperativeBusesPage() {
     }
   };
 
+  const create = async (input: CooperativeBusCreateInput) => {
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await createCooperativeBus(input);
+      setCreating(false);
+      setSuccess('El bus se registró correctamente.');
+      await load();
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'No fue posible crear el bus.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const edit = (bus: CooperativeBus) => {
     setEditingId(bus.id);
+    setCreating(false);
 
     setForm({
       number: bus.number,
@@ -195,26 +209,66 @@ export function CooperativeBusesPage() {
 
   return (
     <section className="cooperative-buses">
-      <header>
-        <p className="cooperative-buses__eyebrow">Administración de flota</p>
-        <h2>Gestión de buses</h2>
-        <p>Registra y controla los vehículos de tu cooperativa.</p>
+      <header className="cooperative-buses__header" hidden={creating}>
+        <div>
+          <p className="cooperative-buses__eyebrow">Administración de flota</p>
+          <h2>Gestión de buses</h2>
+          <p>Registra y controla los vehículos de tu cooperativa.</p>
+        </div>
+        {editingId === null && (
+          <button
+            type="button"
+            className="cooperative-buses__create"
+            onClick={() => {
+              setError(null);
+              setSuccess(null);
+              setCreating(true);
+            }}
+          >
+            Nuevo bus
+          </button>
+        )}
       </header>
 
+      {creating && (
+        <CooperativeBusCreateWizard
+          groups={groups}
+          saving={saving}
+          error={error}
+          onCancel={() => {
+            setCreating(false);
+            setError(null);
+          }}
+          onCreate={create}
+        />
+      )}
+
       {error && (
-        <p className="cooperative-buses__message cooperative-buses__message--error" role="alert">
+        <p
+          className="cooperative-buses__message cooperative-buses__message--error"
+          role="alert"
+          hidden={creating}
+        >
           {error}
         </p>
       )}
 
       {success && (
-        <p className="cooperative-buses__message cooperative-buses__message--success" role="status">
+        <p
+          className="cooperative-buses__message cooperative-buses__message--success"
+          role="status"
+          hidden={creating}
+        >
           {success}
         </p>
       )}
 
-      <form className="cooperative-buses__form" onSubmit={(event) => void submit(event)}>
-        <h3>{isCreating ? 'Registrar bus' : 'Editar bus'}</h3>
+      <form
+        className="cooperative-buses__form"
+        onSubmit={(event) => void submit(event)}
+        hidden={editingId === null || creating}
+      >
+        <h3>Editar bus</h3>
 
         <label>
           Número de disco
@@ -343,23 +397,19 @@ export function CooperativeBusesPage() {
         </label>
 
         <p id="bus-template-help" role="status">
-          {isCreating
-            ? 'El registro de buses requiere seleccionar una plantilla de asientos. Esta funcionalidad estará disponible cuando se integre el módulo de plantillas.'
-            : 'Este bus conserva su plantilla asignada. El cambio de plantilla estará disponible cuando se integre el selector.'}
+          Este bus conserva su plantilla asignada.
         </p>
 
         <button type="submit" disabled={!canSave}>
-          {saving ? 'Guardando...' : isCreating ? 'Registrar bus' : 'Guardar cambios'}
+          {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
 
-        {!isCreating && (
-          <button type="button" onClick={resetForm}>
-            Cancelar
-          </button>
-        )}
+        <button type="button" onClick={resetForm}>
+          Cancelar
+        </button>
       </form>
 
-      <div className="cooperative-buses__filters">
+      <div className="cooperative-buses__filters" hidden={creating}>
         <label>
           Buscar por placa
           <input value={plateFilter} onChange={(event) => setPlateFilter(event.target.value)} />
@@ -396,11 +446,13 @@ export function CooperativeBusesPage() {
       </div>
 
       {loading ? (
-        <p role="status">Cargando buses...</p>
+        <p role="status" hidden={creating}>
+          Cargando buses...
+        </p>
       ) : buses.length === 0 ? (
-        <p>No hay buses que coincidan con los filtros.</p>
+        <p hidden={creating}>No hay buses que coincidan con los filtros.</p>
       ) : (
-        <div className="cooperative-buses__table-wrap">
+        <div className="cooperative-buses__table-wrap" hidden={creating}>
           <table>
             <thead>
               <tr>
