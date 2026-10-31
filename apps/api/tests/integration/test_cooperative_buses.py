@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
-from app.modules.buses.models import BusGroup, BusTemplate
+from app.modules.buses.models import BusGroup, BusTemplate, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
 from app.modules.staff.models import Staff, StaffPosition
 
@@ -99,6 +99,13 @@ def bus_payload(group_id: int, template_id: int, **changes):
     return payload
 
 
+def custom_bus_payload(group_id: int, template: dict, **changes):
+    payload = bus_payload(group_id, 1, floors=template["floors"], **changes)
+    payload.pop("templateId")
+    payload["template"] = template
+    return payload
+
+
 def test_cooperative_can_create_filter_update_status_and_delete_bus(
     test_environment,
 ):
@@ -116,9 +123,11 @@ def test_cooperative_can_create_filter_update_status_and_delete_bus(
 
     assert login(client, "flota-bus@example.com").status_code == 200
 
+    existing_payload = bus_payload(group_id, template_id)
+    existing_payload.pop("floors")
     created = client.post(
         BUSES_URL,
-        json=bus_payload(group_id, template_id),
+        json=existing_payload,
         headers=HEADERS,
     )
 
@@ -358,6 +367,24 @@ def test_bus_requires_template(test_environment):
 
     assert response.status_code == 422
 
+    both_templates = bus_payload(group_id, template_id)
+    both_templates["template"] = {
+        "name": "Plantilla inline",
+        "floors": 2,
+        "hasBathroom": False,
+        "rows": 1,
+        "columns": 1,
+        "seats": [
+            {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "normal"}
+        ],
+    }
+    response = client.post(
+        BUSES_URL,
+        json=both_templates,
+        headers=HEADERS,
+    )
+    assert response.status_code == 422
+
 
 def test_bus_rejects_null_template(test_environment):
     client, engine = test_environment
@@ -432,3 +459,212 @@ def test_bus_rejects_template_from_another_cooperative(test_environment):
     )
 
     assert response.status_code == 404
+
+
+def test_cooperative_can_create_bus_with_one_floor_custom_template(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative(
+        engine,
+        name="Diseño de un piso",
+        email="custom-one-floor@example.com",
+    )
+    group_id = create_group(engine, cooperative.id, "Interprovinciales")
+    assert login(client, "custom-one-floor@example.com").status_code == 200
+
+    response = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(
+            group_id,
+            {
+                "name": "Piso único",
+                "floors": 1,
+                "hasBathroom": True,
+                "rows": 2,
+                "columns": 2,
+                "seats": [
+                    {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "normal"},
+                    {"number": 2, "floor": 1, "row": 2, "column": 2, "seatType": "vip"},
+                ],
+            },
+            capacity=42,
+            plate="ONE-0001",
+        ),
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["floors"] == 1
+    assert response.json()["capacity"] == 42
+    with Session(engine) as db:
+        template = db.get(BusTemplate, response.json()["templateId"])
+        assert template is not None
+        assert template.cooperative_id == cooperative.id
+        assert template.floors == 1
+        assert template.has_bathroom is True
+        assert [(seat.number, seat.floor, seat.row, seat.column, seat.seat_type.value)
+                for seat in db.scalars(
+                    select(TemplateSeat).where(TemplateSeat.template_id == template.id)
+                )] == [
+            (1, 1, 1, 1, "normal"),
+            (2, 1, 2, 2, "vip"),
+        ]
+
+
+def test_cooperative_can_create_bus_with_two_floor_custom_template(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative(
+        engine,
+        name="Diseño de dos pisos",
+        email="custom-two-floor@example.com",
+    )
+    group_id = create_group(engine, cooperative.id, "Interprovinciales")
+    assert login(client, "custom-two-floor@example.com").status_code == 200
+
+    response = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(
+            group_id,
+            {
+                "name": "Dos pisos con baño",
+                "floors": 2,
+                "hasBathroom": True,
+                "rows": 2,
+                "columns": 3,
+                "seats": [
+                    {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "normal"},
+                    {"number": 2, "floor": 1, "row": 2, "column": 1, "seatType": "vip"},
+                    {"number": 3, "floor": 2, "row": 1, "column": 2, "seatType": "normal"},
+                ],
+            },
+            capacity=40,
+            plate="TWO-0001",
+        ),
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["floors"] == 2
+    assert response.json()["capacity"] == 40
+    with Session(engine) as db:
+        template = db.get(BusTemplate, response.json()["templateId"])
+        assert template is not None
+        assert template.floors == 2
+        assert len(
+            list(
+                db.scalars(
+                    select(TemplateSeat).where(TemplateSeat.template_id == template.id)
+                )
+            )
+        ) == 3
+
+
+def test_custom_template_rejects_invalid_coordinates_and_duplicates(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative(
+        engine,
+        name="Validar plano",
+        email="custom-validation@example.com",
+    )
+    group_id = create_group(engine, cooperative.id, "Interprovinciales")
+    assert login(client, "custom-validation@example.com").status_code == 200
+
+    valid_seat = {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "normal"}
+    invalid_templates = [
+        {
+            "name": "Fila fuera",
+            "floors": 1,
+            "hasBathroom": False,
+            "rows": 1,
+            "columns": 2,
+            "seats": [{**valid_seat, "row": 2}],
+        },
+        {
+            "name": "Piso fuera",
+            "floors": 1,
+            "hasBathroom": False,
+            "rows": 1,
+            "columns": 2,
+            "seats": [{**valid_seat, "floor": 2}],
+        },
+        {
+            "name": "Número repetido",
+            "floors": 1,
+            "hasBathroom": False,
+            "rows": 1,
+            "columns": 2,
+            "seats": [
+                valid_seat,
+                {"number": 1, "floor": 1, "row": 1, "column": 2, "seatType": "vip"},
+            ],
+        },
+        {
+            "name": "Posición repetida",
+            "floors": 1,
+            "hasBathroom": False,
+            "rows": 1,
+            "columns": 2,
+            "seats": [
+                valid_seat,
+                {"number": 2, "floor": 1, "row": 1, "column": 1, "seatType": "vip"},
+            ],
+        },
+    ]
+
+    for index, template in enumerate(invalid_templates):
+        response = client.post(
+            BUSES_URL,
+            json=custom_bus_payload(
+                group_id,
+                template,
+                number=f"0{index + 1}",
+                plate=f"BAD-000{index + 1}",
+            ),
+            headers=HEADERS,
+        )
+        assert response.status_code == 422, response.text
+
+    with Session(engine) as db:
+        assert db.scalar(
+            select(BusTemplate.id).where(BusTemplate.cooperative_id == cooperative.id)
+        ) is None
+
+
+def test_custom_template_creation_is_scoped_to_cooperative_group(test_environment):
+    client, engine = test_environment
+    first = create_cooperative(
+        engine,
+        name="Cooperativa propia",
+        email="custom-own@example.com",
+    )
+    second = create_cooperative(
+        engine,
+        name="Cooperativa ajena",
+        email="custom-foreign@example.com",
+    )
+    foreign_group = create_group(engine, second.id, "Grupo ajeno")
+    assert login(client, "custom-own@example.com").status_code == 200
+
+    response = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(
+            foreign_group,
+            {
+                "name": "Plantilla no persistible",
+                "floors": 1,
+                "hasBathroom": False,
+                "rows": 1,
+                "columns": 1,
+                "seats": [
+                    {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "normal"}
+                ],
+            },
+            plate="FOREIGN-1",
+        ),
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 404
+    with Session(engine) as db:
+        assert db.scalar(
+            select(BusTemplate.id).where(BusTemplate.cooperative_id == first.id)
+        ) is None
