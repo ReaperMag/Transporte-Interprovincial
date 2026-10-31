@@ -84,13 +84,9 @@ Reglas principales:
 
 Pendiente para otras ramas:
 
-- **Pagos:** en la compra en línea, el pasajero debe subir el comprobante de
-  pago y, si declaró una categoría con descuento, su cédula o carné. Por ahora
-  la reserva acepta la categoría declarada sin pedir el documento.
-- **Boletos:** el cambio de tipo de boleto en oficina, con el cobro de la
-  diferencia, cuando el chofer detecta que la categoría no corresponde.
 - **Chofer:** la verificación al subir al bus. La categoría declarada queda
-  guardada en cada asiento reservado para cuando exista ese módulo.
+  guardada en cada asiento reservado y en cada boleto para cuando exista ese
+  módulo.
 
 ## Acceso administrativo
 
@@ -141,8 +137,8 @@ solicitud.
 
 Reglas principales:
 
-- **Efectivo:** solo para reservas hechas en la oficina. El oficinista cobra y
-  la reserva queda confirmada en el mismo momento.
+- **Efectivo:** solo para reservas hechas en la oficina. El oficinista cobra,
+  la reserva queda confirmada y los boletos se emiten en el mismo momento.
 - **Depósito o transferencia:** el pasajero sube el comprobante antes de que
   termine el tiempo de su reserva. La reserva pasa a revisión y deja de vencer
   mientras el oficinista la revisa.
@@ -154,7 +150,7 @@ Reglas principales:
   real del archivo, no solo su extensión. Se guardan en `apps/api/uploads`, que
   no se incluye en Git, y solo los ven el dueño de la reserva y el personal de
   oficina de su cooperativa.
-- **Aprobación:** la reserva queda confirmada y lista para emitir los boletos.
+- **Aprobación:** la reserva queda confirmada y se emiten los boletos.
 - **Rechazo:** el oficinista elige el motivo y puede agregar un comentario.
   - `payment_not_received`: la reserva se cancela y los asientos se liberan.
   - `receipt_unverifiable`: la reserva vuelve a esperar el pago con un nuevo
@@ -165,8 +161,40 @@ Reglas principales:
 
 ## Notificaciones
 
-Cada cambio en el pago registra un aviso para el pasajero con cuenta:
-comprobante recibido, pago aprobado o pago rechazado, con el motivo. Se
+Cada cambio en el pago o en los boletos registra un aviso para el pasajero con
+cuenta: comprobante recibido, pago aprobado, pago rechazado con el motivo,
+boletos emitidos y boleto cambiado. Se
 consultan en `GET /api/v1/notifications/me` y se marcan como leídos con
 `POST /api/v1/notifications/{id}/read`. Las ventas en oficina no generan
 avisos porque el pasajero no tiene cuenta. El envío por correo queda pendiente.
+
+## Boletos
+
+Las rutas viven bajo `/api/v1/tickets` y requieren una sesión iniciada. El
+cambio de boleto también valida el origen de la solicitud.
+
+| Método | Ruta | Quién la usa | Operación |
+| --- | --- | --- | --- |
+| `GET` | `/me` | Pasajero | Historial de boletos, del viaje más reciente al más antiguo |
+| `GET` | `/reservations/{id}` | Pasajero y oficinista | Boletos vigentes de una reserva |
+| `GET` | `/{id}` | Pasajero y oficinista | Detalle de un boleto con su vigencia |
+| `GET` | `/{id}/qr` | Pasajero y oficinista | Imagen PNG del QR del boleto |
+| `POST` | `/{id}/change` | Oficinista | Cambiar la categoría o el asiento de un boleto |
+
+Reglas principales:
+
+- **Emisión:** cuando la reserva queda confirmada, por pago en efectivo o por
+  comprobante aprobado, se emite un boleto por asiento. Cada boleto tiene un
+  código aleatorio que va dentro del QR. El QR no lleva datos del pasajero.
+- **Historial:** el pasajero ve los boletos que compró, incluidos los de sus
+  acompañantes, y los emitidos a su nombre en oficina antes de registrarse.
+- **Vigencia:** un boleto deja de servir cuando se usa, se cancela o el viaje
+  termina. También vence cuando pasa la duración del viaje desde la salida, o
+  un día si la ruta no tiene duración registrada.
+- **Cambio en oficina:** si el chofer detecta que la categoría declarada no
+  corresponde, o el pasajero quiere otro asiento, el oficinista cancela el
+  boleto anterior y emite uno nuevo con otro código. Si el nuevo cuesta más,
+  se registra el cobro de la diferencia en efectivo; si cuesta menos, no hay
+  devolución. El asiento nuevo debe estar libre en el tramo del pasajero.
+- **Privacidad:** cada boleto lo ven quien lo compró, el pasajero a cuyo
+  nombre está y el personal de oficina de la cooperativa del viaje.

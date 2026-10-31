@@ -34,6 +34,7 @@ from app.modules.sales.schemas import (
     RejectionReason,
 )
 from app.modules.staff.models import Staff
+from app.modules.tickets.service import issue_tickets
 from app.modules.trips.models import Trip
 
 
@@ -106,7 +107,8 @@ def ensure_payable(reservation: Reservation) -> None:
 def pay_in_cash(db: Session, reservation_id: int, staff: Staff) -> Payment:
     """
     El oficinista cobra en efectivo una reserva hecha en la oficina.
-    El pago queda aprobado y la reserva confirmada en el mismo momento.
+    El pago queda aprobado, la reserva confirmada y los boletos emitidos
+    en el mismo momento.
     """
     reservation = load_reservation(db, reservation_id)
 
@@ -133,6 +135,7 @@ def pay_in_cash(db: Session, reservation_id: int, staff: Staff) -> Payment:
 
     reservation.status = ReservationStatus.CONFIRMED
     reservation.expires_at = None
+    issue_tickets(db, reservation)
 
     db.commit()
     db.refresh(payment)
@@ -302,8 +305,8 @@ def get_pending_payment_for_staff(db: Session, payment_id: int, staff: Staff) ->
 
 def approve_payment(db: Session, payment_id: int, staff: Staff) -> Payment:
     """
-    El oficinista aprueba el comprobante y la reserva queda confirmada.
-    Desde ese momento se pueden emitir los boletos.
+    El oficinista aprueba el comprobante, la reserva queda confirmada
+    y se emiten los boletos.
     """
     payment = get_pending_payment_for_staff(db, payment_id, staff)
     reservation = db.get(Reservation, payment.reservation_id)
@@ -323,6 +326,7 @@ def approve_payment(db: Session, payment_id: int, staff: Staff) -> Payment:
         message="Tu pago fue aprobado y tu compra está confirmada.",
         reservation_id=reservation.id,
     )
+    issue_tickets(db, reservation)
 
     db.commit()
     db.refresh(payment)
