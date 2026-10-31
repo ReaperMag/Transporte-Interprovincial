@@ -729,3 +729,42 @@ def test_bus_photo_upload_rejects_non_image_files(test_environment, monkeypatch,
     assert response.status_code == 422
     assert "JPG o PNG" in response.json()["detail"]
     assert client.get(BUSES_URL).json() == []
+
+
+def test_cooperative_can_add_and_remove_bus_photos_from_edit_flow(
+    test_environment, monkeypatch, tmp_path
+):
+    client, engine = test_environment
+    monkeypatch.setattr(settings, "uploads_dir", str(tmp_path / "uploads"))
+    cooperative = create_cooperative(
+        engine, name="Edicion fotos", email="edit-bus-photos@example.com"
+    )
+    group_id = create_group(engine, cooperative.id, "Flota")
+    template_id = create_template(engine, cooperative.id)
+    assert login(client, "edit-bus-photos@example.com").status_code == 200
+
+    created = client.post(
+        BUSES_URL,
+        json=bus_payload(group_id, template_id),
+        headers=HEADERS,
+    )
+    assert created.status_code == 201, created.text
+    bus_id = created.json()["id"]
+
+    uploaded = client.post(
+        f"{BUSES_URL}/{bus_id}/photos",
+        files=[("photos", ("side.png", b"\x89PNG\r\n\x1a\nside", "image/png"))],
+        headers=HEADERS,
+    )
+    assert uploaded.status_code == 200, uploaded.text
+    photo = uploaded.json()[0]
+    assert client.get(BUSES_URL).json()[0]["photos"] == [photo]
+    assert client.get(photo["url"]).status_code == 200
+
+    deleted = client.delete(
+        f"{BUSES_URL}/{bus_id}/photos/{photo['id']}",
+        headers=HEADERS,
+    )
+    assert deleted.status_code == 204
+    assert client.get(BUSES_URL).json()[0]["photos"] == []
+    assert client.get(photo["url"]).status_code == 404

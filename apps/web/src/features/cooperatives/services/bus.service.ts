@@ -183,6 +183,19 @@ export function updateCooperativeBus(
   });
 }
 
+export function addCooperativeBusPhotos(id: number, photos: File[]): Promise<CooperativeBusPhoto[]> {
+  const formData = new FormData();
+  photos.forEach((photo) => formData.append('photos', photo));
+  return request<CooperativeBusPhoto[]>(`${busesUrl}/${id}/photos`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+export function deleteCooperativeBusPhoto(id: number, photoId: number): Promise<void> {
+  return request<void>(`${busesUrl}/${id}/photos/${photoId}`, { method: 'DELETE' });
+}
+
 export function updateCooperativeBusStatus(id: number, status: BusStatus): Promise<CooperativeBus> {
   return request<CooperativeBus>(`${busesUrl}/${id}/status`, {
     method: 'PATCH',

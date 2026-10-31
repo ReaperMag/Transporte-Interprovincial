@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { CooperativeBusCreateWizard } from '../components/CooperativeBusCreateWizard';
 import { getCooperativeBusGroups, type CooperativeBusGroup } from '../services/busGroup.service';
 import {
+  addCooperativeBusPhotos,
   createCooperativeBus,
   deleteCooperativeBus,
+  deleteCooperativeBusPhoto,
   getCooperativeBuses,
   updateCooperativeBus,
-  updateCooperativeBusStatus,
   type BusInput,
   type CooperativeBusCreateInput,
+  type CooperativeBusPhoto,
   type CooperativeBus,
   type BusOrigin,
   type BusStatus,
@@ -44,6 +46,8 @@ export function CooperativeBusesPage() {
   const [groups, setGroups] = useState<CooperativeBusGroup[]>([]);
   const [form, setForm] = useState<BusForm>(createInitialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingPhotos, setEditingPhotos] = useState<CooperativeBusPhoto[]>([]);
+  const [savingPhotos, setSavingPhotos] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const [plateFilter, setPlateFilter] = useState('');
@@ -96,6 +100,7 @@ export function CooperativeBusesPage() {
   const resetForm = () => {
     setForm(createInitialForm());
     setEditingId(null);
+    setEditingPhotos([]);
     setCreating(false);
   };
 
@@ -154,6 +159,7 @@ export function CooperativeBusesPage() {
 
   const edit = (bus: CooperativeBus) => {
     setEditingId(bus.id);
+    setEditingPhotos(bus.photos ?? []);
     setCreating(false);
 
     setForm({
@@ -193,18 +199,48 @@ export function CooperativeBusesPage() {
     }
   };
 
-  const changeStatus = async (bus: CooperativeBus, status: BusStatus) => {
+  const addPhotos = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (editingId === null || selected.length === 0) return;
+    if (selected.some((file) => !['image/jpeg', 'image/png'].includes(file.type))) {
+      setError('Solo puedes subir fotos JPG o PNG.');
+      return;
+    }
+    if (editingPhotos.length + selected.length > 8) {
+      setError('El bus puede tener hasta 8 fotos.');
+      return;
+    }
+
+    setSavingPhotos(true);
     setError(null);
     setSuccess(null);
-
     try {
-      await updateCooperativeBusStatus(bus.id, status);
-      setSuccess(`Se actualizó el estado del bus ${bus.plate}.`);
+      const created = await addCooperativeBusPhotos(editingId, selected);
+      setEditingPhotos((current) => [...current, ...created]);
+      setSuccess('Las fotos del bus se actualizaron.');
       await load();
-    } catch (updateError) {
-      setError(
-        updateError instanceof Error ? updateError.message : 'No fue posible cambiar el estado.',
-      );
+    } catch (photoError) {
+      setError(photoError instanceof Error ? photoError.message : 'No fue posible subir las fotos.');
+    } finally {
+      setSavingPhotos(false);
+    }
+  };
+
+  const removePhoto = async (photo: CooperativeBusPhoto) => {
+    if (editingId === null) return;
+    setSavingPhotos(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await deleteCooperativeBusPhoto(editingId, photo.id);
+      setEditingPhotos((current) => current.filter((item) => item.id !== photo.id));
+      setSuccess('La foto se elimin? del bus.');
+      await load();
+    } catch (photoError) {
+      setError(photoError instanceof Error ? photoError.message : 'No fue posible eliminar la foto.');
+    } finally {
+      setSavingPhotos(false);
     }
   };
 
@@ -401,6 +437,42 @@ export function CooperativeBusesPage() {
           Este bus conserva su plantilla asignada.
         </p>
 
+        <section className="cooperative-buses__edit-photos" aria-labelledby="bus-photos-title">
+          <div>
+            <h4 id="bus-photos-title">Fotos del bus</h4>
+            <p>Agrega o quita fotos JPG o PNG. Puedes guardar hasta 8 im?genes.</p>
+          </div>
+          <label className="cooperative-buses__photo-upload">
+            {savingPhotos ? 'Procesando fotos...' : 'Subir fotos'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              disabled={savingPhotos || editingPhotos.length >= 8}
+              onChange={(event) => void addPhotos(event)}
+            />
+          </label>
+          <div className="cooperative-buses__photo-grid" aria-live="polite">
+            {editingPhotos.length ? (
+              editingPhotos.map((photo) => (
+                <figure key={photo.id} className="cooperative-buses__photo">
+                  <img src={photo.url} alt={`Foto ${photo.id} del bus`} />
+                  <button
+                    type="button"
+                    disabled={savingPhotos}
+                    onClick={() => void removePhoto(photo)}
+                    aria-label={`Eliminar foto ${photo.id}`}
+                  >
+                    Eliminar foto
+                  </button>
+                </figure>
+              ))
+            ) : (
+              <p>A?n no hay fotos cargadas para este bus.</p>
+            )}
+          </div>
+        </section>
+
         <button type="submit" disabled={!canSave}>
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
@@ -480,19 +552,7 @@ export function CooperativeBusesPage() {
                   <td>{bus.origin}</td>
                   <td>{bus.groupName}</td>
 
-                  <td>
-                    <select
-                      aria-label={`Estado de ${bus.plate}`}
-                      value={bus.status}
-                      onChange={(event) => void changeStatus(bus, event.target.value as BusStatus)}
-                    >
-                      {Object.entries(statusLabels).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+                  <td>{statusLabels[bus.status]}</td>
 
                   <td>
                     <button type="button" onClick={() => edit(bus)}>
