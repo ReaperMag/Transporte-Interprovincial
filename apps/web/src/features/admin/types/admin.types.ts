@@ -6,7 +6,6 @@ export interface Cooperative {
   phone: string | null;
   address: string | null;
   logoUrl: string | null;
-  isActive: boolean;
 }
 
 export interface CooperativeWrite {
@@ -15,11 +14,9 @@ export interface CooperativeWrite {
   email: string | null;
   phone: string | null;
   address: string | null;
-  logoUrl: string | null;
-  isActive: boolean;
 }
 
-export interface CooperativeAccountCreate extends CooperativeWrite {
+export interface CooperativeAccountCreate extends Omit<CooperativeWrite, 'email'> {
   accountEmail: string;
   initialPassword: string;
 }

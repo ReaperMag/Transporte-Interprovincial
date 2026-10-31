@@ -123,7 +123,7 @@ def delete_cooperative(db: Session, cooperative_id: int) -> None:
         )
         if related_count:
             raise CooperativeInUseError(
-                "La cooperativa tiene registros relacionados. Desactívala en lugar de eliminarla."
+                "La cooperativa tiene registros relacionados y no se puede eliminar."
             )
 
     db.delete(cooperative)

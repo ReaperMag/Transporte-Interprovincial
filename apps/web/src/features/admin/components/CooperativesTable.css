@@ -43,7 +43,6 @@
 }
 
 .cooperatives-card__create:focus-visible,
-.cooperatives-table__switch:focus-visible,
 .cooperatives-table__actions button:focus-visible {
   outline: 2px solid #1e40af;
   outline-offset: 2px;
@@ -56,8 +55,7 @@
   margin: 1rem 0;
 }
 
-.cooperatives-toolbar__search,
-.cooperatives-toolbar__status {
+.cooperatives-toolbar__search {
   display: grid;
   gap: 0.35rem;
   color: #475569;
@@ -70,8 +68,7 @@
   max-width: 24rem;
 }
 
-.cooperatives-toolbar__search input,
-.cooperatives-toolbar__status select {
+.cooperatives-toolbar__search input {
   min-height: 2.35rem;
   padding: 0.4rem 0.65rem;
   border: 1px solid #cbd5e1;
@@ -97,7 +94,6 @@
 }
 
 .cooperatives-toolbar__search input:focus-visible,
-.cooperatives-toolbar__status select:focus-visible,
 .cooperatives-toolbar__filter:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 1px;
@@ -168,44 +164,6 @@
   text-align: center !important;
 }
 
-.cooperatives-table__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  color: #334155;
-}
-
-.cooperatives-table__switch {
-  width: 2.4rem;
-  height: 1.25rem;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: #cbd5e1;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.cooperatives-table__switch::after {
-  content: '';
-  display: block;
-  width: 1rem;
-  height: 1rem;
-  margin: 0.125rem;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(15 23 42 / 20%);
-  transition: transform 0.2s;
-}
-
-.cooperatives-table__switch--on {
-  background: #22c55e;
-}
-
-.cooperatives-table__switch--on::after {
-  transform: translateX(1.15rem);
-}
-
 .cooperatives-table__actions {
   display: inline-flex;
   align-items: center;
@@ -225,7 +183,7 @@
 }
 
 .cooperatives-table__actions button:disabled,
-.cooperatives-table__switch:disabled {
+.cooperatives-card__create:disabled {
   cursor: wait;
   opacity: 0.55;
 }

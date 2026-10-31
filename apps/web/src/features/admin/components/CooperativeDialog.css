@@ -80,19 +80,6 @@
   grid-column: 1 / -1;
 }
 
-.cooperative-dialog__fields .cooperative-dialog__checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  grid-column: 1 / -1;
-}
-
-.cooperative-dialog__checkbox input {
-  width: 1rem;
-  height: 1rem;
-  accent-color: #2563eb;
-}
-
 .cooperative-dialog__error {
   margin: 1rem 0 0;
   color: #b91c1c;

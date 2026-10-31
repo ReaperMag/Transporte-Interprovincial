@@ -8,7 +8,6 @@ def list_cooperatives(
     db: Session,
     *,
     search: str | None = None,
-    is_active: bool | None = None,
 ) -> list[Cooperative]:
     statement = select(Cooperative)
     if search:
@@ -20,8 +19,6 @@ def list_cooperatives(
                 Cooperative.email.ilike(pattern),
             )
         )
-    if is_active is not None:
-        statement = statement.where(Cooperative.is_active.is_(is_active))
     return list(db.scalars(statement.order_by(Cooperative.name, Cooperative.id)).all())
 
 

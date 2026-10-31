@@ -14,7 +14,6 @@ from app.modules.cooperatives.schemas import (
     CooperativeProfileRead,
     CooperativeProfileUpdate,
     CooperativeRead,
-    CooperativeStatusUpdate,
     CooperativeUpdate,
 )
 
@@ -104,10 +103,9 @@ def update_current_cooperative_profile(
 @router.get("", response_model=list[CooperativeRead])
 def read_cooperatives(
     search: str | None = Query(default=None, max_length=150),
-    is_active: bool | None = Query(default=None, alias="isActive"),
     db: Session = Depends(get_db),
 ) -> list[CooperativeRead]:
-    return repository.list_cooperatives(db, search=search, is_active=is_active)
+    return repository.list_cooperatives(db, search=search)
 
 
 @router.get("/summary", response_model=AdminSummary)
@@ -188,26 +186,6 @@ def patch_cooperative(
         ) from exc
     except service.DuplicateCooperativeError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-
-
-@router.patch("/{cooperative_id}/status", response_model=CooperativeRead)
-def change_cooperative_status(
-    cooperative_id: int,
-    payload: CooperativeStatusUpdate,
-    db: Session = Depends(get_db),
-    _: None = Depends(validate_request_origin),
-) -> CooperativeRead:
-    try:
-        return service.update_cooperative(
-            db,
-            cooperative_id,
-            {"is_active": payload.is_active},
-        )
-    except service.CooperativeNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cooperativa no encontrada.",
-        ) from exc
 
 
 @router.delete("/{cooperative_id}", status_code=status.HTTP_204_NO_CONTENT)

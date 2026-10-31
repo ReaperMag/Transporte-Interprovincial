@@ -26,8 +26,6 @@ function toFormValues(cooperative?: Cooperative): CooperativeWrite {
     email: cooperative?.email ?? '',
     phone: cooperative?.phone ?? '',
     address: cooperative?.address ?? '',
-    logoUrl: cooperative?.logoUrl ?? '',
-    isActive: cooperative?.isActive ?? true,
   };
 }
 
@@ -64,7 +62,6 @@ export function CooperativeDialog({
       email: values.email?.trim() || null,
       phone: values.phone?.trim() || null,
       address: values.address?.trim() || null,
-      logoUrl: values.logoUrl?.trim() || null,
     };
 
     try {
@@ -72,7 +69,10 @@ export function CooperativeDialog({
         await updateCooperative(cooperative.id, payload);
       } else {
         const createPayload: CooperativeAccountCreate = {
-          ...payload,
+          name: payload.name,
+          ruc: payload.ruc,
+          phone: payload.phone,
+          address: payload.address,
           accountEmail: accountEmail.trim(),
           initialPassword,
         };
@@ -119,7 +119,7 @@ export function CooperativeDialog({
 
         <form onSubmit={handleSubmit}>
           <div className="cooperative-dialog__fields">
-            <label>
+            <label className="cooperative-dialog__field--wide">
               Nombre de cooperativa
               <input
                 autoFocus
@@ -133,40 +133,12 @@ export function CooperativeDialog({
               />
             </label>
 
-            <label>
-              RUC
-              <input
-                inputMode="numeric"
-                maxLength={13}
-                minLength={13}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, ruc: event.target.value }))
-                }
-                pattern="\d{13}"
-                required
-                value={values.ruc}
-                disabled={isReadOnly || isSaving}
-              />
-            </label>
-
-            <label>
-              Correo de contacto
-              <input
-                autoComplete="email"
-                maxLength={150}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, email: event.target.value }))
-                }
-                type="email"
-                value={values.email ?? ''}
-                disabled={isReadOnly || isSaving}
-              />
-            </label>
+            
 
             {mode === 'create' && (
               <>
-                <label>
-                  Correo para iniciar sesión
+                <label className="cooperative-dialog__field--wide">
+                  Correo de registro
                   <input
                     autoComplete="username"
                     maxLength={150}
@@ -192,7 +164,7 @@ export function CooperativeDialog({
                   />
                 </label>
 
-                <label className="cooperative-dialog__field--wide">
+                <label>
                   Confirmar contraseña inicial
                   <input
                     autoComplete="new-password"
@@ -212,6 +184,37 @@ export function CooperativeDialog({
                 </p>
               </>
             )}
+
+            {mode !== 'create' && (
+              <label>
+                Correo de contacto
+                <input
+                  autoComplete="email"
+                  maxLength={150}
+                  onChange={(event) =>
+                    setValues((current) => ({ ...current, email: event.target.value }))
+                  }
+                  type="email"
+                  value={values.email ?? ''}
+                  disabled={isReadOnly || isSaving}
+                />
+              </label>
+            )}
+            <label>
+              RUC
+              <input
+                inputMode="numeric"
+                maxLength={13}
+                minLength={13}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, ruc: event.target.value }))
+                }
+                pattern="\d{13}"
+                required
+                value={values.ruc}
+                disabled={isReadOnly || isSaving}
+              />
+            </label>
 
             <label>
               Teléfono
@@ -239,30 +242,6 @@ export function CooperativeDialog({
               />
             </label>
 
-            <label className="cooperative-dialog__field--wide">
-              URL del logo
-              <input
-                maxLength={500}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, logoUrl: event.target.value }))
-                }
-                type="url"
-                value={values.logoUrl ?? ''}
-                disabled={isReadOnly || isSaving}
-              />
-            </label>
-
-            <label className="cooperative-dialog__checkbox">
-              <input
-                checked={values.isActive}
-                onChange={(event) =>
-                  setValues((current) => ({ ...current, isActive: event.target.checked }))
-                }
-                type="checkbox"
-                disabled={isReadOnly || isSaving}
-              />
-              Cooperativa activa
-            </label>
           </div>
 
           {error && (
