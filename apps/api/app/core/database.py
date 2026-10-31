@@ -71,6 +71,23 @@ def init_db() -> None:
     from app.modules.buses.group_schema import ensure_bus_group_name_index
 
     ensure_bus_group_name_index(engine)
+    bus_columns = {
+        column["name"] for column in inspect(engine).get_columns("buses")
+    }
+    additive_bus_columns = {
+        "brand": "VARCHAR(50)",
+        "model": "VARCHAR(50)",
+        "passenger_capacity": "INTEGER",
+        "floors": "INTEGER NOT NULL DEFAULT 2",
+        "origin": "VARCHAR(30)",
+        "status": "VARCHAR(30) NOT NULL DEFAULT 'operativo'",
+    }
+    with engine.begin() as connection:
+        for column, definition in additive_bus_columns.items():
+            if column not in bus_columns:
+                connection.execute(
+                    text(f"ALTER TABLE buses ADD COLUMN {column} {definition}")
+                )
     columns = {
         column["name"] for column in inspect(engine).get_columns("cooperatives")
     }
