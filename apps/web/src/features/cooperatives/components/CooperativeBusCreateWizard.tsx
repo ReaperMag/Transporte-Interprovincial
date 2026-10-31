@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { BusTemplate } from '../../buses/types/busTemplate.types';
 import type { BusOrigin, BusStatus, CooperativeBusCreateInput } from '../services/bus.service';
 import type { CooperativeBusGroup } from '../services/busGroup.service';
@@ -10,7 +10,7 @@ interface CooperativeBusCreateWizardProps {
   saving: boolean;
   error: string | null;
   onCancel: () => void;
-  onCreate: (input: CooperativeBusCreateInput) => Promise<void>;
+  onCreate: (input: CooperativeBusCreateInput, photos: File[]) => Promise<void>;
 }
 
 type Metadata = Omit<CooperativeBusCreateInput, 'floors' | 'template'>;
@@ -64,9 +64,16 @@ export function CooperativeBusCreateWizard({
   onCancel,
   onCreate,
 }: CooperativeBusCreateWizardProps) {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [metadata, setMetadata] = useState(createInitialMetadata);
   const [template, setTemplate] = useState(createInitialTemplate);
+  const [photos, setPhotos] = useState<Array<{ file: File; previewUrl: string }>>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const previewUrls = useRef(new Set<string>());
+
+  useEffect(() => () => {
+    previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
 
   const change = <K extends keyof Metadata>(field: K, value: Metadata[K]) => {
     setMetadata((current) => ({ ...current, [field]: value }));
@@ -96,7 +103,35 @@ export function CooperativeBusCreateWizard({
           seatType,
         })),
       },
+    }, photos.map(({ file }) => file));
+  };
+
+  const addPhotos = (event: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    setPhotoError(null);
+
+    if (selected.some((file) => !['image/jpeg', 'image/png'].includes(file.type))) {
+      setPhotoError('Solo se aceptan archivos JPG o PNG.');
+      return;
+    }
+    if (photos.length + selected.length > 8) {
+      setPhotoError('Puedes agregar hasta 8 fotos del bus.');
+      return;
+    }
+
+    const additions = selected.map((file) => {
+      const previewUrl = URL.createObjectURL(file);
+      previewUrls.current.add(previewUrl);
+      return { file, previewUrl };
     });
+    setPhotos((current) => [...current, ...additions]);
+  };
+
+  const removePhoto = (previewUrl: string) => {
+    URL.revokeObjectURL(previewUrl);
+    previewUrls.current.delete(previewUrl);
+    setPhotos((current) => current.filter((photo) => photo.previewUrl !== previewUrl));
   };
 
   return (
@@ -118,6 +153,9 @@ export function CooperativeBusCreateWizard({
         </li>
         <li className={step === 2 ? 'bus-create-wizard__step--active' : ''}>
           <span>2</span> Plano de asientos
+        </li>
+        <li className={step === 3 ? 'bus-create-wizard__step--active' : ''}>
+          <span>3</span> Fotos (opcional)
         </li>
       </ol>
 
@@ -239,11 +277,11 @@ export function CooperativeBusCreateWizard({
             </button>
           </div>
         </form>
-      ) : (
-        <form className="bus-create-wizard__floorplan" onSubmit={submit}>
-          <h3>Diseño de asientos</h3>
+      ) : step === 2 ? (
+        <div className="bus-create-wizard__floorplan">
+          <h3>Diseno de asientos</h3>
           <p>
-            Define la plantilla que se enviará con los datos del bus. Puedes ajustar la distribución
+            Define la plantilla que se enviara con los datos del bus. Puedes ajustar la distribucion
             y editar cada asiento directamente en la vista previa.
           </p>
           <BusFloorplanEditor template={template} onChange={setTemplate} />
@@ -252,10 +290,52 @@ export function CooperativeBusCreateWizard({
               Volver a datos
             </button>
             <button
-              type="submit"
-              disabled={saving || !template.name.trim() || !template.seats.length}
+              type="button"
+              disabled={!template.name.trim() || !template.seats.length}
+              onClick={() => setStep(3)}
             >
-              {saving ? 'Guardando...' : 'Crear bus'}
+              Continuar a fotos
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form className="bus-create-wizard__photos" onSubmit={submit}>
+          <h3>Fotos del bus (opcional)</h3>
+          <p>Agrega hasta 8 fotos para mostrar el vehiculo. Puedes omitir este paso.</p>
+          <label className="bus-create-wizard__photo-picker">
+            Seleccionar fotos
+            <input type="file" accept="image/jpeg,image/png" multiple onChange={addPhotos} />
+          </label>
+          {photoError && (
+            <p className="bus-create-wizard__photo-error" role="alert">
+              {photoError}
+            </p>
+          )}
+          <div className="bus-create-wizard__photo-panel" aria-label="Fotos seleccionadas del bus">
+            {photos.length ? (
+              photos.map(({ file, previewUrl }) => (
+                <figure className="bus-create-wizard__photo" key={previewUrl}>
+                  <img src={previewUrl} alt={`Vista previa: ${file.name}`} />
+                  <figcaption>{file.name}</figcaption>
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(previewUrl)}
+                    aria-label={`Quitar ${file.name}`}
+                  >
+                    Quitar
+                  </button>
+                </figure>
+              ))
+            ) : (
+              <p>Aun no has agregado fotos. La carga es opcional.</p>
+            )}
+          </div>
+          <div className="bus-create-wizard__actions">
+            <button type="button" className="bus-create-wizard__back" onClick={() => setStep(2)}>
+              Volver al plano
+            </button>
+            <button type="submit" disabled={saving}>
+              {saving ? 'Guardando...' : photos.length ? 'Crear bus con fotos' : 'Crear bus sin fotos'}
             </button>
           </div>
         </form>

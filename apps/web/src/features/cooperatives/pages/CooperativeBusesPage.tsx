@@ -56,6 +56,7 @@ export function CooperativeBusesPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const canSave = !saving && form.templateId !== null;
+  const showingEditor = creating || editingId !== null;
 
   const load = useCallback(async () => {
     try {
@@ -134,13 +135,13 @@ export function CooperativeBusesPage() {
     }
   };
 
-  const create = async (input: CooperativeBusCreateInput) => {
+  const create = async (input: CooperativeBusCreateInput, photos: File[]) => {
     setSaving(true);
     setError(null);
     setSuccess(null);
 
     try {
-      await createCooperativeBus(input);
+      await createCooperativeBus(input, photos);
       setCreating(false);
       setSuccess('El bus se registró correctamente.');
       await load();
@@ -209,7 +210,7 @@ export function CooperativeBusesPage() {
 
   return (
     <section className="cooperative-buses">
-      <header className="cooperative-buses__header" hidden={creating}>
+      <header className="cooperative-buses__header" hidden={showingEditor}>
         <div>
           <p className="cooperative-buses__eyebrow">Administración de flota</p>
           <h2>Gestión de buses</h2>
@@ -409,7 +410,7 @@ export function CooperativeBusesPage() {
         </button>
       </form>
 
-      <div className="cooperative-buses__filters" hidden={creating}>
+      <div className="cooperative-buses__filters" hidden={showingEditor}>
         <label>
           Buscar por placa
           <input value={plateFilter} onChange={(event) => setPlateFilter(event.target.value)} />
@@ -446,13 +447,13 @@ export function CooperativeBusesPage() {
       </div>
 
       {loading ? (
-        <p role="status" hidden={creating}>
+        <p role="status" hidden={showingEditor}>
           Cargando buses...
         </p>
       ) : buses.length === 0 ? (
-        <p hidden={creating}>No hay buses que coincidan con los filtros.</p>
+        <p hidden={showingEditor}>No hay buses que coincidan con los filtros.</p>
       ) : (
-        <div className="cooperative-buses__table-wrap" hidden={creating}>
+        <div className="cooperative-buses__table-wrap" hidden={showingEditor}>
           <table>
             <thead>
               <tr>

@@ -236,6 +236,11 @@ class BusUpdate(BusGroupSchema):
         return normalized
 
 
+class BusPhotoRead(BusGroupSchema):
+    id: int
+    url: str
+
+
 class BusRead(BusGroupSchema):
     id: int
     number: str
@@ -250,6 +255,7 @@ class BusRead(BusGroupSchema):
     group_id: int = Field(serialization_alias="groupId")
     group_name: str = Field(serialization_alias="groupName")
     template_id: int = Field(serialization_alias="templateId")
+    photos: list[BusPhotoRead] = Field(default_factory=list)
 
 
 class BusStatusUpdate(BusGroupSchema):

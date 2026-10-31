@@ -1,3 +1,4 @@
+import json
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -668,3 +669,63 @@ def test_custom_template_creation_is_scoped_to_cooperative_group(test_environmen
         assert db.scalar(
             select(BusTemplate.id).where(BusTemplate.cooperative_id == first.id)
         ) is None
+
+def test_cooperative_can_upload_bus_photos_and_other_tenants_cannot_read_them(
+    test_environment, monkeypatch, tmp_path
+):
+    client, engine = test_environment
+    monkeypatch.setattr(settings, "uploads_dir", str(tmp_path / "uploads"))
+    owner = create_cooperative(
+        engine, name="Fotos propia", email="bus-photos-owner@example.com"
+    )
+    other = create_cooperative(
+        engine, name="Fotos ajena", email="bus-photos-other@example.com"
+    )
+    group_id = create_group(engine, owner.id, "Flota")
+    template_id = create_template(engine, owner.id)
+    assert login(client, "bus-photos-owner@example.com").status_code == 200
+
+    response = client.post(
+        f"{BUSES_URL}/with-photos",
+        data={"payload": json.dumps(bus_payload(group_id, template_id))},
+        files=[("photos", ("bus.png", b"\x89PNG\r\n\x1a\nimage", "image/png"))],
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 201, response.text
+    bus_id = response.json()["id"]
+    photo = response.json()["photos"][0]
+    image_response = client.get(photo["url"])
+    assert image_response.status_code == 200
+    assert image_response.content == b"\x89PNG\r\n\x1a\nimage"
+    assert image_response.headers["content-type"] == "image/png"
+
+    assert login(client, "bus-photos-other@example.com").status_code == 200
+    assert client.get(photo["url"]).status_code == 404
+
+    assert login(client, "bus-photos-owner@example.com").status_code == 200
+    deleted = client.delete(f"{BUSES_URL}/{bus_id}", headers=HEADERS)
+    assert deleted.status_code == 204
+    assert list((tmp_path / "uploads" / "buses").glob("*")) == []
+
+
+def test_bus_photo_upload_rejects_non_image_files(test_environment, monkeypatch, tmp_path):
+    client, engine = test_environment
+    monkeypatch.setattr(settings, "uploads_dir", str(tmp_path / "uploads"))
+    cooperative = create_cooperative(
+        engine, name="Validar fotos", email="bus-photos-validation@example.com"
+    )
+    group_id = create_group(engine, cooperative.id, "Flota")
+    template_id = create_template(engine, cooperative.id)
+    assert login(client, "bus-photos-validation@example.com").status_code == 200
+
+    response = client.post(
+        f"{BUSES_URL}/with-photos",
+        data={"payload": json.dumps(bus_payload(group_id, template_id))},
+        files=[("photos", ("not-image.pdf", b"%PDF-1.7", "application/pdf"))],
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 422
+    assert "JPG o PNG" in response.json()["detail"]
+    assert client.get(BUSES_URL).json() == []

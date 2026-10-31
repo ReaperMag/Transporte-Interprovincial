@@ -1,6 +1,11 @@
 export type BusOrigin = 'nacional' | 'importado';
 export type BusStatus = 'operativo' | 'mantenimiento' | 'fuera_de_servicio';
 
+export interface CooperativeBusPhoto {
+  id: number;
+  url: string;
+}
+
 export interface CooperativeBus {
   id: number;
   number: string;
@@ -15,6 +20,7 @@ export interface CooperativeBus {
   groupId: number;
   groupName: string;
   templateId: number;
+  photos: CooperativeBusPhoto[];
 }
 
 export interface BusInput {
@@ -115,36 +121,54 @@ export function getCooperativeBuses(filters?: {
   return request<CooperativeBus[]>(query ? `${busesUrl}?${query}` : busesUrl);
 }
 
-export function createCooperativeBus(input: CooperativeBusCreateInput): Promise<CooperativeBus> {
-  return request<CooperativeBus>(busesUrl, {
+function busCreatePayload(input: CooperativeBusCreateInput) {
+  return {
+    number: input.number,
+    plate: input.plate,
+    brand: input.brand,
+    model: input.model,
+    year: input.year,
+    capacity: input.capacity,
+    floors: input.floors,
+    origin: input.origin,
+    status: input.status,
+    groupId: input.groupId,
+    template: {
+      name: input.template.name,
+      floors: input.template.floors,
+      hasBathroom: input.template.hasBathroom,
+      rows: input.template.rows,
+      columns: input.template.columns,
+      seats: input.template.seats.map(({ number, floor, row, column, seatType }) => ({
+        number,
+        floor,
+        row,
+        column,
+        seatType,
+      })),
+    },
+  };
+}
+
+export function createCooperativeBus(
+  input: CooperativeBusCreateInput,
+  photos: File[] = [],
+): Promise<CooperativeBus> {
+  if (!photos.length) {
+    return request<CooperativeBus>(busesUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(busCreatePayload(input)),
+    });
+  }
+
+  const formData = new FormData();
+  formData.set('payload', JSON.stringify(busCreatePayload(input)));
+  photos.forEach((photo) => formData.append('photos', photo));
+
+  return request<CooperativeBus>(`${busesUrl}/with-photos`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      number: input.number,
-      plate: input.plate,
-      brand: input.brand,
-      model: input.model,
-      year: input.year,
-      capacity: input.capacity,
-      floors: input.floors,
-      origin: input.origin,
-      status: input.status,
-      groupId: input.groupId,
-      template: {
-        name: input.template.name,
-        floors: input.template.floors,
-        hasBathroom: input.template.hasBathroom,
-        rows: input.template.rows,
-        columns: input.template.columns,
-        seats: input.template.seats.map(({ number, floor, row, column, seatType }) => ({
-          number,
-          floor,
-          row,
-          column,
-          seatType,
-        })),
-      },
-    }),
+    body: formData,
   });
 }
 

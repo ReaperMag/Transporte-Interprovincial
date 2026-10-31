@@ -20,3 +20,4 @@
   .cooperative-buses { padding: 1rem; }
   .cooperative-buses__header { flex-direction: column; }
 }
+.cooperative-buses [hidden] { display: none !important; }

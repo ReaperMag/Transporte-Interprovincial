@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modules.buses import repository
-from app.modules.buses.models import Bus, BusStatus, BusTemplate, TemplateSeat
+from app.modules.buses.models import Bus, BusPhoto, BusStatus, BusTemplate, TemplateSeat
 
 
 class DuplicateBusPlateError(Exception):
@@ -89,6 +89,7 @@ def create_bus(
     group_id: int,
     template_id: int | None,
     template: dict[str, object] | None,
+    photo_paths: list[str] | None = None,
 ) -> Bus:
     if (template_id is None) == (template is None):
         raise ValueError("Debe proporcionarse exactamente una plantilla.")
@@ -143,6 +144,9 @@ def create_bus(
             template_id=template_id,
         )
         db.add(bus)
+        db.flush()
+        for file_path in photo_paths or []:
+            db.add(BusPhoto(bus_id=bus.id, file_path=file_path))
         db.commit()
     except IntegrityError as exc:
         db.rollback()
