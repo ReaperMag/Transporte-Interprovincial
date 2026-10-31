@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import type { BusTemplate } from '../../buses/types/busTemplate.types';
-import type { BusOrigin, BusStatus, CooperativeBusCreateInput } from '../services/bus.service';
+import { getCooperativeBusTemplates, type BusOrigin, type BusStatus, type CooperativeBusCreateInput, type CooperativeBusTemplate } from '../services/bus.service';
 import type { CooperativeBusGroup } from '../services/busGroup.service';
 import { BusFloorplanEditor } from './BusFloorplanEditor';
 import './CooperativeBusCreateWizard.css';
@@ -67,6 +67,10 @@ export function CooperativeBusCreateWizard({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [metadata, setMetadata] = useState(createInitialMetadata);
   const [template, setTemplate] = useState(createInitialTemplate);
+  const [savedTemplates, setSavedTemplates] = useState<CooperativeBusTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<Array<{ file: File; previewUrl: string }>>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const previewUrls = useRef(new Set<string>());
@@ -74,6 +78,47 @@ export function CooperativeBusCreateWizard({
   useEffect(() => () => {
     previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    getCooperativeBusTemplates()
+      .then((items) => {
+        if (active) setSavedTemplates(items);
+      })
+      .catch((loadError: unknown) => {
+        if (active) {
+          setTemplatesError(
+            loadError instanceof Error ? loadError.message : 'No fue posible cargar las plantillas.',
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setTemplatesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const chooseTemplate = (value: string) => {
+    if (!value) {
+      setSelectedTemplateId(null);
+      setTemplate(createInitialTemplate());
+      return;
+    }
+    const saved = savedTemplates.find((item) => item.id === Number(value));
+    if (!saved) return;
+    setSelectedTemplateId(saved.id);
+    setTemplate({
+      id: String(saved.id),
+      name: saved.name,
+      floors: saved.floors,
+      hasBathroom: saved.hasBathroom,
+      rows: saved.rows,
+      columns: saved.columns,
+      seats: saved.seats.map((seat) => ({ ...seat, id: String(seat.id) })),
+    });
+  };
 
   const change = <K extends keyof Metadata>(field: K, value: Metadata[K]) => {
     setMetadata((current) => ({ ...current, [field]: value }));
@@ -86,24 +131,27 @@ export function CooperativeBusCreateWizard({
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void onCreate({
-      ...metadata,
-      floors: template.floors,
-      template: {
-        name: template.name.trim(),
-        floors: template.floors,
-        hasBathroom: template.hasBathroom,
-        rows: template.rows,
-        columns: template.columns,
-        seats: template.seats.map(({ number, floor, row, column, seatType }) => ({
-          number,
-          floor,
-          row,
-          column,
-          seatType,
-        })),
-      },
-    }, photos.map(({ file }) => file));
+    const input: CooperativeBusCreateInput = selectedTemplateId !== null
+      ? { ...metadata, floors: template.floors, templateId: selectedTemplateId }
+      : {
+          ...metadata,
+          floors: template.floors,
+          template: {
+            name: template.name.trim(),
+            floors: template.floors,
+            hasBathroom: template.hasBathroom,
+            rows: template.rows,
+            columns: template.columns,
+            seats: template.seats.map(({ number, floor, row, column, seatType }) => ({
+              number,
+              floor,
+              row,
+              column,
+              seatType,
+            })),
+          },
+        };
+    void onCreate(input, photos.map(({ file }) => file));
   };
 
   const addPhotos = (event: ChangeEvent<HTMLInputElement>) => {
@@ -284,14 +332,37 @@ export function CooperativeBusCreateWizard({
             Define la plantilla que se enviara con los datos del bus. Puedes ajustar la distribucion
             y editar cada asiento directamente en la vista previa.
           </p>
-          <BusFloorplanEditor template={template} onChange={setTemplate} />
+          <label className="bus-create-wizard__template-select">
+            Plantilla de estructura
+            <select
+              value={selectedTemplateId === null ? '' : String(selectedTemplateId)}
+              onChange={(event) => chooseTemplate(event.target.value)}
+              disabled={templatesLoading}
+            >
+              <option value="">Crear una estructura nueva</option>
+              {savedTemplates.map((saved) => (
+                <option key={saved.id} value={saved.id}>
+                  {saved.name} - {saved.floors} piso(s) - {saved.seats.length} asientos
+                </option>
+              ))}
+            </select>
+          </label>
+          {templatesError && <p className="bus-create-wizard__template-error" role="alert">{templatesError}</p>}
+          {selectedTemplateId === null ? (
+            <BusFloorplanEditor key={template.id} template={template} onChange={setTemplate} />
+          ) : (
+            <div className="bus-create-wizard__saved-template">
+              <BusFloorplanEditor key={template.id} template={template} onChange={setTemplate} readOnly />
+              <p>Se reutilizara esta plantilla guardada sin modificarla.</p>
+            </div>
+          )}
           <div className="bus-create-wizard__actions">
             <button type="button" className="bus-create-wizard__back" onClick={() => setStep(1)}>
               Volver a datos
             </button>
             <button
               type="button"
-              disabled={!template.name.trim() || !template.seats.length}
+              disabled={selectedTemplateId === null && (!template.name.trim() || !template.seats.length)}
               onClick={() => setStep(3)}
             >
               Continuar a fotos

@@ -1,6 +1,23 @@
 export type BusOrigin = 'nacional' | 'importado';
 export type BusStatus = 'operativo' | 'mantenimiento' | 'fuera_de_servicio';
 
+export interface CooperativeBusTemplate {
+  id: number;
+  name: string;
+  floors: number;
+  hasBathroom: boolean;
+  rows: number;
+  columns: number;
+  seats: Array<{
+    id: number;
+    number: number;
+    floor: number;
+    row: number;
+    column: number;
+    seatType: 'normal' | 'vip';
+  }>;
+}
+
 export interface CooperativeBusPhoto {
   id: number;
   url: string;
@@ -39,7 +56,8 @@ export interface BusInput {
 
 export interface CooperativeBusCreateInput extends Omit<BusInput, 'floors' | 'templateId'> {
   floors: number;
-  template: {
+  templateId?: number;
+  template?: {
     name: string;
     floors: number;
     hasBathroom: boolean;
@@ -133,20 +151,26 @@ function busCreatePayload(input: CooperativeBusCreateInput) {
     origin: input.origin,
     status: input.status,
     groupId: input.groupId,
-    template: {
-      name: input.template.name,
-      floors: input.template.floors,
-      hasBathroom: input.template.hasBathroom,
-      rows: input.template.rows,
-      columns: input.template.columns,
-      seats: input.template.seats.map(({ number, floor, row, column, seatType }) => ({
-        number,
-        floor,
-        row,
-        column,
-        seatType,
-      })),
-    },
+    ...(input.templateId !== undefined
+      ? { templateId: input.templateId }
+      : input.template
+        ? {
+            template: {
+              name: input.template.name,
+              floors: input.template.floors,
+              hasBathroom: input.template.hasBathroom,
+              rows: input.template.rows,
+              columns: input.template.columns,
+              seats: input.template.seats.map(({ number, floor, row, column, seatType }) => ({
+                number,
+                floor,
+                row,
+                column,
+                seatType,
+              })),
+            },
+          }
+        : {}),
   };
 }
 
@@ -170,6 +194,10 @@ export function createCooperativeBus(
     method: 'POST',
     body: formData,
   });
+}
+
+export function getCooperativeBusTemplates(): Promise<CooperativeBusTemplate[]> {
+  return request<CooperativeBusTemplate[]>(`${busesUrl}/templates`);
 }
 
 export function updateCooperativeBus(

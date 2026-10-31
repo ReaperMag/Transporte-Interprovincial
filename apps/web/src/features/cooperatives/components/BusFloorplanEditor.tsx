@@ -6,6 +6,7 @@ import './BusFloorplanEditor.css';
 interface BusFloorplanEditorProps {
   template: BusTemplate;
   onChange: (template: BusTemplate) => void;
+  readOnly?: boolean;
 }
 
 function getSeatPositions(columns: number, seatsPerRow: number): number[] {
@@ -25,7 +26,7 @@ function getSeatPositions(columns: number, seatsPerRow: number): number[] {
   );
 }
 
-export function BusFloorplanEditor({ template, onChange }: BusFloorplanEditorProps) {
+export function BusFloorplanEditor({ template, onChange, readOnly = false }: BusFloorplanEditorProps) {
   const [selectedFloor, setSelectedFloor] = useState(1);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [seatType, setSeatType] = useState<SeatType>('normal');
@@ -112,7 +113,7 @@ export function BusFloorplanEditor({ template, onChange }: BusFloorplanEditorPro
 
   return (
     <div className="bus-floorplan-editor">
-      <div className="bus-floorplan-editor__settings">
+      {!readOnly && <div className="bus-floorplan-editor__settings">
         <label>
           Nombre de la plantilla
           <input
@@ -142,9 +143,9 @@ export function BusFloorplanEditor({ template, onChange }: BusFloorplanEditorPro
           />
           Incluir baño
         </label>
-      </div>
+      </div>}
 
-      <section
+      {!readOnly && <section
         className="bus-floorplan-editor__layout-settings"
         aria-label="Distribución de asientos"
       >
@@ -203,9 +204,9 @@ export function BusFloorplanEditor({ template, onChange }: BusFloorplanEditorPro
         <button type="button" onClick={applyLayout}>
           Aplicar distribución
         </button>
-      </section>
+      </section>}
 
-      <div className="bus-floorplan-editor__toolbar">
+      {!readOnly && <div className="bus-floorplan-editor__toolbar">
         <label>
           Tipo al agregar
           <select
@@ -242,7 +243,7 @@ export function BusFloorplanEditor({ template, onChange }: BusFloorplanEditorPro
             </button>
           </div>
         )}
-      </div>
+      </div>}
 
       <div className="bus-floorplan-editor__summary" role="status">
         Piso {selectedFloor}: {selectedFloorSeatCount} asientos · Total: {template.seats.length}
@@ -298,6 +299,7 @@ export function BusFloorplanEditor({ template, onChange }: BusFloorplanEditorPro
                   style={{ gridColumn: column, gridRow: row }}
                   aria-label={`Asiento ${seat.number}, fila ${row}, columna ${column}, ${seat.seatType === 'vip' ? 'VIP' : 'normal'}`}
                   aria-pressed={seat.id === selectedSeatId}
+                  disabled={readOnly}
                   onClick={() => setSelectedSeatId(seat.id)}
                 >
                   <span className="bus-seat-map__seat-number">{seat.number}</span>
@@ -310,6 +312,7 @@ export function BusFloorplanEditor({ template, onChange }: BusFloorplanEditorPro
                   type="button"
                   style={{ gridColumn: column, gridRow: row }}
                   aria-label={`Agregar asiento en fila ${row}, columna ${column}`}
+                  disabled={readOnly}
                   onClick={() => addSeat(row, column)}
                 >
                   +

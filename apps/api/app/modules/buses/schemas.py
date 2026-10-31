@@ -236,6 +236,25 @@ class BusUpdate(BusGroupSchema):
         return normalized
 
 
+class BusTemplateSeatRead(BusGroupSchema):
+    id: int
+    number: int
+    floor: int
+    row: int
+    column: int
+    seat_type: SeatType
+
+
+class BusTemplateRead(BusGroupSchema):
+    id: int
+    name: str
+    floors: Literal[1, 2]
+    has_bathroom: bool
+    rows: int
+    columns: int
+    seats: list[BusTemplateSeatRead]
+
+
 class BusPhotoRead(BusGroupSchema):
     id: int
     url: str

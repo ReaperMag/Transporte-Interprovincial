@@ -9,7 +9,7 @@ from app.core.permissions import require_cooperative_access
 from app.core.storage import InvalidUploadError, resolve_upload, save_upload
 from app.modules.accounts.models import Account
 from app.modules.buses import bus_service, repository, service
-from app.modules.buses.models import BusPhoto, BusStatus
+from app.modules.buses.models import BusPhoto, BusStatus, BusTemplate
 from app.modules.buses.schemas import (
     BusCreate,
     BusGroupCreate,
@@ -18,6 +18,7 @@ from app.modules.buses.schemas import (
     BusGroupUpdate,
     BusRead,
     BusStatusUpdate,
+    BusTemplateRead,
     BusUpdate,
 )
 
@@ -96,6 +97,20 @@ def read_buses(
             status=bus_status.value if bus_status else None,
         )
     ]
+
+
+@cooperative_buses_router.get("/templates", response_model=list[BusTemplateRead])
+def read_cooperative_bus_templates(
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+) -> list[BusTemplateRead]:
+    templates = (
+        db.query(BusTemplate)
+        .filter(BusTemplate.cooperative_id == _require_cooperative_id(account))
+        .order_by(BusTemplate.name, BusTemplate.id)
+        .all()
+    )
+    return [BusTemplateRead.model_validate(template) for template in templates]
 
 
 @cooperative_buses_router.post("", response_model=BusRead, status_code=status.HTTP_201_CREATED)

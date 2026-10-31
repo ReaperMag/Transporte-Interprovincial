@@ -768,3 +768,78 @@ def test_cooperative_can_add_and_remove_bus_photos_from_edit_flow(
     assert deleted.status_code == 204
     assert client.get(BUSES_URL).json()[0]["photos"] == []
     assert client.get(photo["url"]).status_code == 404
+
+
+def test_cooperative_can_list_and_reuse_saved_bus_templates(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative(
+        engine, name="Plantillas guardadas", email="saved-templates@example.com"
+    )
+    group_id = create_group(engine, cooperative.id, "Flota")
+    assert login(client, "saved-templates@example.com").status_code == 200
+
+    layout = {
+        "name": "Bus Ejecutivo",
+        "floors": 1,
+        "hasBathroom": True,
+        "rows": 2,
+        "columns": 4,
+        "seats": [
+            {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "vip"},
+            {"number": 2, "floor": 1, "row": 1, "column": 4, "seatType": "normal"},
+        ],
+    }
+    first = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(group_id, layout, plate="TPL-0001"),
+        headers=HEADERS,
+    )
+    assert first.status_code == 201, first.text
+
+    templates_response = client.get(f"{BUSES_URL}/templates")
+    assert templates_response.status_code == 200
+    saved = next(item for item in templates_response.json() if item["id"] == first.json()["templateId"])
+    assert saved["name"] == layout["name"]
+    assert saved["floors"] == 1
+    assert saved["hasBathroom"] is True
+    assert saved["seats"][0]["seatType"] == "vip"
+
+    second_payload = bus_payload(
+        group_id,
+        saved["id"],
+        number="026",
+        plate="TPL-0002",
+        floors=1,
+    )
+    reused = client.post(BUSES_URL, json=second_payload, headers=HEADERS)
+    assert reused.status_code == 201, reused.text
+    assert reused.json()["templateId"] == saved["id"]
+
+
+def test_cooperative_cannot_list_another_tenant_bus_templates(test_environment):
+    client, engine = test_environment
+    owner = create_cooperative(engine, name="Duena", email="template-owner@example.com")
+    other = create_cooperative(engine, name="Otra", email="template-other@example.com")
+    group_id = create_group(engine, owner.id, "Grupo")
+    assert login(client, "template-owner@example.com").status_code == 200
+    created = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(
+            group_id,
+            {
+                "name": "Solo propia",
+                "floors": 1,
+                "hasBathroom": False,
+                "rows": 1,
+                "columns": 2,
+                "seats": [
+                    {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "normal"}
+                ],
+            },
+        ),
+        headers=HEADERS,
+    )
+    assert created.status_code == 201, created.text
+
+    assert login(client, "template-other@example.com").status_code == 200
+    assert client.get(f"{BUSES_URL}/templates").json() == []
