@@ -76,6 +76,7 @@ BusNumber = Annotated[str, StringConstraints(min_length=1, max_length=10)]
 class BusCreate(BusGroupSchema):
     number: BusNumber
     plate: BusPlate
+    template_id: int = Field(gt=0,validation_alias="templateId", serialization_alias="templateId")
     brand: BusText
     model: BusText
     year: int = Field(ge=1950, le=date.today().year + 1)
@@ -127,6 +128,19 @@ class BusUpdate(BusGroupSchema):
     group_id: int | None = Field(
         default=None, validation_alias="groupId", serialization_alias="groupId"
     )
+    template_id: int | None = Field(
+    default=None,
+    gt=0,
+    validation_alias="templateId",
+    serialization_alias="templateId"
+)
+
+    @field_validator("template_id")
+    @classmethod
+    def validate_template_id(cls, value: int | None) -> int:
+        if value is None:
+            raise ValueError("La plantilla del bus no puede ser nula.")
+        return value
 
     @field_validator("brand", "model")
     @classmethod
@@ -167,6 +181,7 @@ class BusRead(BusGroupSchema):
     status: BusStatus
     group_id: int = Field(serialization_alias="groupId")
     group_name: str = Field(serialization_alias="groupName")
+    template_id: int = Field(serialization_alias="templateId")
 
 
 class BusStatusUpdate(BusGroupSchema):

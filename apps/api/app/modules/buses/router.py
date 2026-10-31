@@ -46,6 +46,7 @@ def _bus_read(bus) -> BusRead:
         or bus.passenger_capacity is None
         or bus.origin is None
         or bus.group is None
+        or bus.template_id is None
     ):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -63,6 +64,7 @@ def _bus_read(bus) -> BusRead:
         origin=bus.origin,
         status=bus.status,
         group_id=bus.group_id,
+        template_id=bus.template_id,
         group_name=bus.group.name,
     )
 
@@ -116,6 +118,11 @@ def create_cooperative_bus(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="El grupo de buses no existe en tu cooperativa.",
         ) from exc
+    except bus_service.BusTemplateNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La plantilla no existe o no pertenece a tu cooperativa.",
+        ) from exc
     return _bus_read(bus)
 
 
@@ -153,6 +160,11 @@ def edit_cooperative_bus(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="El grupo de buses no existe en tu cooperativa.",
+        ) from exc
+    except bus_service.BusTemplateNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La plantilla no existe o no pertenece a tu cooperativa.",
         ) from exc
     return _bus_read(bus)
 

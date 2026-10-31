@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modules.buses import repository
-from app.modules.buses.models import Bus, BusStatus
+from app.modules.buses.models import Bus, BusStatus, BusTemplate
 
 
 class DuplicateBusPlateError(Exception):
@@ -19,7 +19,8 @@ class BusNotFoundError(Exception):
 
 class BusGroupNotFoundError(Exception):
     pass
-
+class BusTemplateNotFoundError(Exception):
+    pass
 
 class BusInUseError(Exception):
     pass
@@ -29,7 +30,20 @@ def _validate_group(db: Session, cooperative_id: int, group_id: int) -> None:
     if repository.get_bus_group(db, cooperative_id, group_id) is None:
         raise BusGroupNotFoundError
 
+def _validate_template(
+    db: Session, cooperative_id: int, template_id: int
+) -> None:
+    template = (
+        db.query(BusTemplate)
+        .filter(
+            BusTemplate.id == template_id,
+            BusTemplate.cooperative_id == cooperative_id,
+        )
+        .first()
+    )
 
+    if template is None:
+        raise BusTemplateNotFoundError
 def _plate_exists(
     db: Session, plate: str, *, excluding_bus_id: int | None = None
 ) -> bool:
@@ -73,7 +87,9 @@ def create_bus(
     origin: str,
     status: BusStatus,
     group_id: int,
+    template_id: int,
 ) -> Bus:
+    _validate_template(db, cooperative_id, template_id)
     _validate_group(db, cooperative_id, group_id)
     if _number_exists(db, cooperative_id, number):
         raise DuplicateBusNumberError
@@ -94,6 +110,7 @@ def create_bus(
         status=status,
         is_active=status == BusStatus.OPERATIONAL,
         group_id=group_id,
+        template_id=template_id,
     )
     db.add(bus)
     try:
@@ -118,6 +135,15 @@ def update_bus(
     bus = repository.get_bus(db, cooperative_id, bus_id)
     if bus is None:
         raise BusNotFoundError
+    if "template_id" in changes:
+        if changes["template_id"] is None:
+            raise ValueError("La plantilla no puede ser nula.")
+
+        _validate_template(
+            db,
+            cooperative_id,
+            int(changes["template_id"]),
+        )
     if "group_id" in changes and changes["group_id"] is not None:
         _validate_group(db, cooperative_id, int(changes["group_id"]))
     if "number" in changes and changes["number"] != bus.number and _number_exists(

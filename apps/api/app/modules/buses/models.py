@@ -90,8 +90,8 @@ class Bus(TenantModel):
     body_brand: Mapped[str] = mapped_column(String(50))  # Carrocería
     year: Mapped[int | None]
     photo_url: Mapped[str | None] = mapped_column(String(500))
-    template_id: Mapped[int | None] = mapped_column(
-        ForeignKey("bus_templates.id", ondelete="RESTRICT"), nullable=True
+    template_id: Mapped[int ] = mapped_column(
+        ForeignKey("bus_templates.id", ondelete="RESTRICT"), nullable=False
     )
     group_id: Mapped[int | None] = mapped_column(ForeignKey("bus_groups.id", ondelete="SET NULL"))
     is_active: Mapped[bool] = mapped_column(default=True)
