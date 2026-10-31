@@ -108,3 +108,15 @@ class Bus(TenantModel):
 
     template: Mapped[BusTemplate] = relationship()
     group: Mapped[BusGroup | None] = relationship()
+    photos: Mapped[list["BusPhoto"]] = relationship(
+        back_populates="bus", cascade="all, delete-orphan", order_by="BusPhoto.id"
+    )
+
+
+class BusPhoto(BaseModel):
+    __tablename__ = "bus_photos"
+
+    bus_id: Mapped[int] = mapped_column(ForeignKey("buses.id", ondelete="CASCADE"))
+    file_path: Mapped[str] = mapped_column(String(500))
+
+    bus: Mapped[Bus] = relationship(back_populates="photos")

@@ -26,7 +26,7 @@ def get_uploads_root() -> Path:
     return root.resolve()
 
 
-def save_upload(file: UploadFile, folder: str) -> str:
+def save_upload(file: UploadFile, folder: str, allowed_types: set[str] | None = None) -> str:
     """
     Valida y guarda un archivo subido con un nombre aleatorio.
 
@@ -47,11 +47,15 @@ def save_upload(file: UploadFile, folder: str) -> str:
 
     extension = None
     for content_type, (suffix, signatures) in ALLOWED_FILE_TYPES.items():
+        if allowed_types is not None and content_type not in allowed_types:
+            continue
         if any(content.startswith(signature) for signature in signatures):
             extension = suffix
             break
 
     if extension is None:
+        if allowed_types == {"image/jpeg", "image/png"}:
+            raise InvalidUploadError("Solo se aceptan imagenes JPG o PNG.")
         raise InvalidUploadError("Solo se aceptan archivos PDF, JPG o PNG.")
 
     target_folder = get_uploads_root() / folder

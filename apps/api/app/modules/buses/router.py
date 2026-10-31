@@ -1,19 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
+from fastapi.responses import FileResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.permissions import require_cooperative_access
+from app.core.storage import InvalidUploadError, resolve_upload, save_upload
 from app.modules.accounts.models import Account
 from app.modules.buses import bus_service, repository, service
-from app.modules.buses.models import BusStatus
+from app.modules.buses.models import BusPhoto, BusStatus, BusTemplate
 from app.modules.buses.schemas import (
     BusCreate,
     BusGroupCreate,
+    BusPhotoRead,
     BusGroupRead,
     BusGroupUpdate,
     BusRead,
     BusStatusUpdate,
+    BusTemplateRead,
     BusUpdate,
 )
 
@@ -66,6 +71,10 @@ def _bus_read(bus) -> BusRead:
         group_id=bus.group_id,
         template_id=bus.template_id,
         group_name=bus.group.name,
+        photos=[
+            BusPhotoRead(id=photo.id, url=f"/api/v1/cooperatives/me/buses/{bus.id}/photos/{photo.id}")
+            for photo in bus.photos
+        ],
     )
 
 
@@ -88,6 +97,20 @@ def read_buses(
             status=bus_status.value if bus_status else None,
         )
     ]
+
+
+@cooperative_buses_router.get("/templates", response_model=list[BusTemplateRead])
+def read_cooperative_bus_templates(
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+) -> list[BusTemplateRead]:
+    templates = (
+        db.query(BusTemplate)
+        .filter(BusTemplate.cooperative_id == _require_cooperative_id(account))
+        .order_by(BusTemplate.name, BusTemplate.id)
+        .all()
+    )
+    return [BusTemplateRead.model_validate(template) for template in templates]
 
 
 @cooperative_buses_router.post("", response_model=BusRead, status_code=status.HTTP_201_CREATED)
@@ -124,6 +147,145 @@ def create_cooperative_bus(
             detail="La plantilla no existe o no pertenece a tu cooperativa.",
         ) from exc
     return _bus_read(bus)
+
+
+@cooperative_buses_router.post(
+    "/with-photos", response_model=BusRead, status_code=status.HTTP_201_CREATED
+)
+def create_cooperative_bus_with_photos(
+    payload: str = Form(...),
+    photos: list[UploadFile] = File(default=[]),
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> BusRead:
+    try:
+        bus_payload = BusCreate.model_validate_json(payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
+
+    if len(photos) > 8:
+        raise HTTPException(status_code=422, detail="Puedes subir hasta 8 fotos por bus.")
+
+    saved_paths: list[str] = []
+    bus = None
+    try:
+        for photo in photos:
+            saved_paths.append(
+                save_upload(photo, "buses", allowed_types={"image/jpeg", "image/png"})
+            )
+        bus = bus_service.create_bus(
+            db,
+            _require_cooperative_id(account),
+            **bus_payload.model_dump(),
+            photo_paths=saved_paths,
+        )
+    except InvalidUploadError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except bus_service.DuplicateBusPlateError as exc:
+        raise HTTPException(status_code=409, detail="Ya existe un bus con esa placa.") from exc
+    except bus_service.DuplicateBusNumberError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe un bus con ese numero de disco en esta cooperativa.",
+        ) from exc
+    except bus_service.BusGroupNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="El grupo de buses no existe en tu cooperativa.") from exc
+    except bus_service.BusTemplateNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="La plantilla no existe o no pertenece a tu cooperativa.",
+        ) from exc
+    finally:
+        if bus is None:
+            _remove_bus_photo_files(saved_paths)
+
+    return _bus_read(bus)
+
+
+def _remove_bus_photo_files(paths: list[str]) -> None:
+    for path in paths:
+        try:
+            resolve_upload(path).unlink()
+        except FileNotFoundError:
+            pass
+
+
+@cooperative_buses_router.get("/{bus_id}/photos/{photo_id}")
+def read_cooperative_bus_photo(
+    bus_id: int,
+    photo_id: int,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+):
+    bus = repository.get_bus(db, _require_cooperative_id(account), bus_id)
+    photo = next((photo for photo in bus.photos if photo.id == photo_id), None) if bus else None
+    if photo is None:
+        raise HTTPException(status_code=404, detail="Foto no encontrada.")
+    try:
+        return FileResponse(resolve_upload(photo.file_path))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Foto no encontrada.") from None
+
+
+@cooperative_buses_router.post("/{bus_id}/photos", response_model=list[BusPhotoRead])
+def add_cooperative_bus_photos(
+    bus_id: int,
+    photos: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> list[BusPhotoRead]:
+    bus = repository.get_bus(db, _require_cooperative_id(account), bus_id)
+    if bus is None:
+        raise HTTPException(status_code=404, detail="Bus no encontrado.")
+    if not photos or len(bus.photos) + len(photos) > 8:
+        raise HTTPException(status_code=422, detail="El bus puede tener hasta 8 fotos.")
+
+    saved_paths: list[str] = []
+    try:
+        for photo in photos:
+            saved_paths.append(
+                save_upload(photo, "buses", allowed_types={"image/jpeg", "image/png"})
+            )
+        created = [BusPhoto(bus_id=bus.id, file_path=path) for path in saved_paths]
+        db.add_all(created)
+        db.commit()
+        for photo in created:
+            db.refresh(photo)
+    except InvalidUploadError as exc:
+        db.rollback()
+        _remove_bus_photo_files(saved_paths)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception:
+        db.rollback()
+        _remove_bus_photo_files(saved_paths)
+        raise
+
+    return [
+        BusPhotoRead(id=photo.id, url=f"/api/v1/cooperatives/me/buses/{bus.id}/photos/{photo.id}")
+        for photo in created
+    ]
+
+
+@cooperative_buses_router.delete("/{bus_id}/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_cooperative_bus_photo(
+    bus_id: int,
+    photo_id: int,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> Response:
+    bus = repository.get_bus(db, _require_cooperative_id(account), bus_id)
+    photo = next((photo for photo in bus.photos if photo.id == photo_id), None) if bus else None
+    if photo is None:
+        raise HTTPException(status_code=404, detail="Foto no encontrada.")
+
+    file_path = photo.file_path
+    db.delete(photo)
+    db.commit()
+    _remove_bus_photo_files([file_path])
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @cooperative_buses_router.patch("/{bus_id}", response_model=BusRead)
@@ -193,8 +355,13 @@ def remove_cooperative_bus(
     account: Account = Depends(require_cooperative_access),
     _: None = Depends(validate_request_origin),
 ) -> Response:
+    cooperative_id = _require_cooperative_id(account)
+    bus = repository.get_bus(db, cooperative_id, bus_id)
+    if bus is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bus no encontrado.")
+    photo_paths = [photo.file_path for photo in bus.photos]
     try:
-        bus_service.delete_bus(db, _require_cooperative_id(account), bus_id)
+        bus_service.delete_bus(db, cooperative_id, bus_id)
     except bus_service.BusNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bus no encontrado.") from exc
     except bus_service.BusInUseError as exc:
@@ -202,6 +369,7 @@ def remove_cooperative_bus(
             status_code=status.HTTP_409_CONFLICT,
             detail="No se puede eliminar el bus porque tiene relaciones operativas o históricas.",
         ) from exc
+    _remove_bus_photo_files(photo_paths)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

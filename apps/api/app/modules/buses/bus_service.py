@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modules.buses import repository
-from app.modules.buses.models import Bus, BusStatus, BusTemplate
+from app.modules.buses.models import Bus, BusPhoto, BusStatus, BusTemplate, TemplateSeat
 
 
 class DuplicateBusPlateError(Exception):
@@ -87,33 +87,66 @@ def create_bus(
     origin: str,
     status: BusStatus,
     group_id: int,
-    template_id: int,
+    template_id: int | None,
+    template: dict[str, object] | None,
+    photo_paths: list[str] | None = None,
 ) -> Bus:
-    _validate_template(db, cooperative_id, template_id)
+    if (template_id is None) == (template is None):
+        raise ValueError("Debe proporcionarse exactamente una plantilla.")
     _validate_group(db, cooperative_id, group_id)
+    if template_id is not None:
+        _validate_template(db, cooperative_id, template_id)
     if _number_exists(db, cooperative_id, number):
         raise DuplicateBusNumberError
     if _plate_exists(db, plate):
         raise DuplicateBusPlateError
-    bus = Bus(
-        cooperative_id=cooperative_id,
-        number=number,
-        plate=plate,
-        chassis_brand=brand,
-        body_brand=brand,
-        brand=brand,
-        model=model,
-        year=year,
-        passenger_capacity=passenger_capacity,
-        floors=floors,
-        origin=origin,
-        status=status,
-        is_active=status == BusStatus.OPERATIONAL,
-        group_id=group_id,
-        template_id=template_id,
-    )
-    db.add(bus)
+
     try:
+        if template is not None:
+            bus_template = BusTemplate(
+                cooperative_id=cooperative_id,
+                name=str(template["name"]),
+                floors=int(template["floors"]),
+                has_bathroom=bool(template["has_bathroom"]),
+                rows=int(template["rows"]),
+                columns=int(template["columns"]),
+            )
+            db.add(bus_template)
+            db.flush()
+            template_id = bus_template.id
+            for seat in template["seats"]:
+                db.add(
+                    TemplateSeat(
+                        template_id=template_id,
+                        number=seat["number"],
+                        floor=seat["floor"],
+                        row=seat["row"],
+                        column=seat["column"],
+                        seat_type=seat["seat_type"],
+                    )
+                )
+
+        bus = Bus(
+            cooperative_id=cooperative_id,
+            number=number,
+            plate=plate,
+            chassis_brand=brand,
+            body_brand=brand,
+            brand=brand,
+            model=model,
+            year=year,
+            passenger_capacity=passenger_capacity,
+            floors=floors,
+            origin=origin,
+            status=status,
+            is_active=status == BusStatus.OPERATIONAL,
+            group_id=group_id,
+            template_id=template_id,
+        )
+        db.add(bus)
+        db.flush()
+        for file_path in photo_paths or []:
+            db.add(BusPhoto(bus_id=bus.id, file_path=file_path))
         db.commit()
     except IntegrityError as exc:
         db.rollback()
@@ -121,6 +154,9 @@ def create_bus(
             raise DuplicateBusNumberError from exc
         if _plate_exists(db, plate):
             raise DuplicateBusPlateError from exc
+        raise
+    except Exception:
+        db.rollback()
         raise
     db.refresh(bus)
     return bus
