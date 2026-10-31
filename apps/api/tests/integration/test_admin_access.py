@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -131,6 +132,7 @@ def test_super_admin_can_create_and_update_cooperatives(test_environment):
             "ruc": "1234567890001",
             "accountEmail": "cooperativa@example.com",
             "initialPassword": "ClaveCooperativa123!",
+            "phone": "0991234567",
         },
         headers=headers,
     )
@@ -138,13 +140,68 @@ def test_super_admin_can_create_and_update_cooperatives(test_environment):
     cooperative_id = created.json()["id"]
 
     updated = client.patch(
-        f"/api/v1/admin/cooperatives/{cooperative_id}/status",
-        json={"isActive": False},
+        f"/api/v1/admin/cooperatives/{cooperative_id}",
+        json={"phone": "0987654321"},
         headers=headers,
     )
 
     assert updated.status_code == 200
-    assert updated.json()["isActive"] is False
+    assert updated.json()["phone"] == "0987654321"
+
+    status_update = client.patch(
+        f"/api/v1/admin/cooperatives/{cooperative_id}",
+        json={"isActive": False},
+        headers=headers,
+    )
+    assert status_update.status_code == 422
+
+    removed_status_route = client.patch(
+        f"/api/v1/admin/cooperatives/{cooperative_id}/status",
+        json={"isActive": False},
+        headers=headers,
+    )
+    assert removed_status_route.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("email", "contacto@cooperativa.ec"),
+        ("logoUrl", "https://example.com/logo.png"),
+        ("isActive", False),
+    ],
+)
+def test_admin_create_rejects_contact_email_logo_and_status(
+    test_environment,
+    field,
+    value,
+):
+    client, engine = test_environment
+    admin_email = "admin@example.com"
+    create_account_for_login(
+        engine,
+        email=admin_email,
+        account_type=AccountType.SUPER_ADMIN,
+    )
+    assert login(client, admin_email).status_code == 200
+
+    payload = {
+        "name": "Cooperativa Test",
+        "ruc": "1234567890001",
+        "accountEmail": "registro@cooperativa.ec",
+        "initialPassword": "ClaveCooperativa123!",
+        field: value,
+    }
+    response = client.post(
+        "/api/v1/admin/cooperatives",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 422
+    with Session(engine) as db:
+        assert db.query(Cooperative).count() == 0
+        assert get_account_by_email(db, "registro@cooperativa.ec") is None
 
 
 def test_creating_cooperative_creates_linked_login_account(test_environment):
@@ -180,6 +237,8 @@ def test_creating_cooperative_creates_linked_login_account(test_environment):
         assert account.cooperative_id == cooperative_id
         assert account.password_hash != "ClaveCooperativa123!"
         assert cooperative is not None
+        assert cooperative.email is None
+        assert cooperative.logo_url is None
 
     cooperative_login = login(
         client,

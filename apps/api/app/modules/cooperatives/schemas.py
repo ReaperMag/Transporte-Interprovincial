@@ -35,7 +35,6 @@ Email = Annotated[
 ]
 Phone = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)]
 Address = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
-LogoUrl = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 ProfileUrl = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)
 ]
@@ -62,14 +61,23 @@ def validate_http_url(value: str | None) -> str | None:
     return value
 
 
-class CooperativeCreate(CooperativeSchema):
+class CooperativeAdminWrite(CooperativeSchema):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        from_attributes=True,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
     name: CooperativeName
     ruc: Ruc
     address: Address | None = None
     phone: Phone | None = None
-    email: Email | None = None
-    logo_url: LogoUrl | None = None
-    is_active: bool = True
+
+
+class CooperativeCreate(CooperativeAdminWrite):
+    name: CooperativeName
+    ruc: Ruc
 
 
 class CooperativeAccountCreate(CooperativeCreate):
@@ -77,14 +85,12 @@ class CooperativeAccountCreate(CooperativeCreate):
     initial_password: str = Field(min_length=12, max_length=128)
 
 
-class CooperativeUpdate(CooperativeSchema):
+class CooperativeUpdate(CooperativeAdminWrite):
     name: CooperativeName | None = None
     ruc: Ruc | None = None
     address: Address | None = None
     phone: Phone | None = None
     email: Email | None = None
-    logo_url: LogoUrl | None = None
-    is_active: bool | None = None
 
     @field_validator("name", "ruc")
     @classmethod
@@ -92,10 +98,6 @@ class CooperativeUpdate(CooperativeSchema):
         if value is None:
             raise ValueError("This field cannot be null.")
         return value
-
-
-class CooperativeStatusUpdate(CooperativeSchema):
-    is_active: bool
 
 
 class CooperativeRead(CooperativeSchema):
@@ -106,7 +108,6 @@ class CooperativeRead(CooperativeSchema):
     phone: str | None
     email: str | None
     logo_url: str | None
-    is_active: bool
 
 
 class CooperativeProfileUpdate(CooperativeSchema):

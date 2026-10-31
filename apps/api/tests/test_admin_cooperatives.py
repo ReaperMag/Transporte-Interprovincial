@@ -32,7 +32,7 @@ class AdminCooperativeServiceTests(unittest.TestCase):
     def test_create_search_and_summary(self) -> None:
         cooperative = self.create_cooperative()
 
-        results = repository.list_cooperatives(self.db, search="Test", is_active=True)
+        results = repository.list_cooperatives(self.db, search="Test")
         summary = repository.get_admin_summary(self.db)
 
         self.assertEqual([cooperative.id], [item.id for item in results])

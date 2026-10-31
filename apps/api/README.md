@@ -8,19 +8,21 @@ cooperativas. El panel consume estos endpoints bajo
 
 | Método | Ruta | Operación |
 | --- | --- | --- |
-| `GET` | `/` | Listar; admite `search` e `isActive` |
+| `GET` | `/` | Listar; admite `search` |
 | `POST` | `/` | Crear |
 | `GET` | `/{id}` | Consultar detalle |
 | `PUT` | `/{id}` | Reemplazar los datos |
 | `PATCH` | `/{id}` | Actualizar los campos enviados |
-| `PATCH` | `/{id}/status` | Activar o desactivar |
 | `DELETE` | `/{id}` | Eliminar si no tiene registros relacionados |
 | `GET` | `/summary` | Total de cooperativas registradas |
 
-El contrato JSON usa camelCase. El RUC es obligatorio y debe tener 13 dígitos.
-El nombre y el RUC son únicos. Los conflictos de unicidad devuelven `409`;
-una cooperativa con información relacionada tampoco se elimina (debe
-desactivarse para conservar el historial).
+El contrato JSON usa camelCase. Para crear una cooperativa se solicita el
+correo de registro de su cuenta y no el correo de contacto. El correo de
+contacto puede consultarse o editarse después; el logo y el estado no se
+administran desde este panel. El RUC debe tener 13 dígitos y el nombre y el RUC
+son únicos. Los conflictos de unicidad devuelven `409`. Una cooperativa con
+registros relacionados no se puede eliminar para conservar la integridad de
+esos datos.
 
 ## Acceso de cooperativas
 
