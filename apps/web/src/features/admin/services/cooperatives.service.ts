@@ -78,12 +78,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function getCooperatives(
   search = '',
-  isActive?: boolean,
   signal?: AbortSignal,
 ): Promise<Cooperative[]> {
   const params = new URLSearchParams();
   if (search.trim()) params.set('search', search.trim());
-  if (isActive !== undefined) params.set('isActive', String(isActive));
   const query = params.size ? `?${params.toString()}` : '';
 
   return request(`${cooperativesUrl}${query}`, { signal });
@@ -107,16 +105,6 @@ export function updateCooperative(
   return request(`${cooperativesUrl}/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(values),
-  });
-}
-
-export function updateCooperativeStatus(
-  id: number,
-  isActive: boolean,
-): Promise<Cooperative> {
-  return request(`${cooperativesUrl}/${id}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ isActive }),
   });
 }
 
