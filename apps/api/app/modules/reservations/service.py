@@ -104,6 +104,7 @@ def get_bookable_trip(db: Session, trip_id: int) -> Trip:
     trip = db.scalar(
         select(Trip)
         .where(Trip.id == trip_id)
+        .with_for_update()
         .options(
             selectinload(Trip.frequency)
             .selectinload(Frequency.route)

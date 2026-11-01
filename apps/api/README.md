@@ -47,6 +47,33 @@ contraseña como hash y vincula la cuenta de tipo `cooperative` al registro de l
 cooperativa en una sola transacción. Si el correo ya pertenece a otra cuenta,
 no se crea la cooperativa.
 
+## Rutas, frecuencias y hojas de ruta
+
+La cooperativa administra estos recursos en
+`/api/v1/cooperatives/me/route-planning`. Las ciudades son compartidas por las
+cooperativas; las rutas, frecuencias y hojas de servicio pertenecen a la
+cooperativa autenticada.
+
+| Método | Ruta | Operación |
+| --- | --- | --- |
+| `GET` / `POST` | `/cities` | Consultar o agregar ciudades y provincias |
+| `GET` / `POST` | `/routes` | Consultar o crear un recorrido principal con paradas ordenadas |
+| `GET` / `POST` | `/frequencies` | Consultar o asociar una hora ANT y un grupo de buses a una ruta |
+| `GET` | `/route-sheets?groupId={id}&serviceDate=AAAA-MM-DD` | Consultar la hoja del grupo para una fecha |
+| `PUT` | `/route-sheets` | Guardar o reemplazar las asignaciones del borrador diario |
+| `POST` | `/route-sheets/{id}/publish` | Publicar cuando todas las frecuencias activas tienen bus |
+
+Cada parada registra su orden y los minutos desde el origen. En la hoja diaria,
+la cooperativa indica la ubicación inicial de cada bus y puede sustituirlo por
+otro bus operativo del grupo. La API no permite asignar buses en mantenimiento,
+cruzar servicios ni continuar desde una ciudad diferente; exige al menos 30
+minutos entre la llegada de un servicio y la siguiente salida. Las hojas
+publicadas quedan en solo lectura.
+
+La búsqueda de viajes existente también exige que la ruta tenga tarifas para
+el tramo y tipo de asiento solicitado. La planificación de rutas no define
+precios, por lo que publicar una hoja no crea tarifas automáticamente.
+
 ## Reservas de asientos
 
 Las rutas viven bajo `/api/v1/reservations` y requieren una sesión iniciada.
