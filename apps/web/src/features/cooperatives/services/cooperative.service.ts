@@ -18,6 +18,25 @@ export interface CooperativeProfile extends CooperativeIdentity {
   description: string | null;
 }
 
+export interface CooperativeRouteFrequencyAssignment {
+  busId: number;
+  busNumber: string;
+  plate: string;
+  routeId: number;
+  originCity: string;
+  destinationCity: string;
+  departureTime: string;
+  resolutionNumber: string;
+  tripCount: number;
+  lastDepartureAt: string | null;
+}
+
+export interface CooperativeRouteFrequencySummary {
+  activeRoutes: number;
+  activeFrequencies: number;
+  busAssignments: CooperativeRouteFrequencyAssignment[];
+}
+
 export async function getAuthenticatedCooperative(): Promise<CooperativeIdentity> {
   const response = await fetch('/api/v1/cooperatives/me', {
     credentials: 'same-origin',
@@ -40,6 +59,18 @@ export async function getAuthenticatedCooperativeProfile(): Promise<CooperativeP
   }
 
   return (await response.json()) as CooperativeProfile;
+}
+
+export async function getCooperativeRouteFrequencySummary(): Promise<CooperativeRouteFrequencySummary> {
+  const response = await fetch('/api/v1/cooperatives/me/route-frequency-summary', {
+    credentials: 'same-origin',
+  });
+
+  if (!response.ok) {
+    throw new Error('No fue posible obtener el resumen de rutas y frecuencias.');
+  }
+
+  return (await response.json()) as CooperativeRouteFrequencySummary;
 }
 
 export async function updateAuthenticatedCooperativeProfile(

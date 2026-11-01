@@ -83,7 +83,17 @@ export function CooperativeLayout() {
             Grupos
           </NavLink>
           <NavLink
-            className="cooperative-toolbar__link cooperative-toolbar__link--disabled"
+            className={({ isActive }) =>
+              `cooperative-toolbar__link${isActive ? ' cooperative-toolbar__link--active' : ''}`
+            }
+            to="/cooperativa/rutas"
+          >
+            Rutas y frecuencias
+          </NavLink>
+          <NavLink
+            className={({ isActive }) =>
+              `cooperative-toolbar__link${isActive ? ' cooperative-toolbar__link--active' : ''}`
+            }
             to="/cooperativa/buses"
           >
             Buses

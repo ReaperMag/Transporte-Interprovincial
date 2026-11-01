@@ -61,6 +61,84 @@
   overflow-wrap: anywhere;
 }
 
+.cooperative-dashboard__identity a {
+  color: #2563eb;
+  overflow-wrap: anywhere;
+}
+
+.cooperative-dashboard__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.cooperative-dashboard__metrics article {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid #dbe5f0;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 1rem 1.2rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 5%);
+}
+
+.cooperative-dashboard__metrics span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.cooperative-dashboard__metrics strong {
+  color: #0f172a;
+  font-size: 1.7rem;
+}
+
+.cooperative-dashboard__routes {
+  margin-top: 1.25rem;
+  border: 1px solid #dbe5f0;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 5%);
+}
+
+.cooperative-dashboard__routes h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.cooperative-dashboard__routes > p {
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.cooperative-dashboard__table-wrap {
+  overflow-x: auto;
+}
+
+.cooperative-dashboard__routes table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cooperative-dashboard__routes th,
+.cooperative-dashboard__routes td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.75rem;
+}
+
+.cooperative-dashboard__routes th {
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.cooperative-dashboard__empty {
+  margin-bottom: 0;
+  color: #64748b;
+}
+
 .cooperative-dashboard__error {
   color: #991b1b;
 }

@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 from typing import Annotated
 from urllib.parse import urlsplit
@@ -181,3 +182,22 @@ class CooperativeIdentity(CooperativeSchema):
 
 class AdminSummary(CooperativeSchema):
     cooperatives: int
+
+
+class BusRouteFrequency(CooperativeSchema):
+    bus_id: int
+    bus_number: str
+    plate: str
+    route_id: int
+    origin_city: str
+    destination_city: str
+    departure_time: str
+    resolution_number: str
+    trip_count: int
+    last_departure_at: datetime | None
+
+
+class CooperativeRouteFrequencySummary(CooperativeSchema):
+    active_routes: int
+    active_frequencies: int
+    bus_assignments: list[BusRouteFrequency]

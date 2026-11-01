@@ -13,6 +13,7 @@ from app.modules.cooperatives.schemas import (
     CooperativeIdentity,
     CooperativeProfileRead,
     CooperativeProfileUpdate,
+    CooperativeRouteFrequencySummary,
     CooperativeRead,
     CooperativeUpdate,
 )
@@ -67,6 +68,22 @@ def read_current_cooperative_profile(
             detail="La cuenta no tiene una cooperativa asociada.",
         )
     return cooperative
+
+
+@cooperative_router.get(
+    "/me/route-frequency-summary",
+    response_model=CooperativeRouteFrequencySummary,
+)
+def read_current_cooperative_route_frequency_summary(
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+) -> CooperativeRouteFrequencySummary:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    return repository.get_route_frequency_summary(db, account.cooperative_id)
 
 
 @cooperative_router.patch(
