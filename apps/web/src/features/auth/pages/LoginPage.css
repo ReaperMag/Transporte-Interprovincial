@@ -1,61 +1,12 @@
-.login-page {
-  display: flex;
-  min-height: 100vh;
-  min-height: 100dvh;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  padding: 2rem 1rem;
-  background: #f1f5f9;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-}
-
-.login-page__card {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 440px;
-  padding: 2.5rem;
-  border-radius: 1rem;
-  background: white;
-  box-shadow: 0 12px 36px rgb(15 23 42 / 8%);
-}
-
-.login-page__header {
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.login-page__title {
-  margin: 0 0 0.75rem;
-  color: #0f172a;
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.login-page__description {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-@media (max-width: 480px) {
-  .login-page {
-    padding: 1rem;
-  }
-
-  .login-page__card {
-    padding: 1.5rem;
-    border-radius: 0.75rem;
-  }
-
-  .login-page__title {
-    font-size: 1.5rem;
-  }
-}
+.login-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(280px, .85fr) minmax(360px, 1fr); align-items: stretch; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.login-page__intro { display: flex; flex-direction: column; justify-content: center; padding: clamp(32px, 7vw, 96px); background: #14212b; color: #f5f4f0; }
+.login-page__brand { margin: 0 0 72px; color: #d99a1e; font-size: .75rem; font-weight: 800; letter-spacing: .13em; }
+.login-page__intro-kicker { margin: 0 0 12px; color: #aeb9bd; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; }
+.login-page__intro h2 { max-width: 450px; margin: 0; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: clamp(2.4rem, 5vw, 4.4rem); line-height: .98; letter-spacing: -.05em; }
+.login-page__intro-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 34px; }
+.login-page__intro-tags span { padding: 8px 11px; border: 1px solid #40525a; border-radius: 999px; color: #c7d0d2; font-size: .7rem; }
+.login-page__card { align-self: center; width: min(100%, 430px); box-sizing: border-box; margin: 0 auto; padding: clamp(24px, 5vw, 56px); }
+.login-page__header { margin-bottom: 30px; }
+.login-page__title { margin: 0 0 8px; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 2rem; letter-spacing: -.04em; }
+.login-page__description { margin: 0; color: #5b6670; font-size: .86rem; line-height: 1.6; }
+@media (max-width: 760px) { .login-page { display: block; } .login-page__intro { min-height: 230px; padding: 28px 24px; } .login-page__brand { margin-bottom: 36px; } .login-page__intro h2 { font-size: 2.3rem; } .login-page__card { padding: 36px 24px 48px; } }

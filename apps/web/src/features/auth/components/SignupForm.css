@@ -1,144 +1,17 @@
-/* Contenedor principal del formulario */
-.signup-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-}
-
-/* Campos del formulario */
-.signup-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.signup-form__field label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-/* Entradas de texto */
-.signup-form__field input {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 3rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
-  background-color: #ffffff;
-  color: #0f172a;
-  font: inherit;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.signup-form__field input::placeholder {
-  color: #94a3b8;
-}
-
-.signup-form__field input:focus {
-  outline: 2px solid transparent;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-/* Contenedor de contraseña */
-.signup-form__password-wrapper {
-  position: relative;
-}
-
-.signup-form__password-wrapper input {
-  padding-right: 6.5rem;
-}
-
-/* Mostrar y ocultar contraseña */
-.signup-form__toggle {
-  position: absolute;
-  top: 50%;
-  right: 0.75rem;
-  transform: translateY(-50%);
-  border: none;
-  background: transparent;
-  color: #2563eb;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.signup-form__toggle:hover {
-  color: #1d4ed8;
-}
-
-.signup-form__toggle:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 3px;
-}
-
-.signup-form__toggle:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Validación y mensajes de error */
-.signup-form__field input[aria-invalid='true'] {
-  border-color: #dc2626;
-}
-
-.signup-form__error {
-  margin: 0;
-  color: #dc2626;
-  font-size: 0.85rem;
-}
-
-/* Botón principal */
-.signup-form__submit {
-  width: 100%;
-  min-height: 3rem;
-  margin-top: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 0.5rem;
-  background-color: #2563eb;
-  color: #ffffff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.signup-form__submit:hover:not(:disabled) {
-  background-color: #1d4ed8;
-}
-
-.signup-form__submit:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 3px;
-}
-
-.signup-form__submit:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-}
-
-/* Aviso de modo presentación */
-.signup-form__notice {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  text-align: center;
-}
-
-/* Adaptación a pantallas pequeñas */
-@media (max-width: 480px) {
-  .signup-form {
-    gap: 0.85rem;
-  }
-
-  .signup-form__field input {
-    font-size: 1rem;
-  }
-}
+.signup-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; width: 100%; }
+.signup-form__field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.signup-form__field label { color: #14212b; font-size: .75rem; font-weight: 700; }
+.signup-form__field input { width: 100%; min-height: 42px; box-sizing: border-box; padding: 9px 11px; border: 1px solid #dcd9d2; border-radius: 8px; background: #fff; color: #14212b; font: inherit; font-size: .8rem; }
+.signup-form__field input::placeholder { color: #9aa3a5; }
+.signup-form__field input:focus { outline: 2px solid #d99a1e; outline-offset: 1px; border-color: #0e5a6b; }
+.signup-form__password-wrapper { position: relative; }
+.signup-form__password-wrapper input { padding-right: 5rem; }
+.signup-form__toggle { position: absolute; top: 50%; right: 9px; transform: translateY(-50%); border: 0; background: transparent; color: #0e5a6b; font-size: .7rem; font-weight: 700; cursor: pointer; }
+.signup-form__toggle:focus-visible { outline: 2px solid #d99a1e; outline-offset: 3px; }
+.signup-form__field input[aria-invalid='true'] { border-color: #b3362b; }
+.signup-form__error { margin: 0; color: #b3362b; font-size: .72rem; }
+.signup-form__submit { grid-column: 1 / -1; width: 100%; min-height: 44px; margin-top: 5px; border: 0; border-radius: 8px; background: #0e5a6b; color: #fff; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+.signup-form__submit:hover:not(:disabled) { background: #0a4250; }
+.signup-form__submit:disabled { background: #aeb9bd; cursor: not-allowed; }
+.signup-form__notice { grid-column: 1 / -1; margin: 0; color: #5b6670; font-size: .72rem; line-height: 1.5; text-align: center; }
+@media (max-width: 560px) { .signup-form { grid-template-columns: 1fr; } .signup-form__submit, .signup-form__notice { grid-column: auto; } }
