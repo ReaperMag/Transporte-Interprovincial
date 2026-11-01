@@ -4,6 +4,7 @@ import { RequirePassenger } from '../../features/auth/components/RequirePassenge
 import { PassengerLayout } from '../../shared/layouts/PassengerLayout';
 import { PassengerDashboardPage } from '../../features/passengers/pages/PassengerDashboardPage';
 import { PassengerProfilePage } from '../../features/passengers/pages/PassengerProfilePage';
+import { PassengerTripSearchPage } from '../../features/passengers/pages/PassengerTripSearchPage';
 import { SeatPurchasePage } from '../../features/buses/pages/SeatPurchasePage';
 
 export const passengerRoutes = (
@@ -17,6 +18,7 @@ export const passengerRoutes = (
   >
     <Route index element={<PassengerDashboardPage />} />
     <Route path="perfil" element={<PassengerProfilePage />} />
+    <Route path="viajes" element={<PassengerTripSearchPage />} />
     <Route path="asientos" element={<SeatPurchasePage />} />
   </Route>
 );

@@ -60,6 +60,18 @@ export function PassengerDashboardPage() {
 
       <div className="passenger-dashboard__grid">
         <article className="passenger-dashboard__card">
+          <article className="passenger-dashboard__card">
+            <h2>Buscar viajes</h2>
+            <p>
+              Consulta las rutas, cooperativas, horarios y tarifas disponibles para tu próximo
+              viaje.
+            </p>
+
+            <Link className="passenger-dashboard__action" to="/pasajero/viajes">
+              Buscar viajes disponibles
+            </Link>
+          </article>
+
           <h2>Mi información</h2>
 
           <dl>
