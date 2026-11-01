@@ -71,6 +71,14 @@ def init_db() -> None:
     from app.modules.buses.group_schema import ensure_bus_group_name_index
 
     ensure_bus_group_name_index(engine)
+    frequency_columns = {
+        column["name"] for column in inspect(engine).get_columns("frequencies")
+    }
+    if "bus_group_id" not in frequency_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE frequencies ADD COLUMN bus_group_id INTEGER")
+            )
     bus_columns = {
         column["name"] for column in inspect(engine).get_columns("buses")
     }
