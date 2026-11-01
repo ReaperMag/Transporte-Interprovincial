@@ -1,0 +1,47 @@
+.seat-purchase-page, .seat-sale-page { background: #f5f4f0 !important; color: #14212b !important; font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important; }
+.seat-purchase-page__content, .seat-sale-page { width: min(100%, 1120px); }
+.seat-purchase-page__eyebrow { color: #0e5a6b !important; }
+.seat-purchase-page__title, .seat-sale-page__title { color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; letter-spacing: -.04em; }
+.seat-purchase-page__description, .seat-sale-page__subtitle { color: #5b6670 !important; }
+.seat-purchase-page__section, .seat-purchase-page__map-card, .seat-purchase-page__summary, .seat-sale-page__progress, .seat-sale-page__assignment, .passenger-form { border: 1px solid #dcd9d2 !important; border-radius: 14px !important; background: #fff !important; box-shadow: 0 12px 30px rgb(20 33 43 / 5%); }
+.seat-purchase-page__section-heading h2, .seat-purchase-page__summary h2, .passenger-form__title { color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
+.seat-purchase-page__legend { border-color: #eceae5; color: #5b6670; }
+.seat-purchase-page__legend-swatch { border-color: #a9c7cb; background: #e3eef0; }
+.seat-purchase-page__legend-swatch--vip { border-color: #d99a1e; background: #fbf0d9; color: #79560f; }
+.seat-purchase-page__continue:not(:disabled), .seat-sale-page__button--primary { background: #0e5a6b !important; }
+.seat-purchase-page__continue:not(:disabled):hover, .seat-sale-page__button--primary:hover { background: #0a4250 !important; }
+.bus-template-selector__option { border-color: #dcd9d2; border-radius: 10px; }
+.bus-template-selector__option--selected { border-color: #0e5a6b; background: #e3eef0; box-shadow: 0 0 0 1px #0e5a6b; }
+.bus-template-selector__name { color: #14212b; }
+.bus-template-selector__details { color: #5b6670; }
+.bus-seat-map__floor-button { border-color: #b8c2c3; color: #5b6670; }
+.bus-seat-map__floor-button--selected { border-color: #0e5a6b; background: #0e5a6b; }
+.bus-seat-map__vehicle { border-color: #a9c7cb; background: #fbfaf7; box-shadow: inset 0 0 0 .4rem #fff, 0 12px 30px rgb(20 33 43 / 7%); }
+.bus-seat-map__front { border-color: #c8d6d8; background: #e3eef0; color: #0e5a6b; }
+.bus-seat-map__seat { border-color: #a9c7cb; background: #e3eef0; color: #0e5a6b; }
+.bus-seat-map__seat--vip { border-color: #d99a1e; background: #fbf0d9; color: #79560f; }
+.bus-seat-map__seat--selected, .bus-seat-map__seat--selected.bus-seat-map__seat--vip { border-color: #0e5a6b; background: #0e5a6b; box-shadow: 0 0 0 2px rgb(14 90 107 / 18%); color: #fff; }
+.bus-seat-map__bathroom { border-color: #b8c2c3; background: #e3eef0; color: #5b6670; }
+.passenger-form__header { border-color: #eceae5; background: #fbfaf7; }
+.passenger-form__label { color: #14212b; font-size: .75rem; font-weight: 700; }
+.passenger-form__input, .seat-sale-page__assignment-control select { border-color: #dcd9d2; border-radius: 8px; }
+.seat-sale-page__back-link { color: #0e5a6b; }
+.seat-sale-page__progress-fill { background: #d99a1e; }
+.seat-sale-page__assignment { border-color: #b8d0b9 !important; background: #e2f0e7 !important; }
+.seat-sale-page__assignment > p, .seat-sale-page__assignment li { color: #2f7a4d; }
+.invoice-modal__backdrop, .passenger-count-modal__backdrop { background: rgb(20 33 43 / 72%); }
+.invoice-modal, .passenger-count-modal { border: 1px solid #dcd9d2; border-radius: 16px; }
+.invoice-modal__eyebrow { color: #0e5a6b; }
+.invoice-modal__header, .invoice-modal__actions, .passenger-count-modal__header, .passenger-count-modal__footer { border-color: #eceae5; }
+.invoice-modal__actions, .passenger-count-modal__footer { background: #fbfaf7; }
+.invoice-modal__confirm, .passenger-count-modal__button--primary { background: #0e5a6b !important; }
+.invoice-modal__confirm:hover { background: #0a4250; }
+.invoice-modal__paid { color: #2f7a4d; }
+.passenger-count-modal__input { border-color: #dcd9d2; border-radius: 8px; }
+.bus-floorplan-editor__settings, .bus-floorplan-editor__layout-settings, .bus-floorplan-editor__toolbar { border-color: #dcd9d2; border-radius: 12px; background: #fbfaf7; }
+.bus-floorplan-editor__layout-settings button { border-color: #0e5a6b; background: #0e5a6b; }
+.bus-floorplan-editor__empty-seat { border-color: #b8c2c3; background: #fbfaf7; color: #5b6670; }
+.bus-create-wizard { color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.bus-create-wizard__steps .bus-create-wizard__step--active { color: #0e5a6b; }
+.bus-create-wizard__steps .bus-create-wizard__step--active span { border-color: #0e5a6b; background: #0e5a6b; }
+.bus-create-wizard__notice { color: #79560f; }
