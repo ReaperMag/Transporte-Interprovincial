@@ -189,7 +189,7 @@ export function CooperativeDialog({
             )}
 
             {mode !== 'create' && (
-              <label>
+              <label className="cooperative-dialog__field--wide">
                 Correo de contacto
                 <input
                   autoComplete="email"
