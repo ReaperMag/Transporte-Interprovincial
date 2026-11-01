@@ -1,4 +1,34 @@
-.cooperatives-page {
-  max-width: 1180px;
-  margin: 0 auto;
-}
+.cooperatives-page { max-width: 1120px; margin: 0 auto; }
+.admin-breadcrumb { margin: 0 0 28px; color: #5b6670; font-size: .72rem; }
+.cooperatives-page__intro { display: flex; justify-content: space-between; margin-bottom: 24px; }
+.cooperatives-page__kicker { margin: 0 0 7px; color: #0e5a6b; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.cooperatives-page__intro h1 { margin: 0; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.04em; }
+.cooperatives-page__intro p:last-child { margin: 8px 0 0; color: #5b6670; font-size: .88rem; }
+.cooperatives-card { padding: 24px 26px 18px; border: 1px solid #dcd9d2; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgb(20 33 43 / 5%); }
+.cooperatives-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.cooperatives-card__title { margin: 0; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.25rem; }
+.cooperatives-card__subtitle { margin: 5px 0 0; color: #5b6670; font-size: .78rem; }
+.cooperatives-card__create { min-height: 38px; padding: 8px 16px; border: 0; border-radius: 9px; background: #0e5a6b; color: #fff; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; }
+.cooperatives-card__create:hover { background: #0a4250; }
+.cooperatives-toolbar { display: flex; align-items: flex-end; gap: 10px; margin: 0 0 18px; }
+.cooperatives-toolbar__search { display: grid; flex: 1; max-width: 360px; gap: 7px; color: #5b6670; font-size: .72rem; font-weight: 700; }
+.cooperatives-toolbar__search input { min-height: 38px; box-sizing: border-box; padding: 8px 12px; border: 1px solid #dcd9d2; border-radius: 8px; background: #f5f4f0; color: #14212b; font: inherit; font-size: .78rem; }
+.cooperatives-toolbar__filter, .cooperatives-table__error button { min-height: 38px; padding: 8px 14px; border: 1px solid #b8c2c3; border-radius: 8px; background: #fff; color: #14212b; cursor: pointer; font: inherit; font-size: .76rem; font-weight: 700; }
+.cooperatives-toolbar__search input:focus-visible, .cooperatives-toolbar__filter:focus-visible, .cooperatives-card__create:focus-visible { outline: 2px solid #d99a1e; outline-offset: 2px; }
+.cooperatives-table-wrap { overflow-x: auto; }
+.cooperatives-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.cooperatives-table th, .cooperatives-table td { padding: 14px 9px; border-bottom: 1px solid #eceae5; text-align: left; white-space: nowrap; }
+.cooperatives-table th { color: #5b6670; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.cooperatives-table tbody tr:hover { background: #fbfaf7; }
+.cooperatives-table tbody tr:last-child td { border-bottom: 0; }
+.cooperatives-table__logo { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #e3eef0; color: #0e5a6b; font-size: .65rem; font-weight: 800; }
+.cooperatives-table__logo--image { object-fit: cover; }
+.cooperatives-table__message { padding: 32px 10px !important; color: #5b6670; text-align: center !important; }
+.cooperatives-table__actions { display: inline-flex; align-items: center; gap: 4px; }
+.cooperatives-table__actions button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #0e5a6b; cursor: pointer; }
+.cooperatives-table__actions button:hover { background: #e3eef0; }
+.cooperatives-table__actions button:disabled { cursor: wait; opacity: .5; }
+.cooperatives-table__actions svg { width: 17px; height: 17px; }
+.cooperatives-table__action--danger { color: #b3362b !important; }
+.cooperatives-table__error { display: flex; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 11px 13px; border: 1px solid #e9b9b3; border-radius: 8px; background: #f7e3e0; color: #b3362b; font-size: .78rem; }
+@media (max-width: 640px) { .cooperatives-card__header, .cooperatives-toolbar { align-items: stretch; flex-direction: column; } .cooperatives-toolbar__search { max-width: none; } }

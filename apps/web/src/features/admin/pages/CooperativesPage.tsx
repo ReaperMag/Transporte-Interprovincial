@@ -46,10 +46,18 @@ export function CooperativesPage() {
   return (
     <div className="cooperatives-page">
       <nav className="admin-breadcrumb" aria-label="Miga de pan">
-        <span>Inicio</span>
+        <span>Administración del sistema</span>
         <span aria-hidden="true"> / </span>
         <span>Gestión de Cooperativas</span>
       </nav>
+
+      <header className="cooperatives-page__intro">
+        <div>
+          <p className="cooperatives-page__kicker">Administración del sistema</p>
+          <h1>Gestión de Cooperativas</h1>
+          <p>Registra cooperativas y controla su acceso a la plataforma.</p>
+        </div>
+      </header>
 
       <CooperativesTable onDataChanged={() => void refreshSummary()} />
       <DataSummary summary={summary} error={summaryError} />

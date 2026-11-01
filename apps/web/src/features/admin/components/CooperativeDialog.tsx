@@ -106,7 +106,10 @@ export function CooperativeDialog({
         role="dialog"
       >
         <header className="cooperative-dialog__header">
-          <h2 id="cooperative-dialog-title">{title}</h2>
+          <div className="cooperative-dialog__header-copy">
+            <span className="cooperative-dialog__eyebrow">Ficha de cooperativa</span>
+            <h2 id="cooperative-dialog-title">{title}</h2>
+          </div>
           <button
             aria-label="Cerrar"
             className="cooperative-dialog__close"
