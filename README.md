@@ -43,7 +43,7 @@
 - [🤝 Contribuciones](#-contribuciones)
 - [📄 Licencia](#-licencia)
 - [📬 Contacto](#-contacto)
-- [📖 Guía de contribución](#-flujo-de-trabajo-y-control-de-cambios)
+- [📖 Guía de contribución](#-contribuciones)
 
 ---
 
@@ -138,6 +138,40 @@ El pasajero podrá consultar las opciones de viaje y gestionar sus compras desde
 - 🧾 Consultar el historial de compras y volver a visualizar sus boletos.
 - 🔔 Recibir notificaciones sobre el estado de sus reservas, pagos y compras.
 
+#### ✅ Estado actual de implementación del módulo del pasajero
+
+El frontend del pasajero incorpora las siguientes funcionalidades:
+
+- **Búsqueda de viajes:** consulta de ciudades, selección de origen, destino y fecha, y visualización de resultados disponibles.
+- **Selección de asientos:** consulta de disponibilidad por viaje, selección de asientos y registro de los datos de los pasajeros.
+- **Reservas:** creación, consulta del historial y cancelación según el estado de la reserva.
+- **Pagos:** consulta de información bancaria, registro de comprobantes de depósito o transferencia y carga de documentos para categorías con descuento.
+- **Seguimiento de pagos:** consulta de estados, historial y motivos de rechazo cuando corresponda.
+- **Boletos:** consulta de boletos emitidos, información del viaje, estado de vigencia y visualización del código QR.
+- **Navegación:** integración de las funcionalidades en el panel y menú del pasajero.
+
+**Flujo de compra:**
+
+Buscar viaje → Seleccionar asientos → Crear reserva → Registrar comprobante → Revisión del oficinista → Emisión de boletos.
+
+**Rutas principales:**
+
+| Ruta | Funcionalidad |
+|---|---|
+| `/pasajero` | Panel principal |
+| `/pasajero/perfil` | Perfil del pasajero |
+| `/pasajero/viajes` | Búsqueda de viajes |
+| `/pasajero/viajes/:tripId/asientos` | Selección de asientos y reserva |
+| `/pasajero/reservas` | Historial y gestión de reservas |
+| `/pasajero/reservas/:reservationId/pago` | Registro y consulta de pagos |
+| `/pasajero/boletos` | Consulta de boletos y códigos QR |
+
+**Verificaciones realizadas:** TypeScript, ESLint, compilación de producción y pruebas manuales de navegación en Inicio, Buscar viajes, Mis reservas, Mis boletos y Mi perfil.
+
+**Pruebas pendientes:** validar el flujo completo de compra con viajes reales, aprobación de comprobantes y emisión de boletos.
+
+**Fuera del alcance actual:** integración con Google Wallet y Apple Wallet, prevista para una rama independiente.
+
 ## ✨ Funcionalidades principales
 
 ### 🔎 Búsqueda y selección de viajes
@@ -198,7 +232,47 @@ Se contempla enviar notificaciones por correo electrónico sobre cambios relevan
 
 ## 🚀 Instalación y ejecución
 
-PROXIMAMENTE
+### Requisitos
+
+- Node.js y pnpm.
+- Python y las dependencias del backend.
+- Entorno virtual de Python configurado.
+- Base de datos de desarrollo configurada.
+
+### Iniciar el frontend
+
+Desde la raíz del repositorio:
+
+```bash
+pnpm dev:web
+```
+
+El frontend estará disponible en:
+
+`http://localhost:5173`
+
+### Iniciar el backend
+
+En otra terminal, desde la raíz del repositorio:
+
+```bash
+cd apps/api
+```
+
+Activar el entorno virtual existente, según su ubicación, y ejecutar:
+
+```bash
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+La documentación de la API estará disponible en:
+
+`http://127.0.0.1:8000/docs`
+
+**Nota:** el frontend utiliza el proxy de Vite para enviar las solicitudes `/api` al backend en el puerto `8000`. Ambos servidores deben estar funcionando.
+
+Para probar el flujo completo del pasajero se requieren cooperativas, buses, rutas, frecuencias y viajes disponibles en la base de datos.
+
 
 ## 📍 Estado del proyecto
 
@@ -210,7 +284,7 @@ Las funcionalidades descritas representan el alcance previsto y deberán actuali
 
 ## 🤝 Contribuciones
 
-¡La colaboración del equipo es fundamental! 💙 Antes de contribuir, revisa las reglas de ramas, commits y Pull Requests descritas en [Flujo de trabajo y control de cambios](#-flujo-de-trabajo-y-control-de-cambios).
+¡La colaboración del equipo es fundamental! 💙 Antes de contribuir, revisa las reglas de ramas, commits y Pull Requests descritas en [Flujo de trabajo y control de cambios](#-contribuciones).
 
 ### 💡 ¿Cómo proponer un cambio?
 
