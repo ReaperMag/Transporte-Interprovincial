@@ -291,6 +291,14 @@ export function PassengerReservationsPage() {
                     <strong>Total: {formatMoney(reservation.total)}</strong>
                   </p>
 
+                  {reservation.status === 'confirmed' && (
+                    <p style={{ marginTop: '1rem' }}>
+                      <Link to={`/pasajero/boletos?reserva=${reservation.id}`}>
+                        Ver boletos de esta reserva
+                      </Link>
+                    </p>
+                  )}
+
                   {reservation.status === 'pending_payment' && (
                     <p style={{ marginTop: '1rem' }}>
                       <Link to={`/pasajero/reservas/${reservation.id}/pago`}>Registrar pago</Link>

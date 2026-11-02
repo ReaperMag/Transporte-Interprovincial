@@ -43,6 +43,10 @@ export function PassengerLayout() {
             Mis reservas
           </NavLink>
 
+          <NavLink to="/pasajero/boletos" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Mis boletos
+          </NavLink>
+
           <NavLink to="/pasajero/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
             Mi perfil
           </NavLink>
