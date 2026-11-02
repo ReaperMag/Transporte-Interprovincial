@@ -291,6 +291,21 @@ export function PassengerReservationsPage() {
                     <strong>Total: {formatMoney(reservation.total)}</strong>
                   </p>
 
+                  {reservation.status === 'pending_payment' && (
+                    <p style={{ marginTop: '1rem' }}>
+                      <Link to={`/pasajero/reservas/${reservation.id}/pago`}>Registrar pago</Link>
+                    </p>
+                  )}
+
+                  {(reservation.status === 'payment_review' ||
+                    reservation.status === 'confirmed') && (
+                    <p style={{ marginTop: '1rem' }}>
+                      <Link to={`/pasajero/reservas/${reservation.id}/pago`}>
+                        Consultar estado del pago
+                      </Link>
+                    </p>
+                  )}
+
                   {/* Cancelar solo en estados permitidos */}
                   {canCancel && (
                     <div style={{ marginTop: '1.5rem' }}>

@@ -1,5 +1,4 @@
 import { Route } from 'react-router-dom';
-
 import { RequirePassenger } from '../../features/auth/components/RequirePassenger';
 import { PassengerLayout } from '../../shared/layouts/PassengerLayout';
 import { PassengerDashboardPage } from '../../features/passengers/pages/PassengerDashboardPage';
@@ -7,6 +6,7 @@ import { PassengerProfilePage } from '../../features/passengers/pages/PassengerP
 import { PassengerTripSearchPage } from '../../features/passengers/pages/PassengerTripSearchPage';
 import { PassengerTripSeatsPage } from '../../features/passengers/pages/PassengerTripSeatsPage';
 import { PassengerReservationsPage } from '../../features/passengers/pages/PassengerReservationsPage';
+import { PassengerPaymentPage } from '../../features/passengers/pages/PassengerPaymentPage';
 import { SeatPurchasePage } from '../../features/buses/pages/SeatPurchasePage';
 
 export const passengerRoutes = (
@@ -23,6 +23,7 @@ export const passengerRoutes = (
     <Route path="viajes" element={<PassengerTripSearchPage />} />
     <Route path="viajes/:tripId/asientos" element={<PassengerTripSeatsPage />} />
     <Route path="reservas" element={<PassengerReservationsPage />} />
+    <Route path="reservas/:reservationId/pago" element={<PassengerPaymentPage />} />
     <Route path="asientos" element={<SeatPurchasePage />} />
   </Route>
 );
