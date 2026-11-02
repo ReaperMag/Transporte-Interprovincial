@@ -131,3 +131,36 @@ export async function getPassengerReservations(): Promise<ReservationRead[]> {
 
   return (await response.json()) as ReservationRead[];
 }
+
+// Cancelar una reserva del pasajero.
+export async function cancelPassengerReservation(reservationId: number): Promise<ReservationRead> {
+  const response = await fetch(`/api/v1/reservations/${reservationId}/cancel`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+
+    let message = 'No se pudo cancelar la reserva. Inténtalo nuevamente.';
+
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      'detail' in body &&
+      typeof body.detail === 'string'
+    ) {
+      message = body.detail;
+    }
+
+    if (response.status === 401) {
+      message = 'Tu sesión ha expirado. Inicia sesión nuevamente.';
+    } else if (response.status === 403) {
+      message = 'No tienes autorización para cancelar esta reserva.';
+    }
+
+    throw new ReservationRequestError(message, response.status);
+  }
+
+  return (await response.json()) as ReservationRead;
+}

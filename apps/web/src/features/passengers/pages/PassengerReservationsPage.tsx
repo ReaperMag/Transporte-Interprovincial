@@ -1,7 +1,35 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getPassengerReservations, type ReservationRead } from '../services/reservation.service';
+import {
+  cancelPassengerReservation,
+  getPassengerReservations,
+  type ReservationRead,
+} from '../services/reservation.service';
 import './PassengerTripSearchPage.css';
+
+// Estados que el backend permite cancelar.
+const cancellableStatuses = ['pending_payment', 'payment_review'];
+
+function canCancelReservation(status: string): boolean {
+  return cancellableStatuses.includes(status);
+}
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'pending_payment':
+      return 'Pendiente de pago';
+    case 'payment_review':
+      return 'Pago en revisión';
+    case 'confirmed':
+      return 'Confirmada';
+    case 'expired':
+      return 'Vencida';
+    case 'cancelled':
+      return 'Cancelada';
+    default:
+      return status;
+  }
+}
 
 function formatMoney(value: string | number): string {
   return new Intl.NumberFormat('es-EC', {
@@ -30,13 +58,18 @@ export function PassengerReservationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Controlar la cancelación de reservas.
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Consultar las reservas del usuario autenticado.
   useEffect(() => {
     let active = true;
 
     async function loadReservations() {
       setLoading(true);
       setError(null);
-      setReservations([]);
 
       try {
         const result = await getPassengerReservations();
@@ -65,7 +98,52 @@ export function PassengerReservationsPage() {
   }, [refreshKey]);
 
   function handleRefresh() {
+    if (loading || cancellingId !== null) return;
+
+    setActionError(null);
+    setSuccessMessage(null);
     setRefreshKey((current) => current + 1);
+  }
+
+  // Solicitar la cancelación de una reserva.
+  async function handleCancelReservation(reservationId: number) {
+    if (cancellingId !== null || loading) return;
+
+    const reservation = reservations.find((item) => item.id === reservationId);
+
+    if (!reservation || !canCancelReservation(reservation.status)) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Estás seguro de cancelar la reserva #${reservationId}?\n\n` +
+        'Los asientos reservados serán liberados. Esta acción no se puede deshacer.',
+    );
+
+    if (!confirmed) return;
+
+    setCancellingId(reservationId);
+    setActionError(null);
+    setSuccessMessage(null);
+
+    try {
+      const updatedReservation = await cancelPassengerReservation(reservationId);
+
+      // Actualizar la reserva con la respuesta real del backend.
+      setReservations((current) =>
+        current.map((item) => (item.id === reservationId ? updatedReservation : item)),
+      );
+
+      setSuccessMessage(`La reserva #${reservationId} fue cancelada correctamente.`);
+    } catch (err) {
+      setActionError(
+        err instanceof Error
+          ? `Reserva #${reservationId}: ${err.message}`
+          : `No se pudo cancelar la reserva #${reservationId}.`,
+      );
+    } finally {
+      setCancellingId(null);
+    }
   }
 
   return (
@@ -75,9 +153,10 @@ export function PassengerReservationsPage() {
 
         <h1>Mis reservas</h1>
 
-        <p>Consulta las reservas que has realizado, sus pasajeros, asientos y estados.</p>
+        <p>Consulta tus reservas, revisa sus estados y cancela aquellas que todavía lo permitan.</p>
       </header>
 
+      {/* Acciones principales */}
       <div
         style={{
           display: 'flex',
@@ -91,7 +170,7 @@ export function PassengerReservationsPage() {
           type="button"
           className="passenger-trip-search__button"
           onClick={handleRefresh}
-          disabled={loading}
+          disabled={loading || cancellingId !== null}
         >
           {loading ? 'Actualizando...' : 'Actualizar reservas'}
         </button>
@@ -99,8 +178,23 @@ export function PassengerReservationsPage() {
         <Link to="/pasajero/viajes">Buscar otro viaje</Link>
       </div>
 
+      {/* Mensajes de operaciones */}
+      {successMessage && (
+        <p role="status" style={{ color: '#15803d' }}>
+          {successMessage}
+        </p>
+      )}
+
+      {actionError && (
+        <p role="alert" className="passenger-trip-search__error">
+          {actionError}
+        </p>
+      )}
+
+      {/* Cargando reservas */}
       {loading && <p role="status">Cargando tus reservas...</p>}
 
+      {/* Error de consulta */}
       {error && (
         <div role="alert" className="passenger-trip-search__error">
           <p>{error}</p>
@@ -108,6 +202,7 @@ export function PassengerReservationsPage() {
         </div>
       )}
 
+      {/* Sin reservas */}
       {!loading && !error && reservations.length === 0 && (
         <div className="passenger-trip-search__results">
           <h2>Aún no tienes reservas</h2>
@@ -121,6 +216,7 @@ export function PassengerReservationsPage() {
         </div>
       )}
 
+      {/* Listado de reservas */}
       {!loading && !error && reservations.length > 0 && (
         <div className="passenger-trip-search__results">
           <h2>Reservas registradas</h2>
@@ -137,59 +233,112 @@ export function PassengerReservationsPage() {
               marginTop: '1.5rem',
             }}
           >
-            {reservations.map((reservation) => (
-              <article key={reservation.id} className="passenger-trip-search__card">
-                <h3>Reserva #{reservation.id}</h3>
+            {reservations.map((reservation) => {
+              const canCancel = canCancelReservation(reservation.status);
 
-                <p>
-                  <strong>Estado:</strong> {reservation.status}
-                </p>
+              const isCancelling = cancellingId === reservation.id;
 
-                <p>
-                  <strong>Viaje:</strong> #{reservation.tripId}
-                </p>
+              return (
+                <article key={reservation.id} className="passenger-trip-search__card">
+                  <h3>Reserva #{reservation.id}</h3>
 
-                <p>
-                  <strong>Fecha de salida:</strong> {formatDate(reservation.departureAt)}
-                </p>
-
-                <p>
-                  <strong>Origen:</strong> Ciudad #{reservation.originCityId}
-                </p>
-
-                <p>
-                  <strong>Destino:</strong> Ciudad #{reservation.destinationCityId}
-                </p>
-
-                {reservation.expiresAt && (
                   <p>
-                    <strong>Vencimiento de la reserva:</strong> {formatDate(reservation.expiresAt)}
+                    <strong>Estado:</strong> {getStatusLabel(reservation.status)}
                   </p>
-                )}
 
-                <h4>Pasajeros y asientos</h4>
+                  <p>
+                    <strong>Viaje:</strong> #{reservation.tripId}
+                  </p>
 
-                {reservation.seats.length > 0 ? (
-                  <ul>
-                    {reservation.seats.map((seat) => (
-                      <li key={seat.seatId}>
-                        <strong>Asiento {seat.seatNumber}</strong>
-                        {' — '}
-                        {seat.passengerName}
-                        {' — '}
-                        {formatMoney(seat.price)}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No hay asientos registrados en esta reserva.</p>
-                )}
+                  <p>
+                    <strong>Fecha de salida:</strong> {formatDate(reservation.departureAt)}
+                  </p>
 
-                <p style={{ marginTop: '1rem' }}>
-                  <strong>Total: {formatMoney(reservation.total)}</strong>
-                </p>
-              </article>
-            ))}
+                  <p>
+                    <strong>Origen:</strong> Ciudad #{reservation.originCityId}
+                  </p>
+
+                  <p>
+                    <strong>Destino:</strong> Ciudad #{reservation.destinationCityId}
+                  </p>
+
+                  {reservation.expiresAt && (
+                    <p>
+                      <strong>Vencimiento de la reserva:</strong>{' '}
+                      {formatDate(reservation.expiresAt)}
+                    </p>
+                  )}
+
+                  <h4>Pasajeros y asientos</h4>
+
+                  {reservation.seats.length > 0 ? (
+                    <ul>
+                      {reservation.seats.map((seat) => (
+                        <li key={seat.seatId}>
+                          <strong>Asiento {seat.seatNumber}</strong>
+                          {' — '}
+                          {seat.passengerName}
+                          {' — '}
+                          {formatMoney(seat.price)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No hay asientos registrados en esta reserva.</p>
+                  )}
+
+                  <p style={{ marginTop: '1rem' }}>
+                    <strong>Total: {formatMoney(reservation.total)}</strong>
+                  </p>
+
+                  {/* Cancelar solo en estados permitidos */}
+                  {canCancel && (
+                    <div style={{ marginTop: '1.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleCancelReservation(reservation.id);
+                        }}
+                        disabled={cancellingId !== null || loading}
+                        style={{
+                          padding: '0.7rem 1rem',
+                          border: '1px solid #dc2626',
+                          borderRadius: '8px',
+                          backgroundColor: 'transparent',
+                          color: '#dc2626',
+                          fontWeight: 600,
+                          cursor: cancellingId !== null ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {isCancelling ? 'Cancelando reserva...' : 'Cancelar reserva'}
+                      </button>
+
+                      <p
+                        style={{
+                          marginTop: '0.5rem',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        Puedes cancelar mientras la reserva esté pendiente de pago o en revisión.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Información de estados finales */}
+                  {reservation.status === 'cancelled' && <p>Esta reserva fue cancelada.</p>}
+
+                  {reservation.status === 'expired' && (
+                    <p>Esta reserva venció y ya no puede cancelarse.</p>
+                  )}
+
+                  {reservation.status === 'confirmed' && (
+                    <p>
+                      Esta reserva está confirmada y no permite cancelación desde esta pantalla.
+                    </p>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </div>
       )}
