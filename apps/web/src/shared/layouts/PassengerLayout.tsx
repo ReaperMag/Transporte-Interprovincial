@@ -34,12 +34,25 @@ export function PassengerLayout() {
           <NavLink to="/pasajero" end className={({ isActive }) => (isActive ? 'active' : '')}>
             Inicio
           </NavLink>
+
+          <NavLink to="/pasajero/viajes" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Buscar viajes
+          </NavLink>
+
+          <NavLink to="/pasajero/reservas" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Mis reservas
+          </NavLink>
+
+          <NavLink to="/pasajero/boletos" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Mis boletos
+          </NavLink>
+
           <NavLink to="/pasajero/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
             Mi perfil
           </NavLink>
 
           <NavLink to="/pasajero/asientos" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Seleccionar asientos
+            Seleccionar asientos (demo)
           </NavLink>
         </nav>
 
