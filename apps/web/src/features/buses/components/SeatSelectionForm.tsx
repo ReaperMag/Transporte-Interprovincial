@@ -4,6 +4,7 @@ import { BusTemplateSelector } from './BusTemplateSelector';
 import { busTemplates } from '../data/busTemplates.mock';
 import type { TemplateSeat } from '../types/busTemplate.types';
 import './SeatSelectionForm.css';
+import './TransportTheme.css';
 
 interface SeatSelectionFormProps {
   title?: string;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { BusTemplate, SeatType, TemplateSeat } from '../../buses/types/busTemplate.types';
 import '../../buses/components/BusSeatMap.css';
 import './BusFloorplanEditor.css';
+import '../../buses/components/TransportTheme.css';
 
 interface BusFloorplanEditorProps {
   template: BusTemplate;

@@ -136,7 +136,7 @@ export function CooperativesTable({ onDataChanged }: CooperativesTableProps) {
         <header className="cooperatives-card__header">
           <div>
             <h2 className="cooperatives-card__title" id="cooperatives-title">
-              Cooperativas
+              Cooperativas registradas
             </h2>
             <p className="cooperatives-card__subtitle">Gestión de Cooperativas</p>
           </div>
@@ -146,7 +146,7 @@ export function CooperativesTable({ onDataChanged }: CooperativesTableProps) {
             onClick={() => setDialog({ mode: 'create' })}
             type="button"
           >
-            Nueva Cooperativa
+            Nueva cooperativa
           </button>
         </header>
 

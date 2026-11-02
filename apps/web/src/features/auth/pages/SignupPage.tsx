@@ -37,6 +37,12 @@ export function SignupPage() {
 
   return (
     <main className="signup-page">
+      <aside className="signup-page__intro" aria-hidden="true">
+        <p className="signup-page__brand">TRANSPORTE INTERPROVINCIAL</p>
+        <p className="signup-page__intro-kicker">Cuenta de pasajero</p>
+        <h2>Tu próximo viaje empieza aquí.</h2>
+        <p>Reserva asientos, paga en línea y consulta tus boletos cuando quieras.</p>
+      </aside>
       <section className="signup-page__card" aria-labelledby="signup-page-title">
         <header className="signup-page__header">
           <h1 id="signup-page-title" className="signup-page__title">

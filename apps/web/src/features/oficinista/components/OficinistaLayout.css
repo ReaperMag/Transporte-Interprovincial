@@ -1,134 +1,20 @@
-body:has(.oficinista-layout) {
-  margin: 0;
-}
-
-.oficinista-layout {
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: #eaf2fb;
-  color: #0f172a;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-}
-
-.oficinista-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 3.75rem;
-  padding: 0.75rem 1.5rem;
-  background: #0b1f3a;
-  color: #f8fafc;
-}
-
-.oficinista-header__brand,
-.oficinista-header__account {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.oficinista-header__logo {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-}
-
-.oficinista-header__logo svg {
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.oficinista-header__title {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-.oficinista-header__user {
-  margin: 0;
-  color: #e2e8f0;
-  font-size: 0.9rem;
-}
-
-.oficinista-header__avatar {
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  color: #cbd5e1;
-}
-
-.oficinista-header__avatar svg {
-  width: 1.4rem;
-  height: 1.4rem;
-}
-
-.oficinista-header__logout {
-  padding: 0.4rem 0.9rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
-  background: transparent;
-  color: #f8fafc;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.85rem;
-  text-decoration: none;
-}
-
-.oficinista-header__logout:hover {
-  background: rgb(255 255 255 / 8%);
-}
-
-.oficinista-header__logout:focus-visible {
-  outline: 2px solid #60a5fa;
-  outline-offset: 2px;
-}
-
-.oficinista-toolbar {
-  min-height: 3.1rem;
-  padding: 0.35rem 1.5rem;
-  background: #fff;
-  box-shadow: 0 1px 0 #e2e8f0;
-}
-
-.oficinista-toolbar__nav {
-  display: flex;
-}
-
-.oficinista-toolbar__link {
-  position: relative;
-  padding: 0.55rem 0.1rem;
-  color: #334155;
-  font-size: 0.95rem;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: default;
-}
-
-.oficinista-toolbar__link--active {
-  color: #2563eb;
-  font-weight: 600;
-}
-
-.oficinista-layout__content {
-  padding: 1.25rem 1.5rem 2rem;
-}
-
-@media (max-width: 900px) {
-  .oficinista-header,
-  .oficinista-toolbar {
-    flex-wrap: wrap;
-  }
-
-  .oficinista-header__user {
-    display: none;
-  }
-}
+.oficinista-layout { min-height: 100dvh; display: flex; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.oficinista-header { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 38px; border-bottom: 1px solid #dcd9d2; background: #f5f4f0; }
+.oficinista-header__brand { display: flex; align-items: center; gap: 11px; }
+.oficinista-header__logo { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #d99a1e; }
+.oficinista-header__logo svg { width: 22px; height: 22px; }
+.oficinista-header__title { margin: 0; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.2rem; }
+.oficinista-header__account { display: flex; align-items: center; gap: 14px; }
+.oficinista-header__user { margin: 0; color: #5b6670; font-size: .75rem; }
+.oficinista-header__avatar { color: #0e5a6b; }
+.oficinista-header__avatar svg { width: 24px; }
+.oficinista-header__logout { padding: 8px 14px; border: 1px solid #b8c2c3; border-radius: 999px; background: transparent; color: #14212b; cursor: pointer; font: inherit; font-size: .72rem; font-weight: 600; }
+.oficinista-header__logout:hover { border-color: #0e5a6b; color: #0e5a6b; }
+.oficinista-toolbar { padding: 12px 38px; background: #fff; border-bottom: 1px solid #dcd9d2; }
+.oficinista-toolbar__link { color: #0e5a6b; font-size: .78rem; font-weight: 700; }
+.oficinista-layout__content { flex: 1; min-width: 0; padding: 34px clamp(18px, 5vw, 64px); }
+.oficinista-layout > .oficinista-header, .oficinista-layout > .oficinista-toolbar { width: 100%; box-sizing: border-box; }
+.oficinista-layout { flex-wrap: wrap; }
+.oficinista-layout__content { order: 3; }
+.oficinista-layout > [role='alert'] { order: 2; width: 100%; }
+@media (max-width: 760px) { .oficinista-header, .oficinista-toolbar { padding-right: 18px; padding-left: 18px; } .oficinista-header__user, .oficinista-header__avatar { display: none; } }

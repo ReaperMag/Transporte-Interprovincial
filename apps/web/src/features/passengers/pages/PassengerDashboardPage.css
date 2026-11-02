@@ -1,91 +1,15 @@
-.passenger-dashboard {
-  max-width: 1150px;
-  margin: 0 auto;
-}
-
-.passenger-dashboard__header {
-  margin-bottom: 28px;
-}
-
-.passenger-dashboard__eyebrow {
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-}
-
-.passenger-dashboard__header h1 {
-  margin: 10px 0;
-  color: #10213a;
-  font-size: clamp(26px, 4vw, 36px);
-}
-
-.passenger-dashboard__header p {
-  color: #64748b;
-}
-
-.passenger-dashboard__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.passenger-dashboard__card {
-  background: #ffffff;
-  padding: 28px;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-}
-
-.passenger-dashboard__card h2 {
-  margin: 0 0 20px;
-  color: #10213a;
-  font-size: 20px;
-}
-
-.passenger-dashboard__card dl {
-  margin: 0;
-}
-
-.passenger-dashboard__card dt {
-  margin-top: 14px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.passenger-dashboard__card dd {
-  margin: 4px 0 0;
-  overflow-wrap: anywhere;
-  font-weight: 600;
-  color: #10213a;
-}
-
-.passenger-dashboard__card p {
-  color: #64748b;
-  line-height: 1.6;
-}
-
-.passenger-dashboard__notice {
-  font-size: 13px;
-}
-
-.passenger-dashboard__action {
-  display: inline-block;
-  margin-top: 12px;
-  padding: 12px 18px;
-  background: #2563eb;
-  color: #ffffff;
-  border-radius: 9px;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.passenger-dashboard__action:hover {
-  background: #1d4ed8;
-}
-
-@media (max-width: 750px) {
-  .passenger-dashboard__grid {
-    grid-template-columns: 1fr;
-  }
-}
+.passenger-dashboard { max-width: 1120px; margin: 0 auto; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.passenger-dashboard__header { margin-bottom: 28px; }
+.passenger-dashboard__eyebrow { margin: 0 0 8px; color: #0e5a6b; font-size: .72rem; font-weight: 700; letter-spacing: .12em; }
+.passenger-dashboard__header h1 { margin: 0; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.05em; }
+.passenger-dashboard__header p:last-child { margin: 8px 0 0; color: #5b6670; font-size: .85rem; }
+.passenger-dashboard__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); gap: 16px; }
+.passenger-dashboard__card { padding: 24px; border: 1px solid #dcd9d2; border-radius: 14px; background: #fff; box-shadow: 0 12px 30px rgb(20 33 43 / 5%); }
+.passenger-dashboard__card h2 { margin: 0 0 20px; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.25rem; }
+.passenger-dashboard__card dt { margin-top: 14px; color: #5b6670; font-size: .72rem; }
+.passenger-dashboard__card dd { margin: 4px 0 0; color: #14212b; font-size: .85rem; font-weight: 600; }
+.passenger-dashboard__card p { color: #5b6670; font-size: .82rem; line-height: 1.6; }
+.passenger-dashboard__notice { padding: 10px 12px; border-radius: 8px; background: #fbf0d9; color: #79560f !important; font-size: .72rem !important; }
+.passenger-dashboard__action { display: inline-block; margin-top: 12px; padding: 11px 15px; border-radius: 8px; background: #0e5a6b; color: #fff; font-size: .76rem; font-weight: 700; text-decoration: none; }
+.passenger-dashboard__action:hover { background: #0a4250; }
+@media (max-width: 750px) { .passenger-dashboard__grid { grid-template-columns: 1fr; } }

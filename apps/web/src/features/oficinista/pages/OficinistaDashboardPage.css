@@ -1,85 +1,14 @@
-.oficinista-dashboard {
-  padding: 2rem;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.oficinista-dashboard__header {
-  margin-bottom: 2rem;
-}
-
-.oficinista-dashboard__title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.oficinista-dashboard__oficinista-name {
-  font-size: 1rem;
-  color: #555;
-}
-
-.oficinista-dashboard__section {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e5e5e5;
-  padding: 1.5rem;
-}
-
-.oficinista-dashboard__section-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.oficinista-dashboard__table-wrapper {
-  overflow-x: auto;
-}
-
-.oficinista-dashboard__table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.oficinista-dashboard__table thead {
-  background-color: #f7f7f7;
-}
-
-.oficinista-dashboard__table th,
-.oficinista-dashboard__table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.oficinista-dashboard__table th {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.oficinista-dashboard__table td {
-  font-size: 0.95rem;
-}
-
-.oficinista-dashboard__sell-button {
-  display: inline-block;
-  padding: 0.4rem 0.9rem;
-  background-color: #0052cc;
-  color: #fff;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.oficinista-dashboard__sell-button:hover {
-  background-color: #003d99;
-}
-
-.oficinista-dashboard__empty {
-  color: #666;
-}
-
-.oficinista-dashboard__error {
-  color: #d33;
-}
+.oficinista-dashboard { max-width: 1120px; margin: 0 auto; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.oficinista-dashboard__header { margin-bottom: 26px; }
+.oficinista-dashboard__title { margin: 0; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.05em; }
+.oficinista-dashboard__oficinista-name { margin: 8px 0 0; color: #5b6670; font-size: .82rem; }
+.oficinista-dashboard__section { padding: 24px; border: 1px solid #dcd9d2; border-radius: 14px; background: #fff; box-shadow: 0 12px 30px rgb(20 33 43 / 5%); }
+.oficinista-dashboard__section-title { margin: 0 0 18px; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.3rem; }
+.oficinista-dashboard__table-wrapper { overflow-x: auto; }
+.oficinista-dashboard__table { width: 100%; border-collapse: collapse; }
+.oficinista-dashboard__table th, .oficinista-dashboard__table td { padding: 14px 9px; border-bottom: 1px solid #eceae5; text-align: left; font-size: .78rem; }
+.oficinista-dashboard__table th { color: #5b6670; font-size: .68rem; letter-spacing: .04em; text-transform: uppercase; }
+.oficinista-dashboard__sell-button { padding: 9px 13px; border: 0; border-radius: 8px; background: #0e5a6b; color: #fff; font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; }
+.oficinista-dashboard__sell-button:hover { background: #0a4250; }
+.oficinista-dashboard__empty { color: #5b6670; }
+.oficinista-dashboard__error { color: #b3362b; }
