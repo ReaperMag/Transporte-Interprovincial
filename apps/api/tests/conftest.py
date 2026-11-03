@@ -1,4 +1,8 @@
 
+import re
+import smtplib
+from email.message import EmailMessage
+
 import pytest
 from pydantic import SecretStr
 from fastapi.testclient import TestClient
@@ -10,6 +14,7 @@ from app.core.config import settings
 from app.core.database import get_db, import_models
 from app.main import app
 from app.modules.accounts.repository import get_account_by_email
+from app.modules.notifications.providers import smtp as smtp_provider
 from app.shared.base_model import Base
 
 
@@ -83,6 +88,74 @@ def test_environment(monkeypatch):
         else:
             app.state.initialize_database_on_startup = previous_init_setting
         engine.dispose()
+
+
+class FakeSMTP:
+    """
+    Reemplaza a smtplib.SMTP: guarda los mensajes en lugar de enviarlos.
+
+    Con fail = True simula que el servidor rechaza el envío.
+    """
+
+    def __init__(self, outbox: list[EmailMessage], fail: bool):
+        self.outbox = outbox
+        self.fail = fail
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def starttls(self, **kwargs):
+        pass
+
+    def login(self, user, password):
+        pass
+
+    def send_message(self, message: EmailMessage):
+        if self.fail:
+            raise smtplib.SMTPServerDisconnected("Servidor SMTP simulado no disponible.")
+        self.outbox.append(message)
+
+
+class FakeMailServer:
+    """Correos enviados durante una prueba y utilidades para leerlos."""
+
+    def __init__(self):
+        self.outbox: list[EmailMessage] = []
+        self.fail = False
+
+    def text(self, message: EmailMessage) -> str:
+        return message.get_body(preferencelist=("plain",)).get_content()
+
+    def sent_to(self, email: str) -> list[EmailMessage]:
+        return [message for message in self.outbox if message["To"] == email]
+
+    def last_code(self, email: str) -> str:
+        """Código de 6 dígitos del último correo enviado a la dirección."""
+        text = self.text(self.sent_to(email)[-1])
+        return re.search(r"Código: (\d{6})", text).group(1)
+
+
+@pytest.fixture
+def fake_smtp(monkeypatch):
+    """Activa el envío de correos con un servidor SMTP simulado."""
+
+    server = FakeMailServer()
+    monkeypatch.setattr(settings, "email_enabled", True)
+    monkeypatch.setattr(settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(settings, "smtp_user", "sistema@example.com")
+    monkeypatch.setattr(settings, "smtp_password", SecretStr("clave-de-prueba"))
+    monkeypatch.setattr(
+        smtp_provider.smtplib,
+        "SMTP",
+        lambda *args, **kwargs: FakeSMTP(server.outbox, server.fail),
+    )
+    return server
 
 
 @pytest.fixture
