@@ -118,6 +118,14 @@ def init_db() -> None:
                     "BOOLEAN NOT NULL DEFAULT 1"
                 )
             )
+    if "pending_passenger_id" not in account_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE accounts ADD COLUMN pending_passenger_id INTEGER "
+                    "REFERENCES passengers(id) ON DELETE SET NULL"
+                )
+            )
 
 
 def reset_db() -> None:

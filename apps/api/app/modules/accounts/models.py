@@ -31,6 +31,11 @@ class Account(BaseModel):
     # Solo el registro público de pasajeros crea cuentas sin verificar. Las
     # cuentas existentes, el administrador y las cooperativas quedan verificadas.
     is_email_verified: Mapped[bool] = mapped_column(default=True, server_default=true())
+    # Pasajero registrado en una venta de oficina que esta cuenta reclamó al
+    # registrarse. La vinculación se concreta solo cuando verifica su correo.
+    pending_passenger_id: Mapped[int | None] = mapped_column(
+        ForeignKey("passengers.id", ondelete="SET NULL", use_alter=True)
+    )
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     role: Mapped[Role | None] = relationship()

@@ -20,6 +20,10 @@ from app.modules.auth.verification import (
     issue_code,
     send_code_email,
 )
+from app.modules.passengers.linking import (
+    GENERIC_MISMATCH_MESSAGE,
+    can_claim_passenger,
+)
 from app.modules.passengers.repository import (
     create_passenger,
     get_passenger_by_id_number,
@@ -59,11 +63,22 @@ def register_passenger(
                 "El correo electrónico ya está registrado."
             )
 
-        # 2. Comprobar si ya existe la identificación.
-        if get_passenger_by_id_number(db, id_number) is not None:
-            raise SignupConflictError(
-                "La identificación ya tiene un registro previo."
-            )
+        # 2. Comprobar si ya existe la identificación. Si viene de una venta
+        #    en oficina (sin cuenta) y los datos coinciden, se reclama ese
+        #    registro en lugar de crear otro.
+        existing_passenger = get_passenger_by_id_number(db, id_number)
+        if existing_passenger is not None:
+            if existing_passenger.account_id is not None:
+                raise SignupConflictError(
+                    "La identificación ya tiene un registro previo."
+                )
+            if not can_claim_passenger(
+                existing_passenger,
+                first_name=data.firstName,
+                last_name=data.lastName,
+                email=email,
+            ):
+                raise SignupConflictError(GENERIC_MISMATCH_MESSAGE)
 
         # 3. Proteger la contraseña antes de almacenarla.
         password_hash = hash_password(data.password)
@@ -78,15 +93,20 @@ def register_passenger(
             is_email_verified=False,
         )
 
-        # 5. Crear el perfil relacionado con la cuenta.
-        create_passenger(
-            db,
-            id_number=id_number,
-            first_name=data.firstName,
-            last_name=data.lastName,
-            email=email,
-            account_id=account.id,
-        )
+        # 5. Crear el perfil relacionado con la cuenta o, si la cédula viene
+        #    de una venta en oficina, dejar la vinculación pendiente hasta
+        #    que verifique su correo. Mientras tanto no ve esos viajes.
+        if existing_passenger is not None:
+            account.pending_passenger_id = existing_passenger.id
+        else:
+            create_passenger(
+                db,
+                id_number=id_number,
+                first_name=data.firstName,
+                last_name=data.lastName,
+                email=email,
+                account_id=account.id,
+            )
 
         # 6. Generar el código de verificación.
         code = issue_code(db, account, VerificationPurpose.EMAIL_VERIFICATION)
