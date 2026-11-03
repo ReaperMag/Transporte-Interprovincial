@@ -20,6 +20,12 @@ def isolated_settings(monkeypatch):
     """Fija la configuración de las pruebas para no depender del .env de cada integrante."""
 
     monkeypatch.setattr(settings, "jwt_secret_key", TEST_JWT_SECRET_KEY)
+    # Nunca se envían correos reales durante las pruebas.
+    monkeypatch.setattr(settings, "email_enabled", False)
+    monkeypatch.setattr(settings, "smtp_host", None)
+    monkeypatch.setattr(settings, "smtp_user", None)
+    monkeypatch.setattr(settings, "smtp_password", None)
+    monkeypatch.setattr(settings, "smtp_from", None)
 
 
 @pytest.fixture
