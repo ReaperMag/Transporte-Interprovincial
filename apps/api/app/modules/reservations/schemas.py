@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from app.modules.buses.models import SeatType
 from app.modules.passengers.models import PassengerCategory
 from app.modules.reservations.models import ReservationStatus
+from app.modules.tickets.models import SaleChannel
 
 
 class SeatAvailability(BaseModel):
@@ -96,6 +97,8 @@ class ReservationRead(BaseModel):
     id: int
     tripId: int
     status: ReservationStatus
+    # online: la hizo el pasajero en la app; office: la vendió un oficinista.
+    channel: SaleChannel
 
     originCityId: int
     destinationCityId: int

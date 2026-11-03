@@ -198,7 +198,7 @@ def list_my_reservations(
     """Lista las reservas del pasajero autenticado."""
     reservations = service.list_account_reservations(db, account.id)
     return [
-        service.build_reservation_read(db, reservation)
+        service.build_account_reservation_read(db, reservation, account.id)
         for reservation in reservations
     ]
 
