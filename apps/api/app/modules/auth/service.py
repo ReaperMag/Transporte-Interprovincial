@@ -22,7 +22,9 @@ from app.modules.auth.verification import (
 )
 from app.modules.passengers.linking import (
     GENERIC_MISMATCH_MESSAGE,
+    PassengerLinkError,
     can_claim_passenger,
+    link_pending_passenger,
 )
 from app.modules.passengers.repository import (
     create_passenger,
@@ -230,6 +232,22 @@ def _pending_passenger(db: Session, email: str) -> Account | None:
     return account
 
 
+def _complete_verification(db: Session, account: Account) -> None:
+    """
+    Marca la cuenta como verificada y, si reclamó el registro de una venta
+    en oficina, concreta la vinculación para que vea sus viajes anteriores.
+
+    Si la vinculación no es posible, se revierte todo: la cuenta no queda
+    verificada sin perfil de pasajero.
+    """
+    account.is_email_verified = True
+    try:
+        link_pending_passenger(db, account)
+    except PassengerLinkError:
+        db.rollback()
+        raise
+
+
 def verify_email(db: Session, email: str, code: str) -> None:
     """
     Verifica el correo de un pasajero con el código recibido.
@@ -244,7 +262,7 @@ def verify_email(db: Session, email: str, code: str) -> None:
         )
 
     consume_code(db, account, VerificationPurpose.EMAIL_VERIFICATION, code)
-    account.is_email_verified = True
+    _complete_verification(db, account)
     db.commit()
 
 
@@ -299,5 +317,5 @@ def reset_password(db: Session, email: str, code: str, new_password: str) -> Non
 
     consume_code(db, account, VerificationPurpose.PASSWORD_RESET, code)
     account.password_hash = hash_password(new_password)
-    account.is_email_verified = True
+    _complete_verification(db, account)
     db.commit()

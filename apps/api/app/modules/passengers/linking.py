@@ -10,6 +10,9 @@ cuando verifica su correo.
 
 import unicodedata
 
+from sqlalchemy.orm import Session
+
+from app.modules.accounts.models import Account
 from app.modules.passengers.models import Passenger
 
 
@@ -62,3 +65,34 @@ def can_claim_passenger(
         return False
 
     return True
+
+
+def link_pending_passenger(db: Session, account: Account) -> Passenger | None:
+    """
+    Concreta la vinculación pendiente cuando la cuenta verifica su correo.
+
+    Conserva la cédula, los nombres y la categoría registrados en la venta y
+    solo completa el correo si estaba vacío. Si otra cuenta ya se vinculó
+    primero o la venta registró después un correo distinto, no se vincula.
+    No confirma la transacción.
+    """
+    if account.pending_passenger_id is None:
+        return None
+
+    passenger = db.get(Passenger, account.pending_passenger_id)
+    if (
+        passenger is None
+        or passenger.account_id is not None
+        or (
+            passenger.email
+            and passenger.email.strip().lower() != account.email.strip().lower()
+        )
+    ):
+        raise PassengerLinkError()
+
+    passenger.account_id = account.id
+    if not passenger.email:
+        passenger.email = account.email
+    account.pending_passenger_id = None
+    db.flush()
+    return passenger
