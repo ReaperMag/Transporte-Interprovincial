@@ -53,6 +53,7 @@ def test_existing_accounts_stay_verified_and_can_log_in(monkeypatch):
 
         columns = {column["name"] for column in inspect(engine).get_columns("accounts")}
         assert "is_email_verified" in columns
+        assert "pending_passenger_id" in columns
         assert "verification_codes" in inspect(engine).get_table_names()
 
         with Session(engine) as db:
