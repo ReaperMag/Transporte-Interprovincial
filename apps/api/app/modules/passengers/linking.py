@@ -10,10 +10,14 @@ cuando verifica su correo.
 
 import unicodedata
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.modules.accounts.models import Account
+from app.modules.notifications.models import NotificationEvent
+from app.modules.notifications.service import notify
 from app.modules.passengers.models import Passenger
+from app.modules.tickets.models import Ticket, TicketStatus
 
 
 GENERIC_MISMATCH_MESSAGE = (
@@ -95,4 +99,43 @@ def link_pending_passenger(db: Session, account: Account) -> Passenger | None:
         passenger.email = account.email
     account.pending_passenger_id = None
     db.flush()
+
+    notify_linked_trips(db, account, passenger)
     return passenger
+
+
+def count_passenger_trips(db: Session, passenger: Passenger) -> int:
+    """Viajes distintos con boletos emitidos o usados a nombre del pasajero."""
+    return int(
+        db.scalar(
+            select(func.count(func.distinct(Ticket.trip_id))).where(
+                Ticket.passenger_id == passenger.id,
+                Ticket.status != TicketStatus.CANCELLED,
+            )
+        )
+        or 0
+    )
+
+
+def notify_linked_trips(db: Session, account: Account, passenger: Passenger) -> None:
+    """
+    Avisa cuántos viajes se encontraron con la cédula. Pasa por notify(),
+    así que también se envía por correo cuando se confirma la transacción.
+    Si no hay boletos emitidos (por ejemplo, una reserva sin pagar), no avisa.
+    """
+    trips = count_passenger_trips(db, passenger)
+    if trips == 0:
+        return
+
+    message = (
+        "Encontramos 1 viaje registrado con tu identificación."
+        if trips == 1
+        else f"Encontramos {trips} viajes registrados con tu identificación."
+    )
+    notify(
+        db,
+        account_id=account.id,
+        event=NotificationEvent.PASSENGER_LINKED,
+        title="Viajes vinculados a tu cuenta",
+        message=f"{message} Puedes verlos en Mis boletos y Mis reservas.",
+    )

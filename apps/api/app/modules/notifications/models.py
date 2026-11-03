@@ -11,6 +11,7 @@ class NotificationEvent(enum.StrEnum):
     RESERVATION_CREATED = "reservation_created"
     RESERVATION_EXPIRED = "reservation_expired"
     RESERVATION_CANCELLED = "reservation_cancelled"
+    PASSENGER_LINKED = "passenger_linked"
     RECEIPT_UPLOADED = "receipt_uploaded"
     PAYMENT_APPROVED = "payment_approved"
     PAYMENT_REJECTED = "payment_rejected"
