@@ -1,12 +1,77 @@
-.account-recovery__notice { margin: 0; padding: 10px 12px; border-radius: 8px; background: #e4eef0; color: #0e5a6b; font-size: .78rem; line-height: 1.5; }
-.account-recovery__success { margin: 0; padding: 10px 12px; border-radius: 8px; background: #e2f0e7; color: #1f6b43; font-size: .78rem; line-height: 1.5; }
-.account-recovery__code { font-size: 1.15rem; font-weight: 700; letter-spacing: .45em; text-align: center; }
-.account-recovery__secondary { min-height: 44px; border: 1px solid #dcd9d2; border-radius: 8px; background: #f5f4f0; color: #0e5a6b; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
-.account-recovery__secondary:hover:not(:disabled) { background: #ece9e2; }
-.account-recovery__secondary:disabled { opacity: .65; cursor: not-allowed; }
-.account-recovery__secondary:focus-visible, .account-recovery__button-link:focus-visible { outline: 2px solid #d99a1e; outline-offset: 3px; }
-.account-recovery__button-link { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 8px; background: #0e5a6b; color: #fff; font-size: .8rem; font-weight: 700; text-decoration: none; }
-.account-recovery__button-link:hover { background: #0a4250; }
-.account-recovery__links { margin: 4px 0 0; color: #5b6670; font-size: .78rem; text-align: center; }
-.account-recovery__links a { color: #0e5a6b; font-weight: 700; }
-.account-recovery__hint { margin: -10px 0 0; color: #5b6670; font-size: .72rem; }
+.account-recovery__notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e4eef0;
+  color: #0e5a6b;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.account-recovery__success {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #e2f0e7;
+  color: #1f6b43;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.account-recovery__code {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.45em;
+  text-align: center;
+}
+.account-recovery__secondary {
+  min-height: 44px;
+  border: 1px solid #dcd9d2;
+  border-radius: 8px;
+  background: #f5f4f0;
+  color: #0e5a6b;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.account-recovery__secondary:hover:not(:disabled) {
+  background: #ece9e2;
+}
+.account-recovery__secondary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.account-recovery__secondary:focus-visible,
+.account-recovery__button-link:focus-visible {
+  outline: 2px solid #d99a1e;
+  outline-offset: 3px;
+}
+.account-recovery__button-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 8px;
+  background: #0e5a6b;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.account-recovery__button-link:hover {
+  background: #0a4250;
+}
+.account-recovery__links {
+  margin: 4px 0 0;
+  color: #5b6670;
+  font-size: 0.78rem;
+  text-align: center;
+}
+.account-recovery__links a {
+  color: #0e5a6b;
+  font-weight: 700;
+}
+.account-recovery__hint {
+  margin: -10px 0 0;
+  color: #5b6670;
+  font-size: 0.72rem;
+}
