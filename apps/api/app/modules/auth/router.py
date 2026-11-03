@@ -21,6 +21,7 @@ from app.modules.auth.schemas import (
     LoginRequest,
     LoginResponse,
     MessageResponse,
+    ResetPasswordRequest,
     SignupRequest,
     SignupResponse,
     VerifyEmailRequest,
@@ -31,7 +32,9 @@ from app.modules.auth.service import (
     SignupConflictError,
     authenticate_account,
     register_passenger,
+    request_password_reset,
     resend_verification_code,
+    reset_password,
     verify_email,
 )
 from app.modules.auth.verification import InvalidVerificationCodeError
@@ -47,6 +50,15 @@ router = APIRouter(
     prefix="/auth",
     tags=["Autenticación"],
 )
+
+
+def get_client_ip(request: Request) -> str:
+    """
+    IP de la conexión para el control de intentos.
+
+    No confiamos en X-Forwarded-For enviado por el cliente.
+    """
+    return request.client.host if request.client is not None else "unknown"
 
 
 @router.post(
@@ -85,13 +97,7 @@ def login(
 ) -> LoginResponse:
     """Autentica una cuenta activa y controla los intentos fallidos."""
 
-    # Obtenemos la IP de la conexión.
-    # No confiamos en X-Forwarded-For enviado por el cliente.
-    ip_address = (
-        request.client.host
-        if request.client is not None
-        else "unknown"
-    )
+    ip_address = get_client_ip(request)
 
     # 1. Comprobar si alcanzó el límite de intentos.
     if is_login_blocked(db, str(data.email), ip_address):
@@ -201,6 +207,73 @@ def resend_verification_code_endpoint(
 
     resend_verification_code(db, str(data.email))
     return MessageResponse(message=RESEND_VERIFICATION_MESSAGE)
+
+
+FORGOT_PASSWORD_MESSAGE = (
+    "Si el correo está registrado, enviamos un código para restablecer tu "
+    "contraseña. Revisa también la carpeta de spam."
+)
+
+
+@router.post(
+    "/password/forgot",
+    response_model=MessageResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def forgot_password(
+    data: EmailRequest,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(validate_request_origin)],
+) -> MessageResponse:
+    """
+    Solicita un código para restablecer la contraseña.
+
+    Responde siempre el mismo mensaje para no revelar qué correos están
+    registrados.
+    """
+
+    request_password_reset(db, str(data.email))
+    return MessageResponse(message=FORGOT_PASSWORD_MESSAGE)
+
+
+@router.post(
+    "/password/reset",
+    response_model=MessageResponse,
+)
+def reset_password_endpoint(
+    data: ResetPasswordRequest,
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(validate_request_origin)],
+) -> MessageResponse:
+    """
+    Establece una nueva contraseña con el código recibido por correo.
+
+    Respeta el bloqueo por intentos fallidos del inicio de sesión y cada
+    código incorrecto cuenta como un intento fallido.
+    """
+
+    email = str(data.email)
+    ip_address = get_client_ip(request)
+
+    if is_login_blocked(db, email, ip_address):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos. Inténtalo más tarde.",
+        )
+
+    try:
+        reset_password(db, email, data.code, data.password)
+    except InvalidVerificationCodeError as error:
+        register_failed_login(db, email, ip_address)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    return MessageResponse(
+        message="Tu contraseña fue actualizada. Ya puedes iniciar sesión."
+    )
 
 
 @router.get(

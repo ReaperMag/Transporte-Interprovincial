@@ -243,3 +243,41 @@ def resend_verification_code(db: Session, email: str) -> None:
     code = issue_code(db, account, VerificationPurpose.EMAIL_VERIFICATION)
     db.commit()
     send_code_email(account.email, VerificationPurpose.EMAIL_VERIFICATION, code)
+
+
+def request_password_reset(db: Session, email: str) -> None:
+    """
+    Envía un código de recuperación si la cuenta existe, está activa y ya
+    pasó la espera mínima desde el último código. La respuesta al cliente
+    es siempre la misma, exista o no la cuenta.
+    """
+    account = get_account_by_email(db, email)
+    if (
+        account is None
+        or not account.is_active
+        or not can_issue_code(db, account, VerificationPurpose.PASSWORD_RESET)
+    ):
+        return
+
+    code = issue_code(db, account, VerificationPurpose.PASSWORD_RESET)
+    db.commit()
+    send_code_email(account.email, VerificationPurpose.PASSWORD_RESET, code)
+
+
+def reset_password(db: Session, email: str, code: str, new_password: str) -> None:
+    """
+    Establece una nueva contraseña con un código de recuperación válido.
+
+    El código queda usado. Recibirlo también demuestra que la persona
+    controla el correo, por eso la cuenta queda verificada.
+    """
+    account = get_account_by_email(db, email)
+    if account is None or not account.is_active:
+        raise InvalidVerificationCodeError(
+            "El código no es válido o ya venció. Solicita uno nuevo."
+        )
+
+    consume_code(db, account, VerificationPurpose.PASSWORD_RESET, code)
+    account.password_hash = hash_password(new_password)
+    account.is_email_verified = True
+    db.commit()
