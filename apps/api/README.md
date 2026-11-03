@@ -146,6 +146,50 @@ usa una sola base de datos, `apps/api/transporte.db`, sin importar la carpeta
 desde la que se ejecuten la API o los scripts. Durante el desarrollo web, Vite
 reenvía `/api` a `http://127.0.0.1:8000`.
 
+## Verificación de cuenta y recuperación de contraseña
+
+Las rutas viven bajo `/api/v1/auth` y validan el origen de la solicitud.
+
+| Método | Ruta | Operación |
+| --- | --- | --- |
+| `POST` | `/verify-email` | Verifica la cuenta con `email` y `code` |
+| `POST` | `/verify-email/resend` | Reenvía el código de verificación |
+| `POST` | `/password/forgot` | Envía un código para restablecer la contraseña |
+| `POST` | `/password/reset` | Cambia la contraseña con `email`, `code`, `password` y `confirmPassword` |
+
+Reglas principales:
+
+- **Registro:** la cuenta del pasajero queda pendiente y se envía un código de
+  6 dígitos. Si el correo falla, la cuenta igual se crea y el pasajero puede
+  pedir otro código.
+- **Login sin verificar:** si la contraseña es correcta pero el pasajero no
+  verificó su correo, la API responde `403` con
+  `{"code": "email_not_verified", "message": "..."}`. Con una contraseña
+  incorrecta responde el `401` de siempre, para no revelar el estado de la
+  cuenta. Este rechazo no cuenta como intento fallido.
+- **Códigos:** se guardan con Argon2 en `verification_codes`, nunca en texto
+  plano, con su propósito (`email_verification` o `password_reset`),
+  vencimiento, intentos, uso y revocación. Vencen a los
+  `VERIFICATION_CODE_EXPIRE_MINUTES` minutos, admiten 5 intentos y sirven una
+  sola vez. Al generar uno nuevo se revocan los anteriores del mismo propósito.
+- **Respuestas genéricas:** reenviar el código y "olvidé mi contraseña"
+  responden siempre `202` con el mismo mensaje, exista o no la cuenta. Entre
+  dos códigos debe pasar al menos 60 segundos; si se piden antes, la API
+  responde igual pero no envía nada. La cuenta regresiva se muestra en el
+  frontend.
+- **Nueva contraseña:** cumple la misma política del registro (8 a 128
+  caracteres y confirmación) y se guarda con Argon2. El código queda usado y
+  la cuenta queda verificada, porque recibir el código demuestra el control
+  del correo. Las sesiones abiertas no se cierran: el JWT vence a los 15
+  minutos.
+- **Bloqueo:** el cambio de contraseña respeta el bloqueo del inicio de
+  sesión. Si el correo y la IP están bloqueados responde `429`, y cada código
+  incorrecto cuenta como un intento fallido.
+- **Cuentas existentes:** al iniciar, la API agrega
+  `accounts.is_email_verified` con `DEFAULT 1`. Todas las cuentas que ya
+  existían, el `super_admin` y las cooperativas quedan verificadas; solo el
+  registro público crea cuentas pendientes.
+
 ## Pagos
 
 Las rutas viven bajo `/api/v1/payments` y requieren una sesión iniciada. Las
@@ -190,12 +234,64 @@ Reglas principales:
 
 ## Notificaciones
 
-Cada cambio en el pago o en los boletos registra un aviso para el pasajero con
-cuenta: comprobante recibido, pago aprobado, pago rechazado con el motivo,
-boletos emitidos y boleto cambiado. Se
-consultan en `GET /api/v1/notifications/me` y se marcan como leídos con
-`POST /api/v1/notifications/{id}/read`. Las ventas en oficina no generan
-avisos porque el pasajero no tiene cuenta. El envío por correo queda pendiente.
+Cada cambio en una reserva, un pago o los boletos registra un aviso para el
+pasajero con cuenta: reserva creada, reserva vencida, reserva cancelada,
+comprobante recibido, pago aprobado, pago rechazado con el motivo, boletos
+emitidos y boleto cambiado. Se consultan en `GET /api/v1/notifications/me` y
+se marcan como leídos con `POST /api/v1/notifications/{id}/read`. Las ventas
+en oficina no generan avisos porque el pasajero no tiene cuenta.
+
+Cada aviso también se envía por correo con el mismo título y mensaje. El envío
+se hace desde un único punto (`notifications/dispatcher.py`): `notify()` deja
+el aviso pendiente y el correo sale solo cuando la transacción del módulo que
+lo creó se confirma. Si esa transacción se revierte, no se envía nada. Si el
+envío es exitoso se guarda `email_sent_at`; si falla, se registra en el log,
+la compra, el pago o la aprobación continúan y `email_sent_at` queda vacío.
+
+## Envío de correos
+
+El proveedor `notifications/providers/smtp.py` usa `smtplib` de la biblioteca
+estándar, así que no requiere dependencias nuevas. Lo usan la verificación de
+cuenta, la recuperación de contraseña y las notificaciones. Nunca lanza
+excepciones: si el servidor SMTP falla, registra el error y devuelve `False`.
+
+| Variable | Valor por defecto | Uso |
+| --- | --- | --- |
+| `EMAIL_ENABLED` | `false` | Con `false` no se envía nada: el correo completo, incluido el código, se escribe en la consola del backend |
+| `SMTP_HOST` | vacío | Servidor SMTP, por ejemplo `smtp.gmail.com` |
+| `SMTP_PORT` | `587` | Puerto. Con `465` se usa SSL directo |
+| `SMTP_USER` | vacío | Usuario de la cuenta que envía |
+| `SMTP_PASSWORD` | vacío | Contraseña; en Gmail, una contraseña de aplicación |
+| `SMTP_FROM` | vacío | Remitente visible. Si está vacío se usa `SMTP_USER` |
+| `SMTP_USE_TLS` | `true` | Activa STARTTLS en el puerto 587 |
+| `VERIFICATION_CODE_EXPIRE_MINUTES` | `15` | Minutos de validez de los códigos |
+
+**Modo desarrollo.** Con `EMAIL_ENABLED=false` cualquier integrante puede
+probar sin configurar SMTP: al registrarse, el correo completo aparece en la
+consola donde corre la API, después del mensaje
+`EMAIL_ENABLED=false: el correo no se envió.`, con una línea `Código: 123456`.
+En este modo `email_sent_at` queda vacío porque no se envió nada.
+
+**Gmail con contraseña de aplicación.**
+
+1. Activa la verificación en dos pasos en la cuenta de Google que enviará los
+   correos.
+2. Crea una contraseña de aplicación en
+   <https://myaccount.google.com/apppasswords>. Google muestra 16 caracteres.
+3. Configura `apps/api/.env`:
+
+   ```env
+   EMAIL_ENABLED=true
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USE_TLS=true
+   SMTP_USER=tu-correo@gmail.com
+   SMTP_PASSWORD=la-contraseña-de-aplicación-sin-espacios
+   SMTP_FROM=Transporte Interprovincial <tu-correo@gmail.com>
+   ```
+
+4. Reinicia la API. Nunca subas `.env` al repositorio ni compartas la
+   contraseña de aplicación; si se filtra, revócala en la misma página.
 
 ## Boletos
 
