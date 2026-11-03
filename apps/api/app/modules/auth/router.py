@@ -38,6 +38,7 @@ from app.modules.auth.service import (
     verify_email,
 )
 from app.modules.auth.verification import InvalidVerificationCodeError
+from app.modules.passengers.linking import PassengerLinkError
 
 from app.modules.login_attempts.service import (
     is_login_blocked,
@@ -182,6 +183,11 @@ def verify_email_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
         ) from error
+    except PassengerLinkError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
 
     return MessageResponse(
         message="Tu correo fue verificado. Ya puedes iniciar sesión."
@@ -268,6 +274,11 @@ def reset_password_endpoint(
         register_failed_login(db, email, ip_address)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+    except PassengerLinkError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(error),
         ) from error
 

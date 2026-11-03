@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.buses.models import Bus, BusTemplate, TemplateSeat
@@ -26,7 +26,7 @@ from app.modules.reservations.schemas import (
 from app.modules.routes.models import Fare, Route, RouteType
 from app.modules.schedules.models import Frequency
 from app.modules.staff.models import Staff
-from app.modules.tickets.models import Ticket, TicketStatus
+from app.modules.tickets.models import SaleChannel, Ticket, TicketStatus
 from app.modules.trips.models import Trip, TripStatus
 from app.modules.trips.service import ECUADOR_TIMEZONE
 
@@ -529,17 +529,48 @@ def get_reservation_cooperative_id(db: Session, reservation: Reservation) -> int
 
 
 def list_account_reservations(db: Session, account_id: int) -> list[Reservation]:
-    """Reservas hechas por un pasajero con cuenta, de la más reciente a la más antigua."""
+    """
+    Reservas de un pasajero con cuenta, de la más reciente a la más antigua:
+    las que hizo en la app y las que un oficinista vendió a su nombre (antes
+    o después de registrarse).
+    """
     release_expired_reservations(db)
+
+    own_passenger = select(Passenger.id).where(Passenger.account_id == account_id)
+    with_own_seat = select(ReservationSeat.reservation_id).where(
+        ReservationSeat.passenger_id.in_(own_passenger)
+    )
 
     return list(
         db.scalars(
             select(Reservation)
-            .where(Reservation.buyer_account_id == account_id)
+            .where(
+                or_(
+                    Reservation.buyer_account_id == account_id,
+                    Reservation.id.in_(with_own_seat),
+                )
+            )
             .options(selectinload(Reservation.seats))
             .order_by(Reservation.created_at.desc(), Reservation.id.desc())
         ).all()
     )
+
+
+def build_account_reservation_read(
+    db: Session,
+    reservation: Reservation,
+    account_id: int,
+) -> ReservationRead:
+    """
+    Arma la reserva para el historial del pasajero. Si no la compró él (por
+    ejemplo, una venta en oficina para un grupo), solo muestra sus asientos
+    para no exponer los datos de las demás personas.
+    """
+    if reservation.buyer_account_id == account_id:
+        return build_reservation_read(db, reservation)
+
+    passenger_id = db.scalar(select(Passenger.id).where(Passenger.account_id == account_id))
+    return build_reservation_read(db, reservation, only_passenger_id=passenger_id)
 
 
 def cancel_reservation(db: Session, reservation: Reservation) -> Reservation:
@@ -567,10 +598,22 @@ def cancel_reservation(db: Session, reservation: Reservation) -> Reservation:
     return reservation
 
 
-def build_reservation_read(db: Session, reservation: Reservation) -> ReservationRead:
-    """Arma la respuesta de una reserva con sus asientos y pasajeros."""
+def build_reservation_read(
+    db: Session,
+    reservation: Reservation,
+    *,
+    only_passenger_id: int | None = None,
+) -> ReservationRead:
+    """
+    Arma la respuesta de una reserva con sus asientos y pasajeros.
+
+    Con only_passenger_id solo incluye los asientos de ese pasajero y el
+    total corresponde a esos asientos.
+    """
     trip = db.get(Trip, reservation.trip_id)
     seats = sorted(reservation.seats, key=lambda item: item.id)
+    if only_passenger_id is not None:
+        seats = [item for item in seats if item.passenger_id == only_passenger_id]
     first_seat = seats[0]
 
     seat_rows: list[ReservationSeatRead] = []
@@ -600,6 +643,11 @@ def build_reservation_read(db: Session, reservation: Reservation) -> Reservation
         destinationCityId=first_seat.destination_city_id,
         departureAt=trip.departure_at,
         expiresAt=reservation.expires_at,
-        total=reservation.total,
+        total=(
+            reservation.total
+            if only_passenger_id is None
+            else sum((item.price for item in seats), Decimal("0.00"))
+        ),
         seats=seat_rows,
+        channel=SaleChannel.OFFICE if reservation.sold_by_id else SaleChannel.ONLINE,
     )

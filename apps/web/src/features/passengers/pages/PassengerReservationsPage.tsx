@@ -234,13 +234,20 @@ export function PassengerReservationsPage() {
             }}
           >
             {reservations.map((reservation) => {
-              const canCancel = canCancelReservation(reservation.status);
+              // Las reservas vendidas en oficina las gestiona la cooperativa:
+              // el pasajero puede verlas, pero no pagarlas ni cancelarlas aquí.
+              const isOfficeSale = reservation.channel === 'office';
+              const canCancel = !isOfficeSale && canCancelReservation(reservation.status);
 
               const isCancelling = cancellingId === reservation.id;
 
               return (
                 <article key={reservation.id} className="passenger-trip-search__card">
                   <h3>Reserva #{reservation.id}</h3>
+
+                  {isOfficeSale && (
+                    <p className="passenger-history__channel">Comprado en oficina</p>
+                  )}
 
                   <p>
                     <strong>Estado:</strong> {getStatusLabel(reservation.status)}
@@ -299,20 +306,28 @@ export function PassengerReservationsPage() {
                     </p>
                   )}
 
-                  {reservation.status === 'pending_payment' && (
+                  {isOfficeSale && reservation.status !== 'confirmed' && (
+                    <p style={{ marginTop: '1rem' }}>
+                      Esta compra la gestiona la oficina de la cooperativa. Para pagarla o
+                      cambiarla, acércate a una oficina.
+                    </p>
+                  )}
+
+                  {!isOfficeSale && reservation.status === 'pending_payment' && (
                     <p style={{ marginTop: '1rem' }}>
                       <Link to={`/pasajero/reservas/${reservation.id}/pago`}>Registrar pago</Link>
                     </p>
                   )}
 
-                  {(reservation.status === 'payment_review' ||
-                    reservation.status === 'confirmed') && (
-                    <p style={{ marginTop: '1rem' }}>
-                      <Link to={`/pasajero/reservas/${reservation.id}/pago`}>
-                        Consultar estado del pago
-                      </Link>
-                    </p>
-                  )}
+                  {!isOfficeSale &&
+                    (reservation.status === 'payment_review' ||
+                      reservation.status === 'confirmed') && (
+                      <p style={{ marginTop: '1rem' }}>
+                        <Link to={`/pasajero/reservas/${reservation.id}/pago`}>
+                          Consultar estado del pago
+                        </Link>
+                      </p>
+                    )}
 
                   {/* Cancelar solo en estados permitidos */}
                   {canCancel && (

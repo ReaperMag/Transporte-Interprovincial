@@ -45,6 +45,8 @@ export interface ReservationRead {
   expiresAt: string | null;
   total: string | number;
   seats: ReservationSeatRead[];
+  /** online: hecha en la app; office: vendida por un oficinista. */
+  channel: 'online' | 'office' | 'on_board';
 }
 
 export class ReservationRequestError extends Error {

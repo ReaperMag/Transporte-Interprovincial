@@ -206,3 +206,14 @@
     width: 100%;
   }
 }
+
+.passenger-history__channel {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #fdf3e1;
+  color: #8a5a0b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}

@@ -245,6 +245,10 @@ export function PassengerTicketsPage() {
                     <div>
                       <h3>Boleto #{ticket.id}</h3>
 
+                      {ticket.channel === 'office' && (
+                        <p className="passenger-history__channel">Comprado en oficina</p>
+                      )}
+
                       <p>
                         <strong>Código:</strong> {ticket.code}
                       </p>
