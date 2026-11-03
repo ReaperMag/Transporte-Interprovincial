@@ -85,7 +85,7 @@ solicitud.
 | `GET` | `/trips/{trip_id}/seats` | Pasajero y oficinista | Mapa de asientos del viaje con su disponibilidad para un tramo (`origin_city_id` y `destination_city_id`) |
 | `POST` | `/` | Pasajero | Reservar asientos para el pasajero y sus acompañantes |
 | `POST` | `/office` | Oficinista | Reservar asientos en la oficina |
-| `GET` | `/me` | Pasajero | Listar sus reservas |
+| `GET` | `/me` | Pasajero | Listar sus reservas, incluidas las vendidas en oficina a su nombre (ver [Vinculación de pasajeros](#vinculación-de-pasajeros-registrados-en-oficina)) |
 | `GET` | `/{id}` | Pasajero y oficinista | Consultar el detalle de una reserva |
 | `POST` | `/{id}/cancel` | Pasajero y oficinista | Cancelar una reserva y liberar sus asientos |
 
@@ -189,6 +189,51 @@ Reglas principales:
   `accounts.is_email_verified` con `DEFAULT 1`. Todas las cuentas que ya
   existían, el `super_admin` y las cooperativas quedan verificadas; solo el
   registro público crea cuentas pendientes.
+
+## Vinculación de pasajeros registrados en oficina
+
+Cuando un oficinista vende un boleto, la cédula queda registrada en
+`passengers` sin cuenta (`account_id` vacío). Ese registro acumula los viajes
+de la persona. Si después se registra en la aplicación con la misma cédula,
+puede ver los viajes que hizo antes de tener cuenta.
+
+Reglas principales:
+
+- **Registro:** si la cédula ya tiene una cuenta, se rechaza como siempre. Si
+  pertenece a un pasajero sin cuenta, se comparan los nombres y apellidos por
+  separado, sin distinguir mayúsculas, tildes ni espacios extra. Si la venta
+  guardó un correo, el del registro también debe coincidir. Si algo no
+  coincide, la API responde `409` con un mensaje genérico que no revela los
+  datos guardados: "Los datos no coinciden con el registro existente de esta
+  identificación. Acércate a una oficina de la cooperativa."
+- **Vinculación pendiente:** si los datos coinciden, la cuenta se crea sin
+  verificar y guarda el pasajero reclamado en `accounts.pending_passenger_id`.
+  No se crea otro pasajero.
+- **Verificación:** la vinculación se concreta solo al verificar el correo
+  (o al restablecer la contraseña, que también verifica). Entonces
+  `passengers.account_id` apunta a la cuenta, se completa el correo solo si
+  estaba vacío y se conservan la cédula, los nombres y la categoría. Si la
+  persona nunca verifica, el pasajero sigue sin cuenta y sus viajes no se
+  exponen.
+- **Varias cuentas:** si dos cuentas reclaman la misma cédula, se vincula la
+  primera que verifica. La otra recibe `409` con el mensaje genérico y no
+  queda verificada.
+- **Aviso:** al vincularse se crea la notificación "Encontramos X viaje(s)
+  registrados con tu identificación" (evento `passenger_linked`), que también
+  se envía por correo. Cuenta los viajes con boletos emitidos o usados; si no
+  hay ninguno, no avisa.
+- **Historial:** `GET /reservations/me` incluye las reservas que tienen un
+  asiento a nombre del pasajero de la cuenta, aunque las haya vendido un
+  oficinista antes o después del registro. En esas reservas solo se devuelven
+  los asientos del propio pasajero y su total, para no exponer a otras
+  personas de una compra grupal. El campo `channel` indica `online` u `office`.
+  `GET /tickets/me` ya incluía los boletos a nombre del pasajero; el frontend
+  los marca como "Comprado en oficina" según `tickets.channel`.
+- **Gestión:** las reservas vendidas en oficina las sigue gestionando la
+  cooperativa. El pasajero las ve, pero pagarlas o cancelarlas solo lo puede
+  hacer el personal de oficina.
+- **Migración compatible:** al iniciar, la API agrega
+  `accounts.pending_passenger_id` si no existe.
 
 ## Pagos
 
