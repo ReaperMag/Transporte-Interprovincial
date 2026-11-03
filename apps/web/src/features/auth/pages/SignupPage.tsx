@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SignupForm } from '../components/SignupForm';
 import { registerPassenger, SignupApiError } from '../services/signup.service';
 import type { SignupFormValues } from '../types/signup.types';
+import type { VerifyEmailLocationState } from './VerifyEmailPage';
 
 import './SignupPage.css';
 
@@ -22,8 +23,12 @@ export function SignupPage() {
     try {
       await registerPassenger(values);
 
-      // Redirige al Login únicamente si el registro fue exitoso.
-      navigate('/login', { replace: true });
+      // La cuenta queda pendiente: se redirige a ingresar el código enviado al correo.
+      const state: VerifyEmailLocationState = { reason: 'signup' };
+      navigate(`/verificar-correo?email=${encodeURIComponent(values.email.trim())}`, {
+        replace: true,
+        state,
+      });
     } catch (err: unknown) {
       if (err instanceof SignupApiError) {
         setError(err.message);

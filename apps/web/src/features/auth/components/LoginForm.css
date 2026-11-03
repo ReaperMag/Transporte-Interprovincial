@@ -14,3 +14,5 @@
 .login-form__error { margin: 0; padding: 10px 12px; border-radius: 8px; background: #f7e3e0; color: #b3362b; font-size: .78rem; }
 .login-form__register { margin: 4px 0 0; color: #5b6670; font-size: .78rem; text-align: center; }
 .login-form__register a { color: #0e5a6b; font-weight: 700; }
+.login-form__forgot { align-self: flex-end; color: #0e5a6b; font-size: .72rem; font-weight: 700; }
+.login-form__forgot:focus-visible { outline: 2px solid #d99a1e; outline-offset: 3px; }
