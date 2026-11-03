@@ -86,6 +86,10 @@ export function LoginForm(props: LoginFormProps) {
             {showPassword ? 'Ocultar' : 'Mostrar'}
           </button>
         </div>
+
+        <Link className="login-form__forgot" to="/recuperar-contrasena">
+          ¿Olvidaste tu contraseña?
+        </Link>
       </div>
 
       {error && (

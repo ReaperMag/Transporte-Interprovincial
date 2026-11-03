@@ -2,7 +2,7 @@
 from app.core.config import settings
 
 
-def test_login_success(test_environment, signup_data):
+def test_login_success(test_environment, signup_data, verify_account):
     client, _ = test_environment
 
     signup = client.post(
@@ -10,6 +10,7 @@ def test_login_success(test_environment, signup_data):
         json=signup_data,
     )
     assert signup.status_code == 201
+    verify_account(signup_data["email"])
 
     response = client.post(
         "/api/v1/auth/login",
@@ -69,10 +70,11 @@ def test_me_without_login(test_environment):
     assert response.status_code == 401
 
 
-def test_me_after_login(test_environment, signup_data):
+def test_me_after_login(test_environment, signup_data, verify_account):
     client, _ = test_environment
 
     client.post("/api/v1/auth/signup", json=signup_data)
+    verify_account(signup_data["email"])
 
     login = client.post(
         "/api/v1/auth/login",
@@ -91,10 +93,11 @@ def test_me_after_login(test_environment, signup_data):
     assert response.json()["accountId"] == login.json()["accountId"]
 
 
-def test_logout(test_environment, signup_data):
+def test_logout(test_environment, signup_data, verify_account):
     client, _ = test_environment
 
     client.post("/api/v1/auth/signup", json=signup_data)
+    verify_account(signup_data["email"])
 
     login = client.post(
         "/api/v1/auth/login",

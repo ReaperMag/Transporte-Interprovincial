@@ -1,4 +1,8 @@
 import type { LoginCredentials } from '../types/auth.types';
+import { readApiError } from './authApi';
+
+/** Código que envía la API cuando el pasajero no ha verificado su correo. */
+export const EMAIL_NOT_VERIFIED = 'email_not_verified';
 
 export interface AuthenticatedAccount {
   accountId: number;
@@ -31,9 +35,15 @@ export async function loginAccount(credentials: LoginCredentials): Promise<Authe
   }
 
   if (response.status === 403) {
-    throw new Error(
-      'La API rechazó el origen del frontend',
-    );
+    const error = await readApiError(response, 'La API rechazó el origen del frontend');
+
+    // El pasajero aún no verifica su correo: la pantalla de inicio de sesión
+    // lo lleva a la verificación.
+    if (error.code === EMAIL_NOT_VERIFIED) {
+      throw error;
+    }
+
+    throw new Error('La API rechazó el origen del frontend');
   }
 
   if (!response.ok) {

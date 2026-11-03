@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.roles_permissions.models import Role
@@ -28,6 +28,9 @@ class Account(BaseModel):
         ForeignKey("cooperatives.id", ondelete="CASCADE"), index=True
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+    # Solo el registro público de pasajeros crea cuentas sin verificar. Las
+    # cuentas existentes, el administrador y las cooperativas quedan verificadas.
+    is_email_verified: Mapped[bool] = mapped_column(default=True, server_default=true())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     role: Mapped[Role | None] = relationship()

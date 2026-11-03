@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.modules.notifications.dispatcher import queue_notification_email
 from app.modules.notifications.models import Notification, NotificationEvent
 from app.modules.trips.service import ECUADOR_TIMEZONE
 
@@ -17,10 +18,11 @@ def notify(
     reservation_id: int | None = None,
 ) -> Notification | None:
     """
-    Registra un aviso para la cuenta indicada.
+    Registra un aviso para la cuenta indicada y programa su envío por correo.
 
     Las ventas en oficina no tienen cuenta de pasajero; en ese caso no se
     registra nada. No confirma la transacción: lo hace el servicio que llama.
+    El correo se envía solo cuando esa transacción se confirma.
     """
     if account_id is None:
         return None
@@ -33,6 +35,7 @@ def notify(
         reservation_id=reservation_id,
     )
     db.add(notification)
+    queue_notification_email(db, notification)
     return notification
 
 

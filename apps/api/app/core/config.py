@@ -52,5 +52,16 @@ class Settings(BaseSettings):
     payment_account_holder: str = "Transporte Interprovincial (demostración)"
     payment_deuna_qr: str = "DEMO-DEUNA-TRANSPORTE-INTERPROVINCIAL"
 
+    # Envío de correos. Con email_enabled en False no se envía nada: el
+    # contenido del correo se escribe en la consola del backend.
+    email_enabled: bool = False
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, gt=0)
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_from: str | None = None
+    smtp_use_tls: bool = True
+    verification_code_expire_minutes: int = Field(default=15, gt=0)
+
 
 settings = Settings()

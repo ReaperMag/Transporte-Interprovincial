@@ -13,6 +13,7 @@ from app.modules.auth.tokens import decode_access_token
 def test_authenticate_registered_passenger(
     test_environment,
     signup_data,
+    verify_account,
 ):
     client, engine = test_environment
 
@@ -22,6 +23,8 @@ def test_authenticate_registered_passenger(
     )
 
     assert signup.status_code == 201
+
+    verify_account(signup_data["email"])
 
     with Session(engine) as db:
         account, token = authenticate_passenger(

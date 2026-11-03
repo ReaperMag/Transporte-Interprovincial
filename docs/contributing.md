@@ -61,6 +61,45 @@ tener entre 12 y 128 caracteres. Al iniciar, la API crea automáticamente las
 tablas que falten y el primer `super_admin` si todavía no existe ninguno. Si
 ya hay un administrador, la API no crea ni modifica cuentas.
 
+### Envío de correos
+
+La API envía correos para verificar cuentas, recuperar contraseñas y avisar
+los cambios de reservas, pagos y boletos. Las variables están en
+`.env.example`:
+
+| Variable | Uso |
+| --- | --- |
+| `EMAIL_ENABLED` | `false` (por defecto) no envía nada y escribe el correo en la consola |
+| `SMTP_HOST`, `SMTP_PORT` | Servidor y puerto SMTP (`587` con STARTTLS, `465` con SSL) |
+| `SMTP_USER`, `SMTP_PASSWORD` | Credenciales de la cuenta que envía |
+| `SMTP_FROM` | Remitente visible; si está vacío se usa `SMTP_USER` |
+| `SMTP_USE_TLS` | Activa STARTTLS en el puerto 587 |
+| `VERIFICATION_CODE_EXPIRE_MINUTES` | Minutos de validez de los códigos (15 por defecto) |
+
+**Probar en local sin SMTP (recomendado).** Deja `EMAIL_ENABLED=false`.
+Regístrate como pasajero desde `http://localhost:5173/signup` y busca en la
+consola de la API el mensaje `EMAIL_ENABLED=false: el correo no se envió.`
+Debajo aparece el correo con la línea `Código: 123456`; ingrésalo en la
+pantalla de verificación. Lo mismo ocurre con "¿Olvidaste tu contraseña?".
+
+**Probar con Gmail.**
+
+1. Activa la verificación en dos pasos de la cuenta de Google.
+2. Crea una contraseña de aplicación en
+   <https://myaccount.google.com/apppasswords>.
+3. En `apps/api/.env` configura `EMAIL_ENABLED=true`,
+   `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USE_TLS=true`,
+   `SMTP_USER` con tu correo, `SMTP_PASSWORD` con la contraseña de aplicación
+   (sin espacios) y, si quieres, `SMTP_FROM=Transporte Interprovincial <tu-correo@gmail.com>`.
+4. Reinicia la API.
+
+Nunca subas `.env` ni compartas la contraseña de aplicación. Si el envío
+falla, la API lo registra en la consola y la operación principal continúa.
+
+Las cuentas que ya existían en tu base local quedan verificadas al iniciar la
+API, así que no pierdes el acceso. Solo los pasajeros que se registren desde
+ahora deben verificar su correo.
+
 ### Base de datos
 
 Para desarrollo local se utiliza SQLite mediante SQLAlchemy. El proyecto usa
@@ -98,6 +137,10 @@ Para detener el servidor, presionar `Ctrl + C`.
 python -m pip install -r requirements-dev.txt
 pytest
 ```
+
+Las pruebas no dependen de tu `.env`: usan una clave JWT propia, desactivan
+el envío de correos y simulan el servidor SMTP, así que nunca envían correos
+reales.
 
 **Nota:** La base SQLite `transporte.db` no se incluye en Git.
 

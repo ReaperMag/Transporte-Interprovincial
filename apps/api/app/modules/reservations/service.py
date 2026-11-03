@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.modules.buses.models import Bus, BusTemplate, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
+from app.modules.notifications.models import NotificationEvent
+from app.modules.notifications.service import notify
 from app.modules.passengers.models import Passenger, PassengerCategory
 from app.modules.passengers.repository import get_passenger_by_id_number
 from app.modules.reservations.models import (
@@ -203,6 +205,17 @@ def release_expired_reservations(db: Session) -> int:
     for reservation in pending:
         if as_local(reservation.expires_at) <= current_time:
             reservation.status = ReservationStatus.EXPIRED
+            notify(
+                db,
+                account_id=reservation.buyer_account_id,
+                event=NotificationEvent.RESERVATION_EXPIRED,
+                title="Reserva vencida",
+                message=(
+                    "Tu reserva venció porque el pago no se completó a tiempo. "
+                    "Los asientos quedaron libres; puedes hacer una nueva reserva."
+                ),
+                reservation_id=reservation.id,
+            )
             expired += 1
 
     if expired:
@@ -470,6 +483,23 @@ def create_reservation(
         seats=reservation_seats,
     )
     db.add(reservation)
+    db.flush()
+
+    seat_count = len(reservation_seats)
+    notify(
+        db,
+        account_id=buyer_account_id,
+        event=NotificationEvent.RESERVATION_CREATED,
+        title="Reserva creada",
+        message=(
+            f"Apartamos {seat_count} "
+            f"{'asiento' if seat_count == 1 else 'asientos'} por un total de "
+            f"${total:.2f}. Completa el pago antes del "
+            f"{as_local(expires_at):%d/%m/%Y a las %H:%M}; si no, los asientos "
+            "se liberarán."
+        ),
+        reservation_id=reservation.id,
+    )
     db.commit()
     db.refresh(reservation)
 
@@ -523,6 +553,14 @@ def cancel_reservation(db: Session, reservation: Reservation) -> Reservation:
         )
 
     reservation.status = ReservationStatus.CANCELLED
+    notify(
+        db,
+        account_id=reservation.buyer_account_id,
+        event=NotificationEvent.RESERVATION_CANCELLED,
+        title="Reserva cancelada",
+        message="Tu reserva fue cancelada y los asientos quedaron libres.",
+        reservation_id=reservation.id,
+    )
     db.commit()
     db.refresh(reservation)
 

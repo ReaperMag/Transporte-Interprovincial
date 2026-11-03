@@ -14,6 +14,7 @@ MODEL_MODULES = (
     "app.modules.roles_permissions.models",
     "app.modules.cooperatives.models",
     "app.modules.accounts.models",
+    "app.modules.auth.models",
     "app.modules.staff.models",
     "app.modules.passengers.models",
     "app.modules.buses.models",
@@ -103,6 +104,19 @@ def init_db() -> None:
         with engine.begin() as connection:
             connection.execute(
                 text("ALTER TABLE cooperatives ADD COLUMN description VARCHAR(1000)")
+            )
+    account_columns = {
+        column["name"] for column in inspect(engine).get_columns("accounts")
+    }
+    if "is_email_verified" not in account_columns:
+        # DEFAULT 1 deja verificadas todas las cuentas que ya existen
+        # (administrador, cooperativas y pasajeros), así nadie pierde el acceso.
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE accounts ADD COLUMN is_email_verified "
+                    "BOOLEAN NOT NULL DEFAULT 1"
+                )
             )
 
 

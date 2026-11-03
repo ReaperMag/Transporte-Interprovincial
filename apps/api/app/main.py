@@ -1,4 +1,5 @@
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -8,6 +9,12 @@ from app.api.v1.router import router as api_v1_router
 from app.core.bootstrap import ensure_initial_admin
 from app.core.config import settings
 from app.core.database import SessionLocal, init_db
+
+
+# Muestra en consola los mensajes de la aplicación (por ejemplo, los correos
+# que no se envían cuando EMAIL_ENABLED=false). Uvicorn configura solo sus
+# propios registros, así que sin esto los mensajes INFO no aparecerían.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s - %(message)s")
 
 
 @asynccontextmanager
