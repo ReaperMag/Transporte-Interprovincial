@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
-from app.core.permissions import require_cooperative_access
+from app.core.permissions import require_cooperative_access, require_cooperative_admin
 from app.core.storage import InvalidUploadError, resolve_upload, save_upload
 from app.modules.accounts.models import Account
 from app.modules.buses import bus_service, repository, service
@@ -84,7 +84,7 @@ def read_buses(
     group_id: int | None = Query(default=None, alias="groupId"),
     bus_status: BusStatus | None = Query(default=None, alias="status"),
     db: Session = Depends(get_db),
-    account: Account = Depends(require_cooperative_access),
+    account: Account = Depends(require_cooperative_admin),
 ) -> list[BusRead]:
     cooperative_id = _require_cooperative_id(account)
     return [

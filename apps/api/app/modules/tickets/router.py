@@ -9,11 +9,8 @@ from app.core.dependencies import get_current_account
 from app.modules.accounts.models import Account, AccountType
 from app.modules.passengers.models import Passenger
 from app.modules.reservations.models import Reservation
-from app.modules.reservations.router import (
-    get_office_staff,
-    require_office_staff,
-    require_passenger,
-)
+from app.core.permissions import get_office_staff, require_office_staff
+from app.modules.reservations.router import require_passenger
 from app.modules.staff.models import Staff
 from app.modules.tickets import service
 from app.modules.tickets.generator import render_qr_png

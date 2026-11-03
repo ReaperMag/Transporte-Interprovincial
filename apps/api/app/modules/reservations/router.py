@@ -1,12 +1,12 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.dependencies import get_current_account
+from app.core.permissions import get_office_staff, require_office_staff
 from app.modules.accounts.models import Account, AccountType
 from app.modules.reservations import service
 from app.modules.reservations.models import Reservation
@@ -15,20 +15,13 @@ from app.modules.reservations.schemas import (
     ReservationRead,
     TripSeatsResponse,
 )
-from app.modules.staff.models import Staff, StaffPosition
+from app.modules.staff.models import Staff
 
 
 router = APIRouter(
     prefix="/reservations",
     tags=["Reservas"],
 )
-
-# Puestos que pueden vender asientos en la oficina.
-OFFICE_SALE_POSITIONS = (
-    StaffPosition.CLERK,
-    StaffPosition.ADMIN,
-)
-
 
 def require_passenger(
     account: Annotated[Account, Depends(get_current_account)],
@@ -40,36 +33,6 @@ def require_passenger(
             detail="Esta operación es exclusiva para pasajeros.",
         )
     return account
-
-
-def get_office_staff(db: Session, account: Account) -> Staff | None:
-    """Devuelve el oficinista activo vinculado a la cuenta, si existe."""
-    if account.account_type != AccountType.COOPERATIVE:
-        return None
-
-    staff = db.scalar(select(Staff).where(Staff.account_id == account.id))
-    if (
-        staff is None
-        or not staff.is_active
-        or staff.position not in OFFICE_SALE_POSITIONS
-    ):
-        return None
-
-    return staff
-
-
-def require_office_staff(
-    db: Annotated[Session, Depends(get_db)],
-    account: Annotated[Account, Depends(get_current_account)],
-) -> Staff:
-    """Permite la operación solo al personal de oficina de una cooperativa."""
-    staff = get_office_staff(db, account)
-    if staff is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Esta operación es exclusiva para el personal de oficina.",
-        )
-    return staff
 
 
 def raise_reservation_error(exc: service.ReservationError) -> None:

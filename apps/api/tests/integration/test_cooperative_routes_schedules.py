@@ -8,6 +8,7 @@ from app.modules.accounts.models import Account, AccountType
 from app.modules.buses.models import Bus, BusGroup, BusTemplate
 from app.modules.cooperatives import service
 from app.modules.cooperatives.models import Cooperative
+from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE, ensure_default_roles
 from app.modules.reservations.models import Reservation, ReservationStatus
 from app.modules.trips.models import Trip
 
@@ -22,12 +23,14 @@ def create_cooperative_account(engine) -> Cooperative:
             db,
             {"name": "Cooperativa Rutas", "ruc": "1791234567001"},
         )
+        role = ensure_default_roles(db)[COOPERATIVE_ADMIN_ROLE]
         db.add(
             Account(
                 email="rutas@example.com",
                 password_hash=hash_password(PASSWORD),
                 account_type=AccountType.COOPERATIVE,
                 cooperative_id=cooperative.id,
+                role_id=role.id,
             )
         )
         db.commit()

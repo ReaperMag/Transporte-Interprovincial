@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
-from app.core.permissions import require_cooperative_access
+from app.core.permissions import require_cooperative_access, require_cooperative_admin
 from app.modules.accounts.models import Account
 from app.modules.routes import cooperative_service
 from app.modules.routes.cooperative_schemas import (
@@ -32,7 +32,7 @@ def _cooperative_id(account: Account) -> int:
 @router.get("/cities", response_model=list[CityRead])
 def read_cities(
     db: Session = Depends(get_db),
-    _: Account = Depends(require_cooperative_access),
+    _: Account = Depends(require_cooperative_admin),
 ) -> list[CityRead]:
     return cooperative_service.list_cities(db)
 

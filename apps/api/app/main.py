@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.v1.router import router as api_v1_router
-from app.core.bootstrap import ensure_initial_admin
+from app.core.bootstrap import ensure_initial_admin, initialize_roles
 from app.core.config import settings
 from app.core.database import SessionLocal, init_db
 
@@ -23,6 +23,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         init_db()
     session_factory = getattr(application.state, "session_factory", SessionLocal)
     with session_factory() as db:
+        initialize_roles(db)
         ensure_initial_admin(db)
     yield
 

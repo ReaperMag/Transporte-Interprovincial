@@ -12,6 +12,7 @@ from app.modules.buses.models import Bus, BusTemplate, SeatType, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
 from app.modules.passengers.models import Passenger, PassengerCategory
 from app.modules.reservations.models import Reservation, ReservationStatus
+from app.modules.roles_permissions.seed import COOPERATIVE_CLERK_ROLE, ensure_default_roles
 from app.modules.routes.models import City, Fare, Route, RouteStop, RouteType
 from app.modules.schedules.models import Frequency
 from app.modules.staff.models import Staff, StaffPosition
@@ -24,11 +25,15 @@ ORIGIN = {"Origin": settings.frontend_origin}
 
 
 def create_account(db, email, account_type, cooperative_id=None):
+    role_id = None
+    if account_type == AccountType.COOPERATIVE:
+        role_id = ensure_default_roles(db)[COOPERATIVE_CLERK_ROLE].id
     account = Account(
         email=email,
         password_hash=hash_password(PASSWORD),
         account_type=account_type,
         cooperative_id=cooperative_id,
+        role_id=role_id,
     )
     db.add(account)
     db.flush()

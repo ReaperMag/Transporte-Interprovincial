@@ -3,7 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.csrf import validate_request_origin
-from app.core.permissions import require_admin_access, require_cooperative_access
+from app.core.permissions import (
+    require_admin_access,
+    require_cooperative_access,
+    require_cooperative_admin,
+)
 from app.modules.accounts.models import Account
 from app.modules.cooperatives import repository, service
 from app.modules.cooperatives.schemas import (
@@ -33,7 +37,7 @@ router = APIRouter(
 @cooperative_router.get("/me", response_model=CooperativeIdentity)
 def read_current_cooperative(
     db: Session = Depends(get_db),
-    account: Account = Depends(require_cooperative_access),
+    account: Account = Depends(require_cooperative_admin),
 ) -> CooperativeIdentity:
     if account.cooperative_id is None:
         raise HTTPException(
