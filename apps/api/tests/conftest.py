@@ -12,6 +12,16 @@ from app.main import app
 from app.shared.base_model import Base
 
 
+TEST_JWT_SECRET_KEY = "clave-de-pruebas-con-al-menos-32-bytes-0123456789"
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings(monkeypatch):
+    """Fija la configuración de las pruebas para no depender del .env de cada integrante."""
+
+    monkeypatch.setattr(settings, "jwt_secret_key", TEST_JWT_SECRET_KEY)
+
+
 @pytest.fixture
 def test_environment(monkeypatch):
     """Crea una base SQLite temporal para cada prueba."""
