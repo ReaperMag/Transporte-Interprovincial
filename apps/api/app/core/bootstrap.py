@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
 from app.modules.accounts.repository import create_account, get_account_by_email
+from app.modules.roles_permissions.seed import ensure_default_roles
 
 
 def ensure_initial_admin(db: Session) -> bool:
@@ -60,3 +61,9 @@ def ensure_initial_admin(db: Session) -> bool:
         raise
 
     return True
+
+
+def initialize_roles(db: Session) -> None:
+    """Ensure role identifiers exist without changing existing account roles."""
+    ensure_default_roles(db)
+    db.commit()

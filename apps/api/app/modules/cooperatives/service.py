@@ -8,6 +8,10 @@ from app.core.security import hash_password
 from app.modules.accounts.models import AccountType
 from app.modules.accounts.repository import create_account, get_account_by_email
 from app.modules.cooperatives.models import Cooperative
+from app.modules.roles_permissions.seed import (
+    COOPERATIVE_ADMIN_ROLE,
+    ensure_default_roles,
+)
 from app.shared.base_model import Base
 
 
@@ -65,6 +69,7 @@ def create_cooperative_with_account(
         ) from exc
 
     try:
+        roles = ensure_default_roles(db)
         create_account(
             db,
             email=normalized_email,
@@ -72,6 +77,9 @@ def create_cooperative_with_account(
             account_type=AccountType.COOPERATIVE,
             cooperative_id=cooperative.id,
         )
+        account = get_account_by_email(db, normalized_email)
+        if account is not None:
+            account.role_id = roles[COOPERATIVE_ADMIN_ROLE].id
         db.commit()
     except IntegrityError as exc:
         db.rollback()

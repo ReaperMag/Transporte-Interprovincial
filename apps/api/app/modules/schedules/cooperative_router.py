@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
-from app.core.permissions import require_cooperative_access
+from app.core.permissions import require_cooperative_access, require_cooperative_admin
 from app.modules.accounts.models import Account
 from app.modules.schedules import cooperative_service
 from app.modules.schedules.cooperative_schemas import (
@@ -72,7 +72,7 @@ def _schedule_error(error: Exception) -> HTTPException:
 def read_frequencies(
     group_id: int | None = Query(default=None, gt=0, alias="groupId"),
     db: Session = Depends(get_db),
-    account: Account = Depends(require_cooperative_access),
+    account: Account = Depends(require_cooperative_admin),
 ) -> list[FrequencyRead]:
     return cooperative_service.list_frequencies(
         db,

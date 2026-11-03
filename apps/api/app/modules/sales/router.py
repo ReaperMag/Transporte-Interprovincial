@@ -18,11 +18,8 @@ from app.core.dependencies import get_current_account
 from app.core.storage import resolve_upload
 from app.modules.accounts.models import Account, AccountType
 from app.modules.reservations.models import Reservation
-from app.modules.reservations.router import (
-    get_office_staff,
-    require_office_staff,
-    require_passenger,
-)
+from app.core.permissions import get_office_staff, require_office_staff
+from app.modules.reservations.router import require_passenger
 from app.modules.sales import service
 from app.modules.sales.models import Payment, PaymentMethod
 from app.modules.sales.schemas import PaymentInfo, PaymentRead, PaymentRejection

@@ -8,6 +8,7 @@ from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
 from app.modules.buses.models import BusGroup, BusTemplate, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
+from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE, ensure_default_roles
 from app.modules.staff.models import Staff, StaffPosition
 
 
@@ -24,6 +25,7 @@ def create_cooperative(engine, *, name: str, email: str) -> Cooperative:
         )
         db.add(cooperative)
         db.flush()
+        role = ensure_default_roles(db)[COOPERATIVE_ADMIN_ROLE]
 
         db.add(
             Account(
@@ -31,6 +33,7 @@ def create_cooperative(engine, *, name: str, email: str) -> Cooperative:
                 password_hash=hash_password(PASSWORD),
                 account_type=AccountType.COOPERATIVE,
                 cooperative_id=cooperative.id,
+                role_id=role.id,
             )
         )
 
