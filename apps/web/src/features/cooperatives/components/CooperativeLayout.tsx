@@ -9,6 +9,7 @@ const sections = [
   ['/cooperativa/buses', 'Buses'],
   ['/cooperativa/grupos', 'Grupos de buses'],
   ['/cooperativa/rutas', 'Rutas y frecuencias'],
+  ['/cooperativa/oficinistas', 'Oficinistas'],
   ['/cooperativa/configuracion', 'Configuración'],
 ] as const;
 
@@ -35,7 +36,7 @@ export function CooperativeLayout() {
         <nav className="cooperative-sidebar__nav" aria-label="Secciones de la cooperativa">
           {sections.map(([to, label]) => (
             <NavLink key={to} to={to} className={({ isActive }) => `cooperative-sidebar__link${isActive ? ' cooperative-sidebar__link--active' : ''}`}>
-              <span aria-hidden="true">{label === 'Panel' ? '⌂' : label === 'Configuración' ? '⚙' : '▦'}</span>{label}
+              <span aria-hidden="true">{label === 'Panel' ? '⌂' : label === 'Configuración' ? '⚙' : label === 'Oficinistas' ? '♙' : '▦'}</span>{label}
             </NavLink>
           ))}
         </nav>
