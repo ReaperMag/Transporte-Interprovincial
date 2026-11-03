@@ -63,3 +63,29 @@ class LoginResponse(BaseModel):
     accountId: int
     email: EmailStr
     accountType: Literal["passenger", "cooperative", "super_admin"]
+
+
+class EmailRequest(BaseModel):
+    """Correo para reenviar el código de verificación o recuperar la contraseña."""
+
+    email: EmailStr
+
+
+class VerifyEmailRequest(BaseModel):
+    """Código recibido por correo para verificar la cuenta."""
+
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def remove_spaces(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+
+class MessageResponse(BaseModel):
+    """Respuesta con un mensaje para mostrar al usuario."""
+
+    message: str

@@ -10,8 +10,16 @@ from app.modules.accounts.repository import (
     create_account,
     get_account_by_email,
 )
+from app.modules.auth.models import VerificationPurpose
 from app.modules.auth.schemas import SignupRequest, SignupResponse
 from app.modules.auth.tokens import create_access_token
+from app.modules.auth.verification import (
+    InvalidVerificationCodeError,
+    can_issue_code,
+    consume_code,
+    issue_code,
+    send_code_email,
+)
 from app.modules.passengers.repository import (
     create_passenger,
     get_passenger_by_id_number,
@@ -24,6 +32,10 @@ class SignupConflictError(Exception):
 
 class InvalidCredentialsError(Exception):
     """Indica que las credenciales de acceso son inválidas."""
+
+
+class EmailNotVerifiedError(Exception):
+    """La contraseña es correcta, pero el pasajero aún no verifica su correo."""
 
 
 def register_passenger(
@@ -56,12 +68,14 @@ def register_passenger(
         # 3. Proteger la contraseña antes de almacenarla.
         password_hash = hash_password(data.password)
 
-        # 4. Crear la cuenta exclusivamente como pasajero.
+        # 4. Crear la cuenta exclusivamente como pasajero, pendiente de
+        #    verificar su correo.
         account = create_account(
             db,
             email=email,
             password_hash=password_hash,
             account_type=AccountType.PASSENGER,
+            is_email_verified=False,
         )
 
         # 5. Crear el perfil relacionado con la cuenta.
@@ -74,9 +88,15 @@ def register_passenger(
             account_id=account.id,
         )
 
-        # 6. Confirmar ambas operaciones.
+        # 6. Generar el código de verificación.
+        code = issue_code(db, account, VerificationPurpose.EMAIL_VERIFICATION)
+
+        # 7. Confirmar las operaciones.
         db.commit()
 
+        # 8. Enviar el código. Si el correo falla, la cuenta queda creada y
+        #    el pasajero puede pedir que se reenvíe.
+        send_code_email(account.email, VerificationPurpose.EMAIL_VERIFICATION, code)
 
         return SignupResponse(
             accountId=account.id,
@@ -149,6 +169,17 @@ def _authenticate_account(
             "Correo o contraseña incorrectos."
         )
 
+    # Se comprueba después de validar la contraseña para no revelar el
+    # estado de la cuenta a quien no la conoce.
+    if (
+        account.account_type == AccountType.PASSENGER
+        and not account.is_email_verified
+    ):
+        raise EmailNotVerifiedError(
+            "Tu cuenta aún no está verificada. Ingresa el código que enviamos "
+            "a tu correo o solicita uno nuevo."
+        )
+
     access_token = create_access_token(
         account_id=account.id,
         account_type=account.account_type.value,
@@ -164,3 +195,51 @@ def _authenticate_account(
         raise
 
     return account, access_token
+
+
+def _pending_passenger(db: Session, email: str) -> Account | None:
+    """Pasajero activo que aún no verifica su correo."""
+    account = get_account_by_email(db, email)
+    if (
+        account is None
+        or not account.is_active
+        or account.account_type != AccountType.PASSENGER
+        or account.is_email_verified
+    ):
+        return None
+    return account
+
+
+def verify_email(db: Session, email: str, code: str) -> None:
+    """
+    Verifica el correo de un pasajero con el código recibido.
+
+    Si la cuenta no existe o ya está verificada se responde igual que con un
+    código inválido, para no revelar qué correos están registrados.
+    """
+    account = _pending_passenger(db, email)
+    if account is None:
+        raise InvalidVerificationCodeError(
+            "El código no es válido o ya venció. Solicita uno nuevo."
+        )
+
+    consume_code(db, account, VerificationPurpose.EMAIL_VERIFICATION, code)
+    account.is_email_verified = True
+    db.commit()
+
+
+def resend_verification_code(db: Session, email: str) -> None:
+    """
+    Envía un nuevo código si la cuenta está pendiente y ya pasó la espera
+    mínima. En cualquier otro caso no hace nada; la respuesta al cliente es
+    siempre la misma.
+    """
+    account = _pending_passenger(db, email)
+    if account is None or not can_issue_code(
+        db, account, VerificationPurpose.EMAIL_VERIFICATION
+    ):
+        return
+
+    code = issue_code(db, account, VerificationPurpose.EMAIL_VERIFICATION)
+    db.commit()
+    send_code_email(account.email, VerificationPurpose.EMAIL_VERIFICATION, code)

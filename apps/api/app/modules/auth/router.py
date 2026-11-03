@@ -17,17 +17,24 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_account
 from app.modules.accounts.models import Account
 from app.modules.auth.schemas import (
+    EmailRequest,
     LoginRequest,
     LoginResponse,
+    MessageResponse,
     SignupRequest,
     SignupResponse,
+    VerifyEmailRequest,
 )
 from app.modules.auth.service import (
+    EmailNotVerifiedError,
     InvalidCredentialsError,
     SignupConflictError,
     authenticate_account,
     register_passenger,
+    resend_verification_code,
+    verify_email,
 )
+from app.modules.auth.verification import InvalidVerificationCodeError
 
 from app.modules.login_attempts.service import (
     is_login_blocked,
@@ -114,6 +121,16 @@ def login(
             detail="Correo o contraseña incorrectos.",
         ) from error
 
+    except EmailNotVerifiedError as error:
+        # No cuenta como intento fallido: la contraseña era correcta.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "email_not_verified",
+                "message": str(error),
+            },
+        ) from error
+
     # 4. Establecer la cookie tras autenticar correctamente.
     response.set_cookie(
         key=settings.auth_cookie_name,
@@ -133,6 +150,57 @@ def login(
         accountType=account.account_type.value,
     )
 
+
+
+RESEND_VERIFICATION_MESSAGE = (
+    "Si la cuenta existe y está pendiente de verificación, enviamos un nuevo "
+    "código a tu correo. Revisa también la carpeta de spam."
+)
+
+
+@router.post(
+    "/verify-email",
+    response_model=MessageResponse,
+)
+def verify_email_endpoint(
+    data: VerifyEmailRequest,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(validate_request_origin)],
+) -> MessageResponse:
+    """Verifica el correo de un pasajero con el código de 6 dígitos."""
+
+    try:
+        verify_email(db, str(data.email), data.code)
+    except InvalidVerificationCodeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    return MessageResponse(
+        message="Tu correo fue verificado. Ya puedes iniciar sesión."
+    )
+
+
+@router.post(
+    "/verify-email/resend",
+    response_model=MessageResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def resend_verification_code_endpoint(
+    data: EmailRequest,
+    db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(validate_request_origin)],
+) -> MessageResponse:
+    """
+    Reenvía el código de verificación.
+
+    Responde siempre lo mismo, exista o no la cuenta y aunque no haya pasado
+    la espera mínima, para no revelar qué correos están registrados.
+    """
+
+    resend_verification_code(db, str(data.email))
+    return MessageResponse(message=RESEND_VERIFICATION_MESSAGE)
 
 
 @router.get(

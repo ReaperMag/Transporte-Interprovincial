@@ -28,6 +28,7 @@ def create_account(
     password_hash: str,
     account_type: AccountType,
     cooperative_id: int | None = None,
+    is_email_verified: bool = True,
 ) -> Account:
     """
     Agrega una cuenta a la sesión de base de datos.
@@ -40,6 +41,7 @@ def create_account(
         password_hash=password_hash,
         account_type=account_type,
         cooperative_id=cooperative_id,
+        is_email_verified=is_email_verified,
     )
 
     db.add(account)

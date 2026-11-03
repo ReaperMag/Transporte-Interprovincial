@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.config import settings
 from app.core.database import get_db, import_models
 from app.main import app
+from app.modules.accounts.repository import get_account_by_email
 from app.shared.base_model import Base
 
 
@@ -82,6 +83,25 @@ def test_environment(monkeypatch):
         else:
             app.state.initialize_database_on_startup = previous_init_setting
         engine.dispose()
+
+
+@pytest.fixture
+def verify_account(test_environment):
+    """
+    Marca como verificado el correo de una cuenta registrada en la prueba.
+
+    El registro público deja la cuenta pendiente de verificación; las pruebas
+    que solo necesitan iniciar sesión lo usan para omitir el paso del código.
+    """
+    _, engine = test_environment
+
+    def _verify(email: str) -> None:
+        with Session(engine) as db:
+            account = get_account_by_email(db, email)
+            account.is_email_verified = True
+            db.commit()
+
+    return _verify
 
 
 @pytest.fixture

@@ -60,10 +60,11 @@ def test_startup_creates_only_one_initial_admin(test_environment):
     assert login_response.json()["accountType"] == "super_admin"
 
 
-def test_admin_routes_reject_passenger_accounts(test_environment, signup_data):
+def test_admin_routes_reject_passenger_accounts(test_environment, signup_data, verify_account):
     client, _ = test_environment
     signup = client.post("/api/v1/auth/signup", json=signup_data)
     assert signup.status_code == 201
+    verify_account(signup_data["email"])
     assert login(
         client,
         signup_data["email"],
@@ -294,10 +295,12 @@ def test_duplicate_account_email_does_not_create_cooperative(test_environment):
 def test_cooperative_identity_rejects_non_cooperative_accounts(
     test_environment,
     signup_data,
+    verify_account,
 ):
     client, _ = test_environment
     signup = client.post("/api/v1/auth/signup", json=signup_data)
     assert signup.status_code == 201
+    verify_account(signup_data["email"])
     assert login(client, signup_data["email"], signup_data["password"]).status_code == 200
 
     response = client.get("/api/v1/cooperatives/me")
