@@ -1,7 +1,15 @@
 import re
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 from app.modules.auth.schemas import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 
@@ -84,6 +92,31 @@ class OfficeUserCreate(StaffSchema):
     _validate_phone = field_validator("phone")(validate_phone)
 
 
+class OfficeUserUpdate(StaffSchema):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    first_name: NonEmptyName | None = None
+    last_name: NonEmptyName | None = None
+    id_number: Annotated[str, StringConstraints(strip_whitespace=True)] | None = None
+    email: EmailStr | None = None
+    phone: Phone | None = None
+
+    _validate_id_number = field_validator("id_number")(validate_ecuadorian_id)
+    _validate_phone = field_validator("phone")(validate_phone)
+
+    @model_validator(mode="after")
+    def require_a_change(self) -> "OfficeUserUpdate":
+        if not self.model_fields_set:
+            raise ValueError("Envía al menos un campo para actualizar.")
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("Los campos enviados no pueden ser nulos.")
+        return self
+
+
 class OfficeUserRead(StaffSchema):
     id: int
     account_id: int
@@ -91,5 +124,5 @@ class OfficeUserRead(StaffSchema):
     last_name: str
     id_number: str
     email: EmailStr
-    phone: str
+    phone: str | None
     position: str

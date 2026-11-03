@@ -8,10 +8,77 @@ from app.core.database import get_db
 from app.core.permissions import require_cooperative_admin
 from app.modules.accounts.models import Account
 from app.modules.staff import service
-from app.modules.staff.schemas import OfficeUserCreate, OfficeUserRead
+from app.modules.staff.schemas import (
+    OfficeUserCreate,
+    OfficeUserRead,
+    OfficeUserUpdate,
+)
 
 
 router = APIRouter(prefix="/cooperatives", tags=["Cooperative staff"])
+
+
+def _to_read(staff, email: str) -> OfficeUserRead:
+    return OfficeUserRead(
+        id=staff.id,
+        account_id=staff.account_id,
+        first_name=staff.first_name,
+        last_name=staff.last_name,
+        id_number=staff.id_number,
+        email=email,
+        phone=staff.phone,
+        position=staff.position.value,
+    )
+
+
+@router.get(
+    "/me/office-users",
+    response_model=list[OfficeUserRead],
+)
+def list_office_users(
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_cooperative_admin)],
+) -> list[OfficeUserRead]:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    return [
+        _to_read(staff, email)
+        for staff, email in service.list_office_users(
+            db,
+            cooperative_id=account.cooperative_id,
+        )
+    ]
+
+
+@router.get(
+    "/me/office-users/{office_user_id}",
+    response_model=OfficeUserRead,
+)
+def read_office_user(
+    office_user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_cooperative_admin)],
+) -> OfficeUserRead:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    try:
+        staff, email = service.get_office_user(
+            db,
+            cooperative_id=account.cooperative_id,
+            office_user_id=office_user_id,
+        )
+    except service.OfficeUserNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Oficinista no encontrado.",
+        ) from exc
+    return _to_read(staff, email)
 
 
 @router.post(
@@ -37,16 +104,7 @@ def create_office_user(
             cooperative_id=account.cooperative_id,
             data=payload,
         )
-        return OfficeUserRead(
-            id=staff.id,
-            account_id=staff.account_id,
-            first_name=staff.first_name,
-            last_name=staff.last_name,
-            id_number=staff.id_number,
-            email=service.get_staff_account_email(db, staff),
-            phone=staff.phone,
-            position=staff.position.value,
-        )
+        return _to_read(staff, service.get_staff_account_email(db, staff))
     except service.DuplicateOfficeUserError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -55,5 +113,41 @@ def create_office_user(
     except service.ClerkRoleNotConfiguredError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
+@router.patch(
+    "/me/office-users/{office_user_id}",
+    response_model=OfficeUserRead,
+)
+def update_office_user(
+    office_user_id: int,
+    payload: OfficeUserUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_cooperative_admin)],
+    _: Annotated[None, Depends(validate_request_origin)],
+) -> OfficeUserRead:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    try:
+        staff, email = service.update_office_user(
+            db,
+            cooperative_id=account.cooperative_id,
+            office_user_id=office_user_id,
+            data=payload,
+        )
+        return _to_read(staff, email)
+    except service.OfficeUserNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Oficinista no encontrado.",
+        ) from exc
+    except service.DuplicateOfficeUserError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc

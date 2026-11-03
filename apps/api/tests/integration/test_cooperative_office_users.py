@@ -19,6 +19,7 @@ from tests.integration.test_cooperative_authorization import (
 
 
 URL = "/api/v1/cooperatives/me/office-users"
+DETAIL_URL = URL + "/{}"
 VALID_PAYLOAD = {
     "firstName": "Oficinista",
     "lastName": "Prueba",
@@ -202,3 +203,258 @@ def test_staff_failure_rolls_back_account(test_environment):
         finally:
             event.remove(Staff, "before_insert", fail_staff_insert)
         assert db.query(Account).filter_by(email=payload.email).one_or_none() is None
+
+
+def _create_registered_clerk(client, email="registered@example.com"):
+    id_number = {
+        "registered@example.com": "0900000019",
+        "foreign-clerk@example.com": "0900000027",
+        "read-clerk@example.com": "0900000035",
+        "update-clerk@example.com": "0900000043",
+        "identity-clerk@example.com": "0900000050",
+        "target-update@example.com": "0900000076",
+        "other-update@example.com": "0900000084",
+    }.get(email, "0900000068")
+    response = client.post(
+        URL,
+        json={
+            **VALID_PAYLOAD,
+            "email": email,
+            "idNumber": id_number,
+        },
+        headers=ORIGIN,
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def test_admin_lists_only_clerks_from_own_cooperative(test_environment):
+    client, engine = test_environment
+    _, first_cooperative_id = create_cooperative_account(
+        engine, email="first-admin@example.com", role_code=COOPERATIVE_ADMIN_ROLE
+    )
+    _, second_cooperative_id = create_cooperative_account(
+        engine, email="second-admin@example.com", role_code=COOPERATIVE_ADMIN_ROLE
+    )
+    create_cooperative_account(
+        engine,
+        email="driver@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+        position=StaffPosition.DRIVER,
+    )
+    create_cooperative_account(
+        engine,
+        email="controller@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+        position=StaffPosition.CONTROLLER,
+    )
+
+    assert login(client, "first-admin@example.com").status_code == 200
+    own = _create_registered_clerk(client)
+    client.cookies.clear()
+    assert login(client, "second-admin@example.com").status_code == 200
+    foreign = _create_registered_clerk(client, "foreign-clerk@example.com")
+    client.cookies.clear()
+    assert login(client, "first-admin@example.com").status_code == 200
+
+    response = client.get(URL)
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [own["id"]]
+    assert own["id"] != foreign["id"]
+    with Session(engine) as db:
+        assert db.query(Staff).filter_by(cooperative_id=first_cooperative_id).count() == 1
+        assert db.query(Staff).filter_by(cooperative_id=second_cooperative_id).count() == 1
+
+
+def test_admin_lists_empty_when_no_clerks(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine, email="empty-admin@example.com", role_code=COOPERATIVE_ADMIN_ROLE
+    )
+    assert login(client, "empty-admin@example.com").status_code == 200
+    assert client.get(URL).json() == []
+
+
+def test_admin_reads_only_own_clerk(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine, email="read-admin@example.com", role_code=COOPERATIVE_ADMIN_ROLE
+    )
+    assert login(client, "read-admin@example.com").status_code == 200
+    clerk = _create_registered_clerk(client, "read-clerk@example.com")
+    assert client.get(DETAIL_URL.format(clerk["id"])).json() == clerk
+
+    client.cookies.clear()
+    create_cooperative_account(
+        engine, email="other-admin@example.com", role_code=COOPERATIVE_ADMIN_ROLE
+    )
+    assert login(client, "other-admin@example.com").status_code == 200
+    assert client.get(DETAIL_URL.format(clerk["id"])).status_code == 404
+
+
+def test_admin_updates_clerk_and_can_keep_current_identity(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine,
+        email="update-admin@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "update-admin@example.com").status_code == 200
+    clerk = _create_registered_clerk(client, "update-clerk@example.com")
+
+    response = client.patch(
+        DETAIL_URL.format(clerk["id"]),
+        json={
+            "firstName": "Nombre Actualizado",
+            "lastName": "Apellido Actualizado",
+            "idNumber": clerk["idNumber"],
+            "email": clerk["email"],
+            "phone": "+593 99 111 2233",
+        },
+        headers=ORIGIN,
+    )
+    assert response.status_code == 200
+    assert response.json()["firstName"] == "Nombre Actualizado"
+    assert response.json()["phone"] == "+593 99 111 2233"
+
+    with Session(engine) as db:
+        account = db.query(Account).filter_by(id=clerk["accountId"]).one()
+        staff = db.query(Staff).filter_by(id=clerk["id"]).one()
+        assert account.email == clerk["email"]
+        assert staff.first_name == "Nombre Actualizado"
+        assert staff.last_name == "Apellido Actualizado"
+
+
+def test_admin_updates_email_and_id_and_rejects_forbidden_fields(test_environment):
+    client, _ = test_environment
+    create_cooperative_account(
+        test_environment[1],
+        email="identity-admin@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "identity-admin@example.com").status_code == 200
+    clerk = _create_registered_clerk(client, "identity-clerk@example.com")
+    response = client.patch(
+        DETAIL_URL.format(clerk["id"]),
+        json={"email": "new-identity@example.com", "idNumber": "0900000027"},
+        headers=ORIGIN,
+    )
+    assert response.status_code == 200
+    assert response.json()["email"] == "new-identity@example.com"
+    assert response.json()["idNumber"] == "0900000027"
+
+    forbidden = client.patch(
+        DETAIL_URL.format(clerk["id"]),
+        json={"roleId": 1, "cooperativeId": 999, "position": "admin"},
+        headers=ORIGIN,
+    )
+    assert forbidden.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("email", "duplicate-update@example.com"),
+        ("idNumber", "0900000068"),
+    ],
+)
+def test_update_duplicate_identity_returns_conflict(test_environment, field, value):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine,
+        email="duplicate-admin@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "duplicate-admin@example.com").status_code == 200
+    target = _create_registered_clerk(client, "target-update@example.com")
+    other = _create_registered_clerk(client, "other-update@example.com")
+
+    conflict_value = other["email"] if field == "email" else other["idNumber"]
+    response = client.patch(
+        DETAIL_URL.format(target["id"]),
+        json={field: conflict_value},
+        headers=ORIGIN,
+    )
+    assert response.status_code == 409
+
+
+def test_update_rejects_invalid_id_empty_patch_and_missing_csrf(test_environment):
+    client, _ = test_environment
+    create_cooperative_account(
+        test_environment[1],
+        email="validation-admin@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "validation-admin@example.com").status_code == 200
+    target = _create_registered_clerk(client, "validation-clerk@example.com")
+
+    assert client.patch(
+        DETAIL_URL.format(target["id"]),
+        json={"idNumber": "1712345679"},
+        headers=ORIGIN,
+    ).status_code == 422
+    assert client.patch(
+        DETAIL_URL.format(target["id"]),
+        json={},
+        headers=ORIGIN,
+    ).status_code == 422
+    assert client.patch(
+        DETAIL_URL.format(target["id"]),
+        json={"firstName": "Sin CSRF"},
+    ).status_code == 403
+
+
+def test_update_failure_rolls_back_account_and_staff(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine,
+        email="rollback-admin@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "rollback-admin@example.com").status_code == 200
+    target = _create_registered_clerk(client, "rollback-clerk@example.com")
+
+    def fail_staff_update(*args, **kwargs):
+        raise RuntimeError("simulated update failure")
+
+    event.listen(Staff, "before_update", fail_staff_update)
+    try:
+        with pytest.raises(RuntimeError):
+            client.patch(
+                DETAIL_URL.format(target["id"]),
+                json={
+                    "firstName": "No Persistir",
+                    "email": "no-persistir@example.com",
+                },
+                headers=ORIGIN,
+            )
+    finally:
+        event.remove(Staff, "before_update", fail_staff_update)
+
+    with Session(engine) as db:
+        account = db.query(Account).filter_by(id=target["accountId"]).one()
+        staff = db.query(Staff).filter_by(id=target["id"]).one()
+        assert account.email == "rollback-clerk@example.com"
+        assert staff.first_name == "Oficinista"
+
+
+def test_non_admin_cannot_list_read_or_update_office_users(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine,
+        email="clerk-caller@example.com",
+        role_code="cooperative_clerk",
+        position=StaffPosition.CLERK,
+    )
+    create_passenger(engine, "passenger-caller@example.com")
+
+    for email in ("clerk-caller@example.com", "passenger-caller@example.com"):
+        client.cookies.clear()
+        assert login(client, email).status_code == 200
+        assert client.get(URL).status_code == 403
+        assert client.get(DETAIL_URL.format(1)).status_code == 403
+        assert client.patch(
+            DETAIL_URL.format(1),
+            json={"firstName": "No autorizado"},
+            headers=ORIGIN,
+        ).status_code == 403
