@@ -1,0 +1,219 @@
+.passenger-trip-search {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  color: #172033;
+}
+
+.passenger-trip-search__header {
+  margin-bottom: 28px;
+}
+
+.passenger-trip-search__eyebrow {
+  margin-bottom: 8px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.passenger-trip-search__header h1 {
+  margin: 0 0 10px;
+  font-size: clamp(26px, 3vw, 34px);
+}
+
+.passenger-trip-search__header > p:last-child {
+  color: #64748b;
+}
+
+.passenger-trip-search__form,
+.passenger-trip-search__card,
+.passenger-trip-search__empty {
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgb(15 23 42 / 4%);
+}
+
+.passenger-trip-search__fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.passenger-trip-search__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.passenger-trip-search__field select,
+.passenger-trip-search__field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+
+.passenger-trip-search__field select:focus,
+.passenger-trip-search__field input:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+
+.passenger-trip-search__button {
+  margin-top: 20px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 9px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.passenger-trip-search__button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.passenger-trip-search__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.passenger-trip-search__error {
+  margin-top: 16px;
+  color: #b91c1c;
+}
+
+.passenger-trip-search__notice {
+  margin-top: 16px;
+  color: #92400e;
+}
+
+.passenger-trip-search__results {
+  margin-top: 32px;
+}
+
+.passenger-trip-search__results h2 {
+  margin-bottom: 18px;
+}
+
+.passenger-trip-search__list {
+  display: grid;
+  gap: 16px;
+}
+
+.passenger-trip-search__empty {
+  text-align: center;
+  color: #64748b;
+}
+
+.passenger-trip-search__empty h3 {
+  color: #172033;
+}
+
+.passenger-trip-search__card-header,
+.passenger-trip-search__details,
+.passenger-trip-search__fares {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.passenger-trip-search__card-header {
+  align-items: center;
+}
+
+.passenger-trip-search__card-header h3 {
+  margin: 4px 0 0;
+}
+
+.passenger-trip-search__caption,
+.passenger-trip-search__trip-id {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.passenger-trip-search__route {
+  margin: 20px 0;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.passenger-trip-search__details {
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.passenger-trip-search__details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.passenger-trip-search__details span,
+.passenger-trip-search__fares > span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.passenger-trip-search__fares {
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.passenger-trip-search__fare-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.passenger-trip-search__fare {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .passenger-trip-search__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .passenger-trip-search__form,
+  .passenger-trip-search__card {
+    padding: 18px;
+  }
+
+  .passenger-trip-search__details {
+    flex-direction: column;
+  }
+
+  .passenger-trip-search__button {
+    width: 100%;
+  }
+}
+
+.passenger-history__channel {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #fdf3e1;
+  color: #8a5a0b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}

@@ -1,0 +1,19 @@
+.passenger-profile { max-width: 980px; margin: 0 auto; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.passenger-profile__header { margin-bottom: 26px; }
+.passenger-profile__header a { color: #0e5a6b; font-size: .75rem; font-weight: 700; text-decoration: none; }
+.passenger-profile__header h1 { margin: 18px 0 8px; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 2.5rem; letter-spacing: -.05em; }
+.passenger-profile__header p, .passenger-profile__description { color: #5b6670; font-size: .82rem; line-height: 1.6; }
+.passenger-profile__card { margin-bottom: 16px; padding: 24px; border: 1px solid #dcd9d2; border-radius: 14px; background: #fff; box-shadow: 0 12px 30px rgb(20 33 43 / 5%); }
+.passenger-profile__card h2 { margin: 0 0 8px; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.25rem; }
+.passenger-profile__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; margin-top: 22px; }
+.passenger-profile__field { display: flex; flex-direction: column; gap: 7px; }
+.passenger-profile__field label { color: #14212b; font-size: .75rem; font-weight: 700; }
+.passenger-profile__field input, .passenger-profile__field select { width: 100%; box-sizing: border-box; padding: 10px 11px; border: 1px solid #dcd9d2; border-radius: 8px; background: #fff; color: #14212b; font: inherit; font-size: .8rem; }
+.passenger-profile__field input:focus, .passenger-profile__field select:focus { outline: 2px solid #d99a1e; outline-offset: 1px; border-color: #0e5a6b; }
+.passenger-profile__field input[readonly] { background: #f5f4f0; color: #5b6670; }
+.passenger-profile__field small { color: #5b6670; font-size: .68rem; }
+.passenger-profile__save { margin-top: 20px; padding: 11px 16px; border: 0; border-radius: 8px; background: #0e5a6b; color: #fff; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; }
+.passenger-profile__save:hover:not(:disabled) { background: #0a4250; }
+.passenger-profile__success { color: #2f7a4d; font-size: .78rem; }
+.passenger-profile__error { color: #b3362b; font-size: .78rem; }
+@media (max-width: 750px) { .passenger-profile__grid { grid-template-columns: 1fr; } .passenger-profile__card { padding: 18px; } .passenger-profile__save { width: 100%; } }

@@ -1,0 +1,185 @@
+.invoice-modal__backdrop {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 1rem;
+  background: rgb(15 23 42 / 60%);
+}
+
+.invoice-modal {
+  width: min(100%, 42rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 24px 64px rgb(15 23 42 / 25%);
+}
+
+.invoice-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.invoice-modal__eyebrow {
+  margin: 0 0 0.3rem;
+  color: #2563eb;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.invoice-modal__header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.35rem;
+}
+
+.invoice-modal__close {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.invoice-modal__body {
+  padding: 1.25rem 1.5rem;
+}
+
+.invoice-modal__metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin: 0 0 1.25rem;
+}
+
+.invoice-modal__metadata div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.invoice-modal__metadata dt {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.invoice-modal__metadata dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.invoice-modal__table-wrapper {
+  overflow-x: auto;
+}
+
+.invoice-modal__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.invoice-modal__table th,
+.invoice-modal__table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.88rem;
+}
+
+.invoice-modal__table th {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.invoice-modal__table th:last-child,
+.invoice-modal__table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.invoice-modal__table tfoot th,
+.invoice-modal__table tfoot td {
+  border-bottom: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.invoice-modal__paid {
+  margin: 1rem 0 0;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.invoice-modal__note {
+  margin: 1rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.invoice-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.invoice-modal__actions button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.invoice-modal__cancel {
+  border-color: #cbd5e1 !important;
+  background: #fff;
+  color: #334155;
+}
+
+.invoice-modal__confirm {
+  background: #16a34a;
+  color: #fff;
+}
+
+.invoice-modal__confirm:hover {
+  background: #15803d;
+}
+
+.invoice-modal__download {
+  background: #cbd5e1;
+  color: #475569;
+  cursor: not-allowed !important;
+}
+
+@media (max-width: 520px) {
+  .invoice-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .invoice-modal__actions button {
+    width: 100%;
+  }
+}

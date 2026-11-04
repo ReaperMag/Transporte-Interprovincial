@@ -1,0 +1,156 @@
+.bus-floorplan-editor {
+  display: grid;
+  gap: 1rem;
+}
+
+.bus-floorplan-editor__settings,
+.bus-floorplan-editor__layout-settings,
+.bus-floorplan-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+}
+
+.bus-floorplan-editor label {
+  display: flex;
+  min-width: 8rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #334155;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.bus-floorplan-editor input:not([type='checkbox']),
+.bus-floorplan-editor select,
+.bus-floorplan-editor__layout-settings button,
+.bus-floorplan-editor__selection button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.bus-floorplan-editor__settings > label:first-child {
+  flex: 1 1 16rem;
+}
+
+.bus-floorplan-editor__bathroom-toggle {
+  min-height: 2.5rem;
+  flex-direction: row !important;
+  align-items: center;
+}
+
+.bus-floorplan-editor__bathroom-toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.bus-floorplan-editor__layout-settings button,
+.bus-floorplan-editor__selection button {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.bus-floorplan-editor__layout-settings button {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.bus-floorplan-editor__toolbar {
+  justify-content: space-between;
+}
+
+.bus-floorplan-editor__selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.bus-floorplan-editor__selection span {
+  align-self: center;
+}
+
+.bus-floorplan-editor__selection .bus-floorplan-editor__remove {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #991b1b;
+}
+
+.bus-floorplan-editor__summary {
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.bus-floorplan-editor__grid {
+  align-items: stretch;
+}
+
+.bus-floorplan-editor__seat {
+  min-width: 0;
+}
+
+.bus-floorplan-editor__seat--selected {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.bus-floorplan-editor__empty-seat {
+  min-width: 0;
+  min-height: 3.4rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.65rem 0.65rem 0.35rem 0.35rem;
+  background: rgb(255 255 255 / 55%);
+  color: #94a3b8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.15rem;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.bus-floorplan-editor__empty-seat:hover,
+.bus-floorplan-editor__empty-seat:focus-visible {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.bus-floorplan-editor__hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+@media (max-width: 540px) {
+  .bus-floorplan-editor__settings,
+  .bus-floorplan-editor__layout-settings {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bus-floorplan-editor__settings > label:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .bus-floorplan-editor__layout-settings button {
+    grid-column: 1 / -1;
+  }
+}

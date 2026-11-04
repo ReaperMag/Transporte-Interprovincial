@@ -1,0 +1,15 @@
+.signup-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(280px, .85fr) minmax(400px, 1fr); align-items: stretch; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.signup-page__intro { display: flex; flex-direction: column; justify-content: center; padding: clamp(32px, 7vw, 96px); background: #0e5a6b; color: #f5f4f0; }
+.signup-page__brand { margin: 0 0 72px; color: #f0c76b; font-size: .75rem; font-weight: 800; letter-spacing: .13em; }
+.signup-page__intro-kicker { margin: 0 0 12px; color: #b8d0d4; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; }
+.signup-page__intro h2 { max-width: 430px; margin: 0 0 18px; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: clamp(2.4rem, 5vw, 4.2rem); line-height: .98; letter-spacing: -.05em; }
+.signup-page__intro > p:last-child { max-width: 360px; margin: 0; color: #d2e2e4; font-size: .88rem; line-height: 1.6; }
+.signup-page__card { align-self: center; width: min(100%, 560px); box-sizing: border-box; margin: 0 auto; padding: clamp(24px, 5vw, 56px); }
+.signup-page__header { margin-bottom: 26px; }
+.signup-page__title { margin: 0 0 8px; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 2rem; letter-spacing: -.04em; }
+.signup-page__description { margin: 0; color: #5b6670; font-size: .86rem; line-height: 1.6; }
+.signup-page__footer { margin-top: 22px; text-align: center; }
+.signup-page__footer p { margin: 0; color: #5b6670; font-size: .78rem; }
+.signup-page__link { color: #0e5a6b; font-weight: 700; text-decoration: none; }
+.signup-page__link:hover { text-decoration: underline; }
+@media (max-width: 760px) { .signup-page { display: block; } .signup-page__intro { min-height: 230px; padding: 28px 24px; } .signup-page__brand { margin-bottom: 36px; } .signup-page__intro h2 { font-size: 2.3rem; } .signup-page__card { padding: 36px 24px 48px; } }
