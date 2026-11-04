@@ -9,6 +9,8 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.validators import Cedula, EmailWithDomain, PersonName
+
 
 # Política de contraseñas compartida por el registro y la recuperación.
 PASSWORD_MIN_LENGTH = 8
@@ -18,28 +20,13 @@ PASSWORD_MAX_LENGTH = 128
 class SignupRequest(BaseModel):
     """Datos recibidos para registrar un pasajero."""
 
-    firstName: str = Field(min_length=1, max_length=100)
-    lastName: str = Field(min_length=1, max_length=100)
-    idNumber: str = Field(
-        min_length=1,
-        max_length=13,
-        pattern=r"^[A-Za-z0-9]+$",
-    )
-    email: EmailStr
+    firstName: PersonName = Field(max_length=100)
+    lastName: PersonName = Field(max_length=100)
+    # Solo cédulas ecuatorianas, con su dígito verificador.
+    idNumber: Cedula
+    email: EmailWithDomain
     password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
     confirmPassword: str
-
-    @field_validator(
-        "firstName",
-        "lastName",
-        "idNumber",
-        mode="before",
-    )
-    @classmethod
-    def remove_extra_spaces(cls, value: object) -> object:
-        if isinstance(value, str):
-            return value.strip()
-        return value
 
     @model_validator(mode="after")
     def validate_passwords(self) -> Self:
