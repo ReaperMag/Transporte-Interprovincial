@@ -331,3 +331,40 @@ git push origin <version>
 ```
 
 10. Actualiza tus ramas locales (`git pull origin main` y `git pull origin develop`).
+
+
+# 📦 Versionamiento del Proyecto
+
+## Estándar utilizado
+
+Este proyecto utiliza **Versionamiento Semántico** con el formato:
+
+vX.Y.Z
+
+| Número | Nombre | Cuándo se incrementa |
+|--------|--------|----------------------|
+| **X** | MAJOR  | Cambios incompatibles con versiones anteriores (breaking changes) |
+| **Y** | MINOR  | Nuevas funcionalidades compatibles con versiones anteriores |
+| **Z** | PATCH  | Correcciones de errores compatibles con versiones anteriores |
+
+
+## ⚠️ Adaptación para este proyecto (fines prácticos)
+
+La especificación oficial de SemVer establece que las versiones deben crearse **únicamente al publicar un release** (es decir, al liberar una versión estable al usuario final). Sin embargo, **este proyecto adopta una variante práctica con fines didácticos y de demostración**: se realizará versionamiento **antes del primer release oficial**, tomando como puntos de versionamiento los **merges de Pull Requests (PR) que integren funcionalidades al proyecto**.
+
+## 🧪 Versiones Pre-release (Alpha, Beta y RC)
+
+Además de las versiones estables (`vX.Y.Z`), el proyecto contempla el uso de **versiones pre-release** para etapas de prueba y validación antes de un release definitivo. Estas se identifican añadiendo un sufijo al número de versión, separado por un guion:
+
+vX.Y.Z-alpha
+vX.Y.Z-beta
+vX.Y.Z-rc
+
+### 🔄 Ciclo de vida de una versión
+
+Antes de publicar una versión estable, el código puede pasar por un ciclo de maduración. El orden recomendado, de menor a mayor estabilidad, es:
+
+
+1.  **Alpha (`-alpha`)**: Versión muy temprana. La funcionalidad está incompleta o la API es inestable. Se usa para pruebas internas o para obtener retroalimentación temprana. Puede contener errores graves.
+2.  **Beta (`-beta`)**: La funcionalidad está completa, pero pueden existir errores conocidos. Es una versión lista para pruebas más amplias (usuarios beta) pero no para producción.
+3.  **Release Candidate / RC (`-rc`)**: Versión candidata a ser la definitiva. Si no se detectan errores críticos en esta etapa, el mismo código (sin cambios) se promueve a versión estable eliminando el sufijo `-rc`.
