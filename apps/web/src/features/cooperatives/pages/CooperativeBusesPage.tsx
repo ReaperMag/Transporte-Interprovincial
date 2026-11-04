@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { CooperativeBusCreateWizard } from '../components/CooperativeBusCreateWizard';
+import {
+  cleanPlate,
+  digitsError,
+  onlyDigits,
+  plateError,
+  preventNonNumericKeys,
+} from '../../../shared/utils/validation';
 import { getCooperativeBusGroups, type CooperativeBusGroup } from '../services/busGroup.service';
 import {
   addCooperativeBusPhotos,
@@ -114,6 +121,12 @@ export function CooperativeBusesPage() {
 
     if (!form.groupId) {
       setError('Selecciona un grupo de buses.');
+      return;
+    }
+
+    const validationError = digitsError(form.number) ?? plateError(form.plate);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -311,9 +324,10 @@ export function CooperativeBusesPage() {
           Número de disco
           <input
             required
+            inputMode="numeric"
             maxLength={10}
             value={form.number}
-            onChange={(event) => change('number', event.target.value)}
+            onChange={(event) => change('number', onlyDigits(event.target.value, 10))}
           />
         </label>
 
@@ -322,8 +336,9 @@ export function CooperativeBusesPage() {
           <input
             required
             maxLength={10}
+            placeholder="PBA-1234"
             value={form.plate}
-            onChange={(event) => change('plate', event.target.value)}
+            onChange={(event) => change('plate', cleanPlate(event.target.value))}
           />
         </label>
 
@@ -352,6 +367,7 @@ export function CooperativeBusesPage() {
           <input
             required
             type="number"
+            onKeyDown={preventNonNumericKeys}
             min={1950}
             max={new Date().getFullYear() + 1}
             value={form.year}
@@ -364,6 +380,7 @@ export function CooperativeBusesPage() {
           <input
             required
             type="number"
+            onKeyDown={preventNonNumericKeys}
             min={1}
             max={200}
             value={form.capacity}

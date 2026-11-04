@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './PassengerCountModal.css';
+import { preventNonNumericKeys } from '../../../shared/utils/validation';
 
 interface PassengerCountModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ export function PassengerCountModal({ isOpen, onClose, onConfirm }: PassengerCou
           <input
             id="passenger-count"
             type="number"
+            onKeyDown={preventNonNumericKeys}
             min={1}
             max={10}
             value={count}

@@ -1,6 +1,6 @@
 .passenger-layout { min-height: 100dvh; display: flex; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
 .passenger-layout__sidebar { display: flex; width: 248px; flex: 0 0 248px; flex-direction: column; box-sizing: border-box; padding: 28px 18px 20px; background: #14212b; color: #f5f4f0; }
-.passenger-layout__brand { display: flex; align-items: center; gap: 11px; margin: 0 12px 38px; }
+.passenger-layout__brand { display: flex; align-items: center; gap: 11px; margin: 0 12px 38px; color: inherit; text-decoration: none; }
 .passenger-layout__brand span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #d99a1e; font-size: 1rem; }
 .passenger-layout__brand strong, .passenger-layout__brand small { display: block; }
 .passenger-layout__brand strong { font-size: .8rem; letter-spacing: .08em; }

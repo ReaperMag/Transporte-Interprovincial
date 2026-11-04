@@ -23,7 +23,7 @@ from test_reservations import (  # noqa: F401
 )
 
 
-CEDULA = "1799999990"
+CEDULA = "1756990063"
 CLIENT_EMAIL = "juan.paz@example.com"
 
 
@@ -184,13 +184,13 @@ def test_unverified_signup_does_not_expose_the_trips(payments, fake_smtp):
 def test_regular_signup_without_previous_purchases_still_works(payments, fake_smtp):
     client, engine, _ = payments
 
-    assert signup(client, id_number="1788888888").status_code == 201
+    assert signup(client, id_number="1756880058").status_code == 201
     assert verify(client, fake_smtp).status_code == 200
     login(client, CLIENT_EMAIL)
 
     assert client.get("/api/v1/reservations/me").json() == []
     assert client.get("/api/v1/tickets/me").json() == []
-    [stored] = passengers_with_id(engine, "1788888888")
+    [stored] = passengers_with_id(engine, "1756880058")
     with Session(engine) as db:
         account = get_account_by_email(db, CLIENT_EMAIL)
         assert stored.account_id == account.id
@@ -260,7 +260,7 @@ def test_group_office_sale_only_shows_the_linked_passenger_seat(payments, fake_s
         data,
         [
             (3, passenger(CEDULA, "Juan", "Paz")),
-            (4, passenger("1766666666", "Rosa", "Lema")),
+            (4, passenger("1756660013", "Rosa", "Lema")),
         ],
     )
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
+import { emailError } from '../../../shared/utils/validation';
 import { AuthPageLayout } from '../components/AuthPageLayout';
 import { AuthApiError } from '../services/authApi';
 import { requestPasswordReset } from '../services/passwordRecovery.service';
@@ -16,6 +17,12 @@ export function ForgotPasswordPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isLoading) return;
+
+    const invalidEmail = emailError(email);
+    if (invalidEmail) {
+      setError(invalidEmail);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);

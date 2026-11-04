@@ -7,6 +7,18 @@ y el proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.0.1] - 2026-11-04
+
+Corrección sobre la versión 1.0.0.
+
+### Fixed
+
+- Validación de los datos en todos los formularios y en la API: cédulas ecuatorianas con dígito verificador, RUC, teléfonos solo con números, nombres solo con letras, correos con dominio completo, placas y número de disco.
+- Los campos numéricos ya no aceptan letras y los de nombres ya no aceptan números.
+- El panel del pasajero ya no muestra los accesos de «Inicio» ni de «Seleccionar asientos (demo)»; los asientos se eligen después de escoger el viaje.
+- La búsqueda de viajes muestra todos los viajes disponibles al entrar y los filtros de origen, destino y fecha son opcionales.
+- La pantalla para elegir asientos vuelve a mostrar el mapa visual del bus, ahora con los asientos reales del viaje y los ocupados marcados.
+
 ## [1.0.0-alpha.1] - 2026-11-03
 
 Primera versión preliminar (pre-release) del sistema. Reúne el trabajo integrado

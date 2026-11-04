@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { SignupFormProps, SignupFormValues } from '../types/signup.types';
+import {
+  cedulaError,
+  cleanName,
+  emailError,
+  nameError,
+  onlyDigits,
+} from '../../../shared/utils/validation';
 import './SignupForm.css';
 
 const initialValues: SignupFormValues = {
@@ -16,6 +23,24 @@ export function SignupForm(props: SignupFormProps) {
   const [values, setValues] = useState<SignupFormValues>(initialValues);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [touched, setTouched] = useState<Partial<Record<keyof SignupFormValues, boolean>>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const fieldErrors = {
+    firstName: nameError(values.firstName),
+    lastName: nameError(values.lastName),
+    idNumber: cedulaError(values.idNumber),
+    email: emailError(values.email),
+  };
+  const hasFieldErrors = Object.values(fieldErrors).some(Boolean);
+
+  function visibleError(field: keyof typeof fieldErrors): string | null {
+    return submitted || touched[field] ? fieldErrors[field] : null;
+  }
+
+  function markTouched(field: keyof SignupFormValues) {
+    setTouched((current) => ({ ...current, [field]: true }));
+  }
 
   const passwordsDoNotMatch =
     values.confirmPassword.length > 0 && values.password !== values.confirmPassword;
@@ -33,7 +58,9 @@ export function SignupForm(props: SignupFormProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (props.mode === 'preview' || passwordsDoNotMatch || isLoading) {
+    setSubmitted(true);
+
+    if (props.mode === 'preview' || passwordsDoNotMatch || hasFieldErrors || isLoading) {
       return;
     }
 
@@ -56,12 +83,19 @@ export function SignupForm(props: SignupFormProps) {
           type="text"
           name="firstName"
           value={values.firstName}
-          onChange={(event) => updateField('firstName', event.target.value)}
+          onChange={(event) => updateField('firstName', cleanName(event.target.value))}
+          onBlur={() => markTouched('firstName')}
+          aria-invalid={Boolean(visibleError('firstName'))}
           autoComplete="given-name"
           placeholder="Ingresa tus nombres"
           maxLength={100}
           required
         />
+        {visibleError('firstName') && (
+          <p className="signup-form__error" role="alert">
+            {visibleError('firstName')}
+          </p>
+        )}
       </div>
 
       <div className="signup-form__field">
@@ -71,29 +105,42 @@ export function SignupForm(props: SignupFormProps) {
           type="text"
           name="lastName"
           value={values.lastName}
-          onChange={(event) => updateField('lastName', event.target.value)}
+          onChange={(event) => updateField('lastName', cleanName(event.target.value))}
+          onBlur={() => markTouched('lastName')}
+          aria-invalid={Boolean(visibleError('lastName'))}
           autoComplete="family-name"
           placeholder="Ingresa tus apellidos"
           maxLength={100}
           required
         />
+        {visibleError('lastName') && (
+          <p className="signup-form__error" role="alert">
+            {visibleError('lastName')}
+          </p>
+        )}
       </div>
 
       {/* Identificación del pasajero */}
       <div className="signup-form__field">
-        <label htmlFor="signup-id-number">Cédula o pasaporte</label>
+        <label htmlFor="signup-id-number">Cédula</label>
         <input
           id="signup-id-number"
           type="text"
           name="idNumber"
           value={values.idNumber}
-          onChange={(event) => updateField('idNumber', event.target.value)}
-          placeholder="Ingresa tu cédula o pasaporte"
-          maxLength={13}
-          pattern="[A-Za-z0-9]+"
-          title="Ingresa únicamente letras y números."
+          onChange={(event) => updateField('idNumber', onlyDigits(event.target.value, 10))}
+          onBlur={() => markTouched('idNumber')}
+          aria-invalid={Boolean(visibleError('idNumber'))}
+          placeholder="Ingresa tu cédula de 10 números"
+          inputMode="numeric"
+          maxLength={10}
           required
         />
+        {visibleError('idNumber') && (
+          <p className="signup-form__error" role="alert">
+            {visibleError('idNumber')}
+          </p>
+        )}
       </div>
 
       <div className="signup-form__field">
@@ -103,11 +150,18 @@ export function SignupForm(props: SignupFormProps) {
           type="email"
           name="email"
           value={values.email}
-          onChange={(event) => updateField('email', event.target.value)}
+          onChange={(event) => updateField('email', event.target.value.trim())}
+          onBlur={() => markTouched('email')}
+          aria-invalid={Boolean(visibleError('email'))}
           autoComplete="email"
           placeholder="ejemplo@correo.com"
           required
         />
+        {visibleError('email') && (
+          <p className="signup-form__error" role="alert">
+            {visibleError('email')}
+          </p>
+        )}
       </div>
 
       <div className="signup-form__field">

@@ -25,7 +25,7 @@ class AdminCooperativeServiceTests(unittest.TestCase):
         Base.metadata.drop_all(self.engine)
         self.engine.dispose()
 
-    def create_cooperative(self, name: str = "Cooperativa Test", ruc: str = "1234567890001"):
+    def create_cooperative(self, name: str = "Cooperativa Test", ruc: str = "1790011223001"):
         data = CooperativeCreate(name=name, ruc=ruc)
         return service.create_cooperative(self.db, data.model_dump())
 

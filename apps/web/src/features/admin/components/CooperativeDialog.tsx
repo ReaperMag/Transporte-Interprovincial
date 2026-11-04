@@ -10,6 +10,13 @@ import {
   createCooperative,
   updateCooperative,
 } from '../services/cooperatives.service';
+import {
+  cleanPhone,
+  emailError,
+  onlyDigits,
+  phoneError,
+  rucError,
+} from '../../../shared/utils/validation';
 import './CooperativeDialog.css';
 
 interface CooperativeDialogProps {
@@ -46,6 +53,17 @@ export function CooperativeDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isReadOnly || isSaving) return;
+
+    const validationError =
+      rucError(values.ruc.trim()) ??
+      phoneError(values.phone ?? '') ??
+      (mode === 'create'
+        ? emailError(accountEmail)
+        : emailError(values.email ?? '', false));
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     setIsSaving(true);
     setError(null);
@@ -210,7 +228,7 @@ export function CooperativeDialog({
                 maxLength={13}
                 minLength={13}
                 onChange={(event) =>
-                  setValues((current) => ({ ...current, ruc: event.target.value }))
+                  setValues((current) => ({ ...current, ruc: onlyDigits(event.target.value, 13) }))
                 }
                 pattern="\d{13}"
                 required
@@ -225,7 +243,7 @@ export function CooperativeDialog({
                 autoComplete="tel"
                 maxLength={20}
                 onChange={(event) =>
-                  setValues((current) => ({ ...current, phone: event.target.value }))
+                  setValues((current) => ({ ...current, phone: cleanPhone(event.target.value) }))
                 }
                 type="tel"
                 value={values.phone ?? ''}

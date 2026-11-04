@@ -14,7 +14,7 @@
   [![GitHub issues](https://img.shields.io/github/issues/ReaperMag/Transporte-Interprovincial?style=for-the-badge)](https://github.com/ReaperMag/Transporte-Interprovincial/issues)
   [![GitHub stars](https://img.shields.io/github/stars/ReaperMag/Transporte-Interprovincial?style=for-the-badge)](https://github.com/ReaperMag/Transporte-Interprovincial/stargazers)
   ![Estado del proyecto](https://img.shields.io/badge/Estado-En%20desarrollo-orange?style=for-the-badge)
-  [![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.0.0--alpha.1-purple?style=for-the-badge)](CHANGELOG.md)
+  [![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.0.1-purple?style=for-the-badge)](CHANGELOG.md)
   ![Plataforma](https://img.shields.io/badge/Plataforma-Web-blue?style=for-the-badge)
   ![País](https://img.shields.io/badge/Pa%C3%ADs-Ecuador-yellow?style=for-the-badge)
   ![Licencia: GPL-3.0](https://img.shields.io/badge/Licencia-GPL--3.0-blue?style=for-the-badge)
@@ -279,7 +279,7 @@ Para probar el flujo completo del pasajero se requieren cooperativas, buses, rut
 
 🚧 **En desarrollo académico.**
 
-🏷️ **Versión actual:** `1.0.0-alpha.1` (pre-release). Es una versión preliminar y no estable: algunas funcionalidades aún no están implementadas o usan datos de demostración.
+🏷️ **Versión actual:** `1.0.1`. Algunas funcionalidades aún no están implementadas o usan datos de demostración.
 
 📝 Consulta el [registro de cambios (CHANGELOG)](CHANGELOG.md) para ver las novedades de cada versión, los problemas conocidos y las notas para el equipo.
 

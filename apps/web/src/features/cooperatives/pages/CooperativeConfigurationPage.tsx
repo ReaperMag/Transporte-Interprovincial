@@ -4,6 +4,7 @@ import {
   updateAuthenticatedCooperativeProfile,
   type CooperativeProfile,
 } from '../services/cooperative.service';
+import { cleanPhone, emailError, phoneError } from '../../../shared/utils/validation';
 import './CooperativeConfigurationPage.css';
 
 type EditableProfile = {
@@ -108,9 +109,16 @@ export function CooperativeConfigurationPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSuccess(null);
+
+    const validationError = phoneError(profile.phone) ?? emailError(profile.email, false);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const saved = await updateAuthenticatedCooperativeProfile(toNullableProfile(profile));
@@ -184,9 +192,9 @@ export function CooperativeConfigurationPage() {
                       type="tel"
                       autoComplete="tel"
                       maxLength={20}
-                      pattern="[+]?[0-9][0-9 ().-]{5,19}"
+                      inputMode="tel"
                       value={profile.phone}
-                      onChange={(event) => updateField('phone', event.target.value)}
+                      onChange={(event) => updateField('phone', cleanPhone(event.target.value))}
                     />
                   </label>
                   <label>

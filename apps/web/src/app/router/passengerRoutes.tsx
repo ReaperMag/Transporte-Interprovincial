@@ -8,7 +8,6 @@ import { PassengerTripSeatsPage } from '../../features/passengers/pages/Passenge
 import { PassengerReservationsPage } from '../../features/passengers/pages/PassengerReservationsPage';
 import { PassengerPaymentPage } from '../../features/passengers/pages/PassengerPaymentPage';
 import { PassengerTicketsPage } from '../../features/passengers/pages/PassengerTicketsPage';
-import { SeatPurchasePage } from '../../features/buses/pages/SeatPurchasePage';
 
 export const passengerRoutes = (
   <Route
@@ -32,7 +31,5 @@ export const passengerRoutes = (
     <Route path="reservas/:reservationId/pago" element={<PassengerPaymentPage />} />
 
     <Route path="boletos" element={<PassengerTicketsPage />} />
-
-    <Route path="asientos" element={<SeatPurchasePage />} />
   </Route>
 );

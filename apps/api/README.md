@@ -368,3 +368,29 @@ Reglas principales:
   devolución. El asiento nuevo debe estar libre en el tramo del pasajero.
 - **Privacidad:** cada boleto lo ven quien lo compró, el pasajero a cuyo
   nombre está y el personal de oficina de la cooperativa del viaje.
+
+## Búsqueda de viajes
+
+`GET /api/v1/trips/search` lista los viajes programados que todavía no salen.
+Sin filtros devuelve todos los disponibles. Los filtros `origin_city_id`,
+`destination_city_id` y `travel_date` son opcionales y cada uno reduce los
+resultados; si se envían origen y destino, deben ser ciudades distintas.
+
+## Validación de datos
+
+Los formularios de todos los paneles y la API revisan las mismas reglas. Las
+validaciones del backend viven en `app/core/validators.py` y las del frontend
+en `apps/web/src/shared/utils/validation.ts`.
+
+| Campo | Regla |
+| --- | --- |
+| Cédula | Solo cédulas ecuatorianas: 10 números, provincia válida y dígito verificador correcto |
+| RUC | 13 números, provincia y tipo de contribuyente válidos y establecimiento distinto de `000`; en personas naturales también se revisa la cédula |
+| Teléfono | Solo números, con un `+` opcional al inicio, de 7 a 15 dígitos |
+| Nombres, apellidos, ciudades y provincias | Solo letras, espacios, apóstrofos y guiones |
+| Correo | Debe tener un dominio completo, por ejemplo `usuario@gmail.com` |
+| Placa | Tres letras y tres o cuatro números, por ejemplo `PBA-1234` |
+| Número de disco | Solo números |
+
+En el frontend, los campos numéricos no dejan escribir letras y los de nombres
+no dejan escribir números.

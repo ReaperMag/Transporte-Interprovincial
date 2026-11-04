@@ -1,6 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { BusSeatMap } from '../../buses/components/BusSeatMap';
+import '../../buses/components/TransportTheme.css';
+import type { BusTemplate } from '../../buses/types/busTemplate.types';
 import { getTripSeats, type TripSeatsResponse } from '../services/trip-seats.service';
+import './PassengerTripSeatsPage.css';
 import {
   createPassengerReservation,
   ReservationRequestError,
@@ -8,6 +12,15 @@ import {
   type ReservationCreate,
   type ReservationRead,
 } from '../services/reservation.service';
+import {
+  cedulaError,
+  cleanName,
+  cleanPhone,
+  emailError,
+  nameError,
+  onlyDigits,
+  phoneError,
+} from '../../../shared/utils/validation';
 import './PassengerTripSearchPage.css';
 
 interface PassengerForm {
@@ -73,6 +86,7 @@ export function PassengerTripSeatsPage() {
   const [passengerForms, setPassengerForms] = useState<Record<number, PassengerForm>>({});
 
   const [submitting, setSubmitting] = useState(false);
+  const [selectedFloor, setSelectedFloor] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [reservation, setReservation] = useState<ReservationRead | null>(null);
 
@@ -130,6 +144,31 @@ export function PassengerTripSeatsPage() {
   const floors = currentAvailability
     ? [...new Set(currentAvailability.seats.map((seat) => seat.floor))].sort((a, b) => a - b)
     : [];
+
+  // El mapa visual del bus usa la misma forma que las plantillas de la cooperativa.
+  const busLayout: BusTemplate = {
+    id: `viaje-${tripId}`,
+    name: `Bus del viaje ${tripId}`,
+    floors: Math.max(1, floors.length),
+    hasBathroom: false,
+    rows: currentAvailability?.rows ?? 1,
+    columns: currentAvailability?.columns ?? 1,
+    seats: (currentAvailability?.seats ?? []).map((seat) => ({
+      id: String(seat.seatId),
+      number: seat.number,
+      floor: floors.indexOf(seat.floor) + 1,
+      row: seat.row,
+      column: seat.column,
+      seatType: seat.seatType === 'vip' ? 'vip' : 'normal',
+    })),
+  };
+  const visibleFloor = Math.min(selectedFloor, busLayout.floors);
+  const selectedLayoutIds = new Set([...selectedSeatIds].map(String));
+  const unavailableLayoutIds = new Set(
+    (currentAvailability?.seats ?? [])
+      .filter((seat) => !seat.isAvailable)
+      .map((seat) => String(seat.seatId)),
+  );
 
   const selectedSeats = currentAvailability
     ? currentAvailability.seats.filter(
@@ -197,15 +236,14 @@ export function PassengerTripSeatsPage() {
       const firstName = passenger.firstName.trim();
       const lastName = passenger.lastName.trim();
 
-      if (
-        idNumber.length < 5 ||
-        idNumber.length > 13 ||
-        firstName.length < 1 ||
-        firstName.length > 100 ||
-        lastName.length < 1 ||
-        lastName.length > 100
-      ) {
-        setSubmitError(`Revisa la identificación, nombres y apellidos del asiento ${seat.number}.`);
+      const validationError =
+        cedulaError(idNumber) ??
+        nameError(firstName) ??
+        nameError(lastName) ??
+        phoneError(passenger.phone) ??
+        emailError(passenger.email, false);
+      if (validationError) {
+        setSubmitError(`Asiento ${seat.number}: ${validationError}`);
         return;
       }
 
@@ -347,69 +385,32 @@ export function PassengerTripSeatsPage() {
             {currentAvailability.seats.length} asientos en total · {availableCount} disponibles
           </p>
 
-          {floors.map((floor) => {
-            const floorSeats = currentAvailability.seats.filter((seat) => seat.floor === floor);
+          <div className="passenger-trip-seats__legend" aria-label="Significado de los colores">
+            <span className="passenger-trip-seats__legend-item">
+              <i className="passenger-trip-seats__swatch" /> Libre
+            </span>
+            <span className="passenger-trip-seats__legend-item">
+              <i className="passenger-trip-seats__swatch passenger-trip-seats__swatch--vip" /> VIP
+            </span>
+            <span className="passenger-trip-seats__legend-item">
+              <i className="passenger-trip-seats__swatch passenger-trip-seats__swatch--selected" />{' '}
+              Elegido
+            </span>
+            <span className="passenger-trip-seats__legend-item">
+              <i className="passenger-trip-seats__swatch passenger-trip-seats__swatch--unavailable" />{' '}
+              Ocupado
+            </span>
+          </div>
 
-            const minRow = Math.min(...floorSeats.map((seat) => seat.row));
-            const minColumn = Math.min(...floorSeats.map((seat) => seat.column));
-
-            return (
-              <section key={floor} style={{ marginTop: '1.5rem' }}>
-                <h3>Piso {floor}</h3>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${Math.max(
-                      1,
-                      currentAvailability.columns,
-                    )}, minmax(52px, 1fr))`,
-                    gap: '0.5rem',
-                    maxWidth: '500px',
-                    marginTop: '1rem',
-                  }}
-                >
-                  {floorSeats.map((seat) => {
-                    const isSelected = selectedSeatIds.has(seat.seatId);
-                    const limitReached = selectedSeatIds.size >= 10 && !isSelected;
-
-                    return (
-                      <button
-                        key={seat.seatId}
-                        type="button"
-                        aria-label={`Asiento ${seat.number}, piso ${seat.floor}, ${
-                          !seat.isAvailable ? 'ocupado' : isSelected ? 'seleccionado' : 'disponible'
-                        }`}
-                        aria-pressed={isSelected}
-                        disabled={!seat.isAvailable || limitReached || submitting}
-                        onClick={() => handleSeatClick(seat.seatId)}
-                        style={{
-                          gridColumn: seat.column - minColumn + 1,
-                          gridRow: seat.row - minRow + 1,
-                          border: isSelected ? '2px solid #2563eb' : '1px solid currentColor',
-                          borderRadius: '8px',
-                          padding: '0.6rem',
-                          textAlign: 'center',
-                          backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
-                          color: 'inherit',
-                          cursor: seat.isAvailable && !limitReached ? 'pointer' : 'not-allowed',
-                          opacity: seat.isAvailable ? 1 : 0.45,
-                        }}
-                      >
-                        <strong>{seat.number}</strong>
-
-                        <div>{seat.seatType.toUpperCase()}</div>
-
-                        <small>
-                          {!seat.isAvailable ? 'Ocupado' : isSelected ? 'Elegido' : 'Libre'}
-                        </small>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
+          <BusSeatMap
+            template={busLayout}
+            selectedFloor={visibleFloor}
+            selectedSeatIds={selectedLayoutIds}
+            unavailableSeatIds={unavailableLayoutIds}
+            isSeatDisabled={() => submitting || Boolean(reservation) || selectedSeatIds.size >= 10}
+            onFloorChange={setSelectedFloor}
+            onToggleSeat={(seat) => handleSeatClick(Number(seat.id))}
+          />
 
           {currentAvailability.seats.length === 0 && (
             <p>No hay asientos configurados para este viaje.</p>
@@ -476,15 +477,20 @@ export function PassengerTripSeatsPage() {
                       }}
                     >
                       <label>
-                        Identificación *
+                        Cédula *
                         <input
                           type="text"
+                          inputMode="numeric"
                           required
-                          minLength={5}
-                          maxLength={13}
+                          minLength={10}
+                          maxLength={10}
                           value={passenger.idNumber}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'idNumber', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'idNumber',
+                              onlyDigits(event.target.value, 10),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />
@@ -498,7 +504,11 @@ export function PassengerTripSeatsPage() {
                           maxLength={100}
                           value={passenger.firstName}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'firstName', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'firstName',
+                              cleanName(event.target.value),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />
@@ -512,7 +522,11 @@ export function PassengerTripSeatsPage() {
                           maxLength={100}
                           value={passenger.lastName}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'lastName', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'lastName',
+                              cleanName(event.target.value),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />
@@ -537,7 +551,11 @@ export function PassengerTripSeatsPage() {
                           maxLength={20}
                           value={passenger.phone}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'phone', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'phone',
+                              cleanPhone(event.target.value),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />

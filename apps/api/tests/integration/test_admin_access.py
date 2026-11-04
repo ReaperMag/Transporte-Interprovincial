@@ -106,7 +106,7 @@ def test_admin_mutations_require_the_configured_origin(test_environment):
 
     payload = {
         "name": "Cooperativa Test",
-        "ruc": "1234567890001",
+        "ruc": "1790011223001",
         "accountEmail": "cooperativa@example.com",
         "initialPassword": "ClaveCooperativa123!",
     }
@@ -130,7 +130,7 @@ def test_super_admin_can_create_and_update_cooperatives(test_environment):
         "/api/v1/admin/cooperatives",
         json={
             "name": "Cooperativa Test",
-            "ruc": "1234567890001",
+            "ruc": "1790011223001",
             "accountEmail": "cooperativa@example.com",
             "initialPassword": "ClaveCooperativa123!",
             "phone": "0991234567",
@@ -188,7 +188,7 @@ def test_admin_create_rejects_contact_email_logo_and_status(
 
     payload = {
         "name": "Cooperativa Test",
-        "ruc": "1234567890001",
+        "ruc": "1790011223001",
         "accountEmail": "registro@cooperativa.ec",
         "initialPassword": "ClaveCooperativa123!",
         field: value,
@@ -219,7 +219,7 @@ def test_creating_cooperative_creates_linked_login_account(test_environment):
         "/api/v1/admin/cooperatives",
         json={
             "name": "Cooperativa con cuenta",
-            "ruc": "1234567890001",
+            "ruc": "1790011223001",
             "accountEmail": "cuenta@cooperativa.ec",
             "initialPassword": "ClaveCooperativa123!",
         },
@@ -255,7 +255,7 @@ def test_creating_cooperative_creates_linked_login_account(test_environment):
     assert identity.json() == {
         "id": cooperative_id,
         "name": "Cooperativa con cuenta",
-        "ruc": "1234567890001",
+        "ruc": "1790011223001",
     }
     assert client.get("/api/v1/admin/cooperatives/summary").status_code == 403
 
@@ -279,7 +279,7 @@ def test_duplicate_account_email_does_not_create_cooperative(test_environment):
         "/api/v1/admin/cooperatives",
         json={
             "name": "No debe guardarse",
-            "ruc": "1234567890001",
+            "ruc": "1790011223001",
             "accountEmail": "existing@example.com",
             "initialPassword": "ClaveCooperativa123!",
         },
