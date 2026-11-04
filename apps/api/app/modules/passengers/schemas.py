@@ -3,6 +3,7 @@ from datetime import date
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.core.validators import EmailWithDomain, PersonName, Phone
 from app.modules.passengers.models import PassengerCategory
 
 
@@ -23,19 +24,27 @@ class PassengerProfileResponse(BaseModel):
 class PassengerProfileUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    firstName: str | None = Field(default=None, max_length=100)
-    lastName: str | None = Field(default=None, max_length=100)
-    email: EmailStr | None = None
+    firstName: PersonName | None = Field(default=None, max_length=100)
+    lastName: PersonName | None = Field(default=None, max_length=100)
+    email: EmailWithDomain | None = None
     birthDate: date | None = None
-    phone: str | None = Field(default=None, max_length=20)
+    phone: Phone | None = Field(default=None, max_length=20)
     category: PassengerCategory | None = None
 
     @field_validator("firstName", "lastName")
     @classmethod
     def validate_name(cls, value: str | None) -> str:
-        if value is None or not value.strip():
+        if value is None:
             raise ValueError("El nombre o apellido no puede estar vacío.")
-        return value.strip()
+        return value
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def empty_phone(cls, value: object) -> object:
+        # Borrar el teléfono deja el campo como no registrado.
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("email")
     @classmethod
