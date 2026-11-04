@@ -3,6 +3,13 @@ import type { BusTemplate } from '../../buses/types/busTemplate.types';
 import { getCooperativeBusTemplates, type BusOrigin, type BusStatus, type CooperativeBusCreateInput, type CooperativeBusTemplate } from '../services/bus.service';
 import type { CooperativeBusGroup } from '../services/busGroup.service';
 import { BusFloorplanEditor } from './BusFloorplanEditor';
+import {
+  cleanPlate,
+  digitsError,
+  onlyDigits,
+  plateError,
+  preventNonNumericKeys,
+} from '../../../shared/utils/validation';
 import './CooperativeBusCreateWizard.css';
 
 interface CooperativeBusCreateWizardProps {
@@ -73,6 +80,7 @@ export function CooperativeBusCreateWizard({
   const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<Array<{ file: File; previewUrl: string }>>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
   const previewUrls = useRef(new Set<string>());
 
   useEffect(() => () => {
@@ -126,6 +134,11 @@ export function CooperativeBusCreateWizard({
 
   const continueToFloorplan = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const validationError = digitsError(metadata.number) ?? plateError(metadata.plate);
+    setMetadataError(validationError);
+    if (validationError) {
+      return;
+    }
     setStep(2);
   };
 
@@ -216,13 +229,19 @@ export function CooperativeBusCreateWizard({
       {step === 1 ? (
         <form className="bus-create-wizard__metadata" onSubmit={continueToFloorplan}>
           <h3>Datos del bus</h3>
+          {metadataError && (
+            <p className="cooperative-buses__message cooperative-buses__message--error" role="alert">
+              {metadataError}
+            </p>
+          )}
           <label>
             Número de disco
             <input
               required
+              inputMode="numeric"
               maxLength={10}
               value={metadata.number}
-              onChange={(event) => change('number', event.target.value)}
+              onChange={(event) => change('number', onlyDigits(event.target.value, 10))}
             />
           </label>
           <label>
@@ -230,8 +249,9 @@ export function CooperativeBusCreateWizard({
             <input
               required
               maxLength={10}
+              placeholder="PBA-1234"
               value={metadata.plate}
-              onChange={(event) => change('plate', event.target.value)}
+              onChange={(event) => change('plate', cleanPlate(event.target.value))}
             />
           </label>
           <label>
@@ -257,6 +277,7 @@ export function CooperativeBusCreateWizard({
             <input
               required
               type="number"
+              onKeyDown={preventNonNumericKeys}
               min={1950}
               max={new Date().getFullYear() + 1}
               value={metadata.year}
@@ -268,6 +289,7 @@ export function CooperativeBusCreateWizard({
             <input
               required
               type="number"
+              onKeyDown={preventNonNumericKeys}
               min={1}
               max={200}
               value={metadata.capacity}
