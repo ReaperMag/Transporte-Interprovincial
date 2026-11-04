@@ -19,11 +19,11 @@ def test_bus_group_names_are_normalized_and_unique_per_cooperative():
         with Session(engine) as db:
             first_cooperative = Cooperative(
                 name="Primera cooperativa",
-                ruc="1234567890001",
+                ruc="1790011223001",
             )
             second_cooperative = Cooperative(
                 name="Segunda cooperativa",
-                ruc="1234567890002",
+                ruc="1790011223002",
             )
             db.add_all([first_cooperative, second_cooperative])
             db.flush()

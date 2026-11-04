@@ -58,7 +58,7 @@ def test_cash_sale_issues_one_ticket_per_seat(payments):
     _, tickets = office_sale(
         client,
         data,
-        [(3, passenger("1700000001", "Juan", "Paz")), (4, passenger("1700000002", "Rosa", "Paz"))],
+        [(3, passenger("1700000001", "Juan", "Paz")), (4, passenger("1700000019", "Rosa", "Paz"))],
     )
 
     assert len(tickets) == 2
@@ -137,7 +137,7 @@ def test_history_includes_tickets_bought_in_the_office_under_my_name(payments):
         luis = db.scalar(select(Account).where(Account.email == "luis@example.com"))
         db.add(
             Passenger(
-                id_number="1744444444",
+                id_number="1744444447",
                 first_name="Luis",
                 last_name="Mora",
                 account_id=luis.id,
@@ -145,11 +145,11 @@ def test_history_includes_tickets_bought_in_the_office_under_my_name(payments):
         )
         db.commit()
 
-    office_sale(client, data, [(4, passenger("1744444444", "Luis", "Mora"))])
+    office_sale(client, data, [(4, passenger("1744444447", "Luis", "Mora"))])
 
     login(client, "luis@example.com")
     tickets = client.get("/api/v1/tickets/me").json()
-    assert [ticket["passengerIdNumber"] for ticket in tickets] == ["1744444444"]
+    assert [ticket["passengerIdNumber"] for ticket in tickets] == ["1744444447"]
 
 
 def test_ticket_expires_after_the_trip(payments):
@@ -174,7 +174,7 @@ def test_ticket_expires_after_the_trip(payments):
 
 def test_clerk_changes_the_category_and_charges_the_difference(payments):
     client, engine, data = payments
-    senior = passenger("1755555555", "Elena", "Vaca")
+    senior = passenger("1755555552", "Elena", "Vaca")
     senior["category"] = "senior"
     reservation_id, tickets = office_sale(client, data, [(3, senior)])
     old = tickets[0]
@@ -235,7 +235,7 @@ def test_cheaper_change_has_no_refund_and_occupied_seats_are_rejected(payments):
     _, tickets = office_sale(
         client,
         data,
-        [(1, passenger("1700000001", "Juan", "Paz")), (3, passenger("1700000002", "Rosa", "Paz"))],
+        [(1, passenger("1700000001", "Juan", "Paz")), (3, passenger("1700000019", "Rosa", "Paz"))],
     )
     vip_ticket = next(ticket for ticket in tickets if ticket["seatNumber"] == 1)
 

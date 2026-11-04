@@ -23,7 +23,7 @@ def create_cooperative_account(engine, *, name: str, email: str) -> Cooperative:
         ) or 0
         cooperative = Cooperative(
             name=name,
-            ruc=str(1234567890001 + cooperative_count),
+            ruc=str(1790011223001 + cooperative_count),
         )
         db.add(cooperative)
         db.flush()

@@ -157,7 +157,7 @@ def scenario(test_environment):
                 account_id=clerk_account.id,
                 first_name="Olga",
                 last_name="Oficinista",
-                id_number="1800000001",
+                id_number="1800000000",
                 position=StaffPosition.CLERK,
             )
         )
@@ -194,7 +194,7 @@ def scenario(test_environment):
     return client, engine, data
 
 
-def passenger(id_number="1711111111", first_name="Ana", last_name="Perez"):
+def passenger(id_number="1711111110", first_name="Ana", last_name="Perez"):
     return {
         "idNumber": id_number,
         "firstName": first_name,
@@ -248,7 +248,7 @@ def test_passenger_reserves_seats_with_fare_and_time_limit(scenario):
             data,
             "quito",
             "loja",
-            [(1, passenger()), (3, passenger("1722222222", "Pedro", "Perez"))],
+            [(1, passenger()), (3, passenger("1722222229", "Pedro", "Perez"))],
         ),
         headers=ORIGIN,
     )
@@ -289,7 +289,7 @@ def test_seat_is_free_on_segments_that_do_not_overlap(scenario):
     second = client.post(
         "/api/v1/reservations",
         json=reservation_payload(
-            data, "latacunga", "loja", [(4, passenger("1733333333", "Rosa", "Lema"))]
+            data, "latacunga", "loja", [(4, passenger("1733333338", "Rosa", "Lema"))]
         ),
         headers=ORIGIN,
     )
@@ -307,7 +307,7 @@ def test_cannot_reserve_an_occupied_seat(scenario):
     repeated = client.post(
         "/api/v1/reservations",
         json=reservation_payload(
-            data, "quito", "ambato", [(2, passenger("1744444444", "Luis", "Mora"))]
+            data, "quito", "ambato", [(2, passenger("1744444447", "Luis", "Mora"))]
         ),
         headers=ORIGIN,
     )
@@ -319,12 +319,12 @@ def test_discount_follows_the_declared_category(scenario):
 
     # Elena ya existe como pasajera regular y sin verificar.
     with Session(engine) as db:
-        db.add(Passenger(id_number="1755555555", first_name="Elena", last_name="Vaca"))
+        db.add(Passenger(id_number="1755555552", first_name="Elena", last_name="Vaca"))
         db.commit()
 
-    senior = passenger("1755555555", "Elena", "Vaca")
+    senior = passenger("1755555552", "Elena", "Vaca")
     senior["category"] = "senior"
-    child = passenger("1766666666", "Mateo", "Vaca")
+    child = passenger("1756660013", "Mateo", "Vaca")
     child["category"] = "minor"
 
     login(client, "ana@example.com")
@@ -334,7 +334,7 @@ def test_discount_follows_the_declared_category(scenario):
             data,
             "quito",
             "loja",
-            [(1, senior), (3, child), (4, passenger("1777777770", "Rosa", "Vaca"))],
+            [(1, senior), (3, child), (4, passenger("1756770028", "Rosa", "Vaca"))],
         ),
         headers=ORIGIN,
     )
@@ -359,7 +359,7 @@ def test_clerk_applies_the_category_the_buyer_declares(scenario):
     client, _, data = scenario
     login(client, "oficina@andina.ec")
 
-    person = passenger("1788888880", "Luz", "Mora")
+    person = passenger("1756880033", "Luz", "Mora")
     person["category"] = "disability"
     response = client.post(
         "/api/v1/reservations/office",
@@ -452,7 +452,7 @@ def test_clerk_reserves_in_the_office(scenario):
     response = client.post(
         "/api/v1/reservations/office",
         json=reservation_payload(
-            data, "quito", "loja", [(3, passenger("1777777777", "Juan", "Paz"))]
+            data, "quito", "loja", [(3, passenger("1756770044", "Juan", "Paz"))]
         ),
         headers=ORIGIN,
     )
@@ -543,7 +543,7 @@ def test_rejects_repeated_seats_or_passengers(scenario):
         data,
         "quito",
         "loja",
-        [(1, passenger()), (1, passenger("1788888888", "Eva", "Rios"))],
+        [(1, passenger()), (1, passenger("1756880058", "Eva", "Rios"))],
     )
     assert (
         client.post("/api/v1/reservations", json=repeated_seat, headers=ORIGIN).status_code
