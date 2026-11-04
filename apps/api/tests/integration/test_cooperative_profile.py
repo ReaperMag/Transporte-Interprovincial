@@ -26,7 +26,7 @@ def create_cooperative_account(engine, *, name: str, email: str) -> Cooperative:
         ) or 0
         cooperative = service.create_cooperative(
             db,
-            {"name": name, "ruc": str(1234567890001 + cooperative_count)},
+            {"name": name, "ruc": str(1790011223001 + cooperative_count)},
         )
         role = ensure_default_roles(db)[COOPERATIVE_ADMIN_ROLE]
         db.add(
@@ -66,7 +66,7 @@ def test_cooperative_profile_can_be_read_updated_and_persists_after_login(
     initial = client.get(profile_url)
     assert initial.status_code == 200
     assert initial.json()["name"] == "Cooperativa Sierra"
-    assert initial.json()["ruc"] == "1234567890001"
+    assert initial.json()["ruc"] == "1790011223001"
     assert initial.json()["description"] is None
 
     changes = {
@@ -90,7 +90,7 @@ def test_cooperative_profile_can_be_read_updated_and_persists_after_login(
 
     assert updated.status_code == 200
     assert updated.json()["name"] == "Cooperativa Sierra"
-    assert updated.json()["ruc"] == "1234567890001"
+    assert updated.json()["ruc"] == "1790011223001"
     for key, value in changes.items():
         assert updated.json()[key] == value
 
@@ -260,7 +260,7 @@ def test_cooperative_profile_cannot_change_identity_or_another_cooperative(
         assert stored_own is not None
         assert stored_other is not None
         assert stored_own.name == "Cooperativa Propia"
-        assert stored_own.ruc == "1234567890001"
+        assert stored_own.ruc == "1790011223001"
         assert stored_other.description is None
 
     assert client.post(

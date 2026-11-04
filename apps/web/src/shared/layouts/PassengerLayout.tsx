@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/context/useAuth';
 import './PassengerLayout.css';
 
@@ -22,19 +22,15 @@ export function PassengerLayout() {
   return (
     <div className="passenger-layout">
       <aside className="passenger-layout__sidebar">
-        <div className="passenger-layout__brand">
+        <Link className="passenger-layout__brand" to="/pasajero">
           <span>🚌</span>
           <div>
             <strong>Transporte</strong>
             <small>Panel del pasajero</small>
           </div>
-        </div>
+        </Link>
 
         <nav className="passenger-layout__nav" aria-label="Navegación del pasajero">
-          <NavLink to="/pasajero" end className={({ isActive }) => (isActive ? 'active' : '')}>
-            Inicio
-          </NavLink>
-
           <NavLink to="/pasajero/viajes" className={({ isActive }) => (isActive ? 'active' : '')}>
             Buscar viajes
           </NavLink>
@@ -49,10 +45,6 @@ export function PassengerLayout() {
 
           <NavLink to="/pasajero/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
             Mi perfil
-          </NavLink>
-
-          <NavLink to="/pasajero/asientos" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Seleccionar asientos (demo)
           </NavLink>
         </nav>
 

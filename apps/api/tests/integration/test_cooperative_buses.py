@@ -332,7 +332,7 @@ def test_bus_with_staff_assignment_cannot_be_deleted(test_environment):
                 ),
                 first_name="Chofer",
                 last_name="Asignado",
-                id_number="1712345678",
+                id_number="1712345675",
                 position=StaffPosition.DRIVER,
                 assigned_bus_id=created.json()["id"],
             )
@@ -662,7 +662,7 @@ def test_custom_template_creation_is_scoped_to_cooperative_group(test_environmen
                     {"number": 1, "floor": 1, "row": 1, "column": 1, "seatType": "normal"}
                 ],
             },
-            plate="FOREIGN-1",
+            plate="FOR-0001",
         ),
         headers=HEADERS,
     )

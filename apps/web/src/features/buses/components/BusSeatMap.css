@@ -124,6 +124,19 @@
   box-shadow: 0 0 0 2px rgb(29 78 216 / 18%);
 }
 
+.bus-seat-map__seat:disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bus-seat-map__seat--unavailable,
+.bus-seat-map__seat--unavailable.bus-seat-map__seat--vip {
+  border-color: #d1d5db;
+  background: #e5e7eb;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
 .bus-seat-map__seat-number {
   font-size: 0.95rem;
   font-weight: 700;

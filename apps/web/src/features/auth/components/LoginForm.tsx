@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { LoginCredentials, LoginFormProps } from '../types/auth.types';
+import { emailError } from '../../../shared/utils/validation';
 import './LoginForm.css';
 import { Link } from 'react-router-dom';
 export function LoginForm(props: LoginFormProps) {
@@ -13,9 +14,11 @@ export function LoginForm(props: LoginFormProps) {
 
   const isPreview = props.mode === 'preview';
   const isLoading = !isPreview && (props.isLoading ?? false);
-  const error = !isPreview ? props.error : null;
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
+  const error = emailMessage ?? (!isPreview ? props.error : null);
 
   const handleChange = (field: keyof LoginCredentials, value: string) => {
+    setEmailMessage(null);
     setCredentials((previous) => ({
       ...previous,
       [field]: value,
@@ -26,6 +29,12 @@ export function LoginForm(props: LoginFormProps) {
     event.preventDefault();
 
     if (props.mode === 'preview' || isLoading) {
+      return;
+    }
+
+    const invalidEmail = emailError(credentials.email);
+    setEmailMessage(invalidEmail);
+    if (invalidEmail) {
       return;
     }
 
@@ -102,8 +111,8 @@ export function LoginForm(props: LoginFormProps) {
         {isLoading ? 'Iniciando sesión...' : 'Iniciar sesión'}
       </button>
       <p className="login-form__register">
-  ¿No tienes una cuenta? <Link to="/signup">Regístrate aquí</Link>
-</p>
+        ¿No tienes una cuenta? <Link to="/signup">Regístrate aquí</Link>
+      </p>
     </form>
   );
 }

@@ -56,15 +56,22 @@ def list_cities(
 def search_available_trips(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[Account, Depends(require_passenger)],
-    origin_city_id: Annotated[int, Query(gt=0)],
-    destination_city_id: Annotated[int, Query(gt=0)],
-    travel_date: date,
+    origin_city_id: Annotated[int | None, Query(gt=0)] = None,
+    destination_city_id: Annotated[int | None, Query(gt=0)] = None,
+    travel_date: date | None = None,
 ):
     """
-    Busca viajes programados por origen, destino y fecha.
+    Lista los viajes programados disponibles.
+
+    Sin filtros devuelve todos; el origen, el destino y la fecha son
+    opcionales y sirven para reducir los resultados.
     """
 
-    if origin_city_id == destination_city_id:
+    if (
+        origin_city_id is not None
+        and destination_city_id is not None
+        and origin_city_id == destination_city_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El origen y el destino deben ser diferentes.",

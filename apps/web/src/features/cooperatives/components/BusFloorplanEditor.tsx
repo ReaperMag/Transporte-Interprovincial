@@ -3,6 +3,7 @@ import type { BusTemplate, SeatType, TemplateSeat } from '../../buses/types/busT
 import '../../buses/components/BusSeatMap.css';
 import './BusFloorplanEditor.css';
 import '../../buses/components/TransportTheme.css';
+import { preventNonNumericKeys } from '../../../shared/utils/validation';
 
 interface BusFloorplanEditorProps {
   template: BusTemplate;
@@ -154,6 +155,7 @@ export function BusFloorplanEditor({ template, onChange, readOnly = false }: Bus
           Filas
           <input
             type="number"
+            onKeyDown={preventNonNumericKeys}
             min={1}
             max={20}
             value={layout.rows}
@@ -169,6 +171,7 @@ export function BusFloorplanEditor({ template, onChange, readOnly = false }: Bus
           Columnas disponibles
           <input
             type="number"
+            onKeyDown={preventNonNumericKeys}
             min={2}
             max={8}
             value={layout.columns}
@@ -188,6 +191,7 @@ export function BusFloorplanEditor({ template, onChange, readOnly = false }: Bus
           Asientos por fila
           <input
             type="number"
+            onKeyDown={preventNonNumericKeys}
             min={1}
             max={layout.columns}
             value={layout.seatsPerRow}

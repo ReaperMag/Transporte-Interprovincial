@@ -16,6 +16,7 @@ import {
   type RouteSheet,
 } from '../services/routeSchedule.service';
 import './CooperativeRoutesPage.css';
+import { cleanName, nameError, preventNonNumericKeys } from '../../../shared/utils/validation';
 
 const exampleCities = [
   { name: 'Ambato', province: 'Tungurahua' },
@@ -237,6 +238,11 @@ export function CooperativeRoutesPage() {
 
   const handleCreateCity = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (nameError(cityName) || nameError(cityProvince)) {
+      setSuccess(null);
+      setError('La ciudad y la provincia solo pueden tener letras.');
+      return;
+    }
     setIsCreatingCity(true);
     setError(null);
     setSuccess(null);
@@ -446,7 +452,7 @@ export function CooperativeRoutesPage() {
                 Nueva ciudad
                 <input
                   value={cityName}
-                  onChange={(event) => setCityName(event.target.value)}
+                  onChange={(event) => setCityName(cleanName(event.target.value))}
                   required
                   maxLength={100}
                 />
@@ -455,7 +461,7 @@ export function CooperativeRoutesPage() {
                 Provincia
                 <input
                   value={cityProvince}
-                  onChange={(event) => setCityProvince(event.target.value)}
+                  onChange={(event) => setCityProvince(cleanName(event.target.value))}
                   required
                   maxLength={100}
                 />
@@ -530,6 +536,7 @@ export function CooperativeRoutesPage() {
                 Duración del recorrido (minutos)
                 <input
                   type="number"
+                  onKeyDown={preventNonNumericKeys}
                   min={10}
                   max={1440}
                   required
@@ -610,6 +617,7 @@ export function CooperativeRoutesPage() {
                         Minutos desde el origen
                         <input
                           type="number"
+                          onKeyDown={preventNonNumericKeys}
                           min={1}
                           max={Number(routeDuration) - 1}
                           required

@@ -9,6 +9,14 @@ import {
   type PassengerProfileUpdate,
 } from '../services/passenger.service';
 
+import {
+  cleanName,
+  cleanPhone,
+  emailError,
+  nameError,
+  phoneError,
+} from '../../../shared/utils/validation';
+
 import './PassengerProfilePage.css';
 
 export function PassengerProfilePage() {
@@ -111,8 +119,13 @@ export function PassengerProfilePage() {
       return;
     }
 
-    if (!normalizedFirstName || !normalizedLastName) {
-      setError('Los nombres y apellidos son obligatorios.');
+    const validationError =
+      nameError(normalizedFirstName) ??
+      nameError(normalizedLastName) ??
+      emailError(normalizedEmail) ??
+      phoneError(normalizedPhone);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -175,7 +188,7 @@ export function PassengerProfilePage() {
                 maxLength={100}
                 required
                 onChange={(event) => {
-                  setFirstName(event.target.value);
+                  setFirstName(cleanName(event.target.value));
                   setSuccess(null);
                 }}
               />
@@ -190,7 +203,7 @@ export function PassengerProfilePage() {
                 maxLength={100}
                 required
                 onChange={(event) => {
-                  setLastName(event.target.value);
+                  setLastName(cleanName(event.target.value));
                   setSuccess(null);
                 }}
               />
@@ -232,7 +245,7 @@ export function PassengerProfilePage() {
                 maxLength={20}
                 placeholder="Ingresa tu teléfono"
                 onChange={(event) => {
-                  setPhone(event.target.value);
+                  setPhone(cleanPhone(event.target.value));
                   setSuccess(null);
                 }}
               />
