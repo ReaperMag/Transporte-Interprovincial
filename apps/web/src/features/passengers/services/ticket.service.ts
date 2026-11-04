@@ -93,3 +93,52 @@ export async function getPassengerReservationTickets(reservationId: number): Pro
 export function getPassengerTicketQrUrl(ticketId: number): string {
   return `/api/v1/tickets/${ticketId}/qr`;
 }
+// Obtener el enlace firmado para guardar el boleto en Google Wallet.
+export async function getPassengerGoogleWalletUrl(ticketId: number): Promise<string> {
+  const response = await fetch(`/api/v1/tickets/${ticketId}/wallet/google`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw await readTicketError(response, 'No se pudo preparar Google Wallet.');
+  }
+
+  const body: unknown = await response.json().catch(() => null);
+
+  if (
+    typeof body !== 'object' ||
+    body === null ||
+    !('url' in body) ||
+    typeof body.url !== 'string' ||
+    !body.url.startsWith('https://pay.google.com/gp/v/save/') ||
+    body.url.length <= 'https://pay.google.com/gp/v/save/'.length
+  ) {
+    throw new TicketRequestError('El servidor devolvió un enlace de Google Wallet inválido.', 502);
+  }
+
+  return body.url;
+}
+// Obtener el archivo .pkpass firmado para Apple Wallet.
+export async function getPassengerAppleWalletPass(ticketId: number): Promise<Blob> {
+  const response = await fetch(`/api/v1/tickets/${ticketId}/wallet/apple`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw await readTicketError(response, 'No se pudo preparar Apple Wallet.');
+  }
+
+  const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+
+  if (contentType !== 'application/vnd.apple.pkpass') {
+    throw new TicketRequestError('El servidor no devolvió un pase de Apple Wallet válido.', 502);
+  }
+
+  const pass = await response.blob();
+
+  if (pass.size === 0) {
+    throw new TicketRequestError('El pase de Apple Wallet está vacío.', 502);
+  }
+
+  return pass;
+}

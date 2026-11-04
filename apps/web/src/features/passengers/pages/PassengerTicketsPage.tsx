@@ -4,6 +4,8 @@ import {
   getPassengerTickets,
   getPassengerReservationTickets,
   getPassengerTicketQrUrl,
+  getPassengerGoogleWalletUrl,
+  getPassengerAppleWalletPass,
   type TicketRead,
   type TicketValidity,
 } from '../services/ticket.service';
@@ -81,9 +83,21 @@ export function PassengerTicketsPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Solo mostramos el QR que el pasajero solicita.
+  // Mostrar únicamente el código QR solicitado por el pasajero.
   const [visibleQrId, setVisibleQrId] = useState<number | null>(null);
   const [qrErrorId, setQrErrorId] = useState<number | null>(null);
+
+  // Controlar la generación de pases de Google Wallet y Apple Wallet.
+  const [walletAction, setWalletAction] = useState<{
+    ticketId: number;
+    provider: 'google' | 'apple';
+  } | null>(null);
+
+  // Mostrar errores de Wallet únicamente en el boleto correspondiente.
+  const [walletError, setWalletError] = useState<{
+    ticketId: number;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -94,6 +108,7 @@ export function PassengerTicketsPage() {
       setTickets([]);
       setVisibleQrId(null);
       setQrErrorId(null);
+      setWalletError(null);
 
       if (invalidReservationId) {
         setError('El identificador de la reserva no es válido.');
@@ -130,16 +145,78 @@ export function PassengerTicketsPage() {
     };
   }, [reservationId, invalidReservationId, refreshKey]);
 
+  // Actualizar la lista de boletos.
   function handleRefresh() {
-    if (loading) return;
+    if (loading || walletAction !== null) return;
 
     setRefreshKey((current) => current + 1);
   }
 
+  // Mostrar u ocultar el código QR.
   function handleToggleQr(ticketId: number) {
     setQrErrorId(null);
 
     setVisibleQrId((current) => (current === ticketId ? null : ticketId));
+  }
+
+  // Obtener y abrir el enlace de Google Wallet.
+  async function handleGoogleWallet(ticketId: number) {
+    if (walletAction !== null) return;
+
+    setWalletError(null);
+    setWalletAction({ ticketId, provider: 'google' });
+
+    try {
+      const url = await getPassengerGoogleWalletUrl(ticketId);
+
+      // Abrir Google Wallet en la misma pestaña.
+      window.location.assign(url);
+    } catch (err) {
+      setWalletError({
+        ticketId,
+        message:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo abrir Google Wallet. Inténtalo nuevamente.',
+      });
+    } finally {
+      setWalletAction(null);
+    }
+  }
+
+  // Obtener y descargar el archivo firmado de Apple Wallet.
+  async function handleAppleWallet(ticketId: number) {
+    if (walletAction !== null) return;
+
+    setWalletError(null);
+    setWalletAction({ ticketId, provider: 'apple' });
+
+    try {
+      const pass = await getPassengerAppleWalletPass(ticketId);
+      const objectUrl = URL.createObjectURL(pass);
+
+      try {
+        const link = document.createElement('a');
+
+        link.href = objectUrl;
+        link.download = `boleto-${ticketId}.pkpass`;
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } finally {
+        // Dar tiempo al navegador para iniciar la descarga.
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      }
+    } catch (err) {
+      setWalletError({
+        ticketId,
+        message:
+          err instanceof Error ? err.message : 'No se pudo descargar el pase de Apple Wallet.',
+      });
+    } finally {
+      setWalletAction(null);
+    }
   }
 
   return (
@@ -171,7 +248,7 @@ export function PassengerTicketsPage() {
           type="button"
           className="passenger-trip-search__button"
           onClick={handleRefresh}
-          disabled={loading}
+          disabled={loading || walletAction !== null}
         >
           {loading ? 'Actualizando...' : 'Actualizar boletos'}
         </button>
@@ -230,6 +307,16 @@ export function PassengerTicketsPage() {
               const isValid = ticket.validity === 'valid';
               const isQrVisible = visibleQrId === ticket.id;
               const hasQrError = qrErrorId === ticket.id;
+
+              // Identificar qué proveedor está procesando este boleto.
+              const isGoogleLoading =
+                walletAction?.ticketId === ticket.id && walletAction.provider === 'google';
+
+              const isAppleLoading =
+                walletAction?.ticketId === ticket.id && walletAction.provider === 'apple';
+
+              const currentWalletError =
+                walletError?.ticketId === ticket.id ? walletError.message : null;
 
               return (
                 <article key={ticket.id} className="passenger-trip-search__card">
@@ -336,7 +423,7 @@ export function PassengerTicketsPage() {
                     </div>
                   </div>
 
-                  {/* Código QR */}
+                  {/* Código QR y opciones de Wallet */}
                   <div
                     style={{
                       borderTop: '1px solid #ddd',
@@ -346,6 +433,7 @@ export function PassengerTicketsPage() {
                   >
                     {isValid ? (
                       <>
+                        {/* Botón original del código QR */}
                         <button
                           type="button"
                           className="passenger-trip-search__button"
@@ -355,6 +443,53 @@ export function PassengerTicketsPage() {
                           {isQrVisible ? 'Ocultar código QR' : 'Ver código QR'}
                         </button>
 
+                        {/* Botones para guardar el boleto en Wallet */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            marginTop: '1rem',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="passenger-trip-search__button"
+                            disabled={walletAction !== null}
+                            onClick={() => void handleGoogleWallet(ticket.id)}
+                            aria-busy={isGoogleLoading}
+                          >
+                            {isGoogleLoading
+                              ? 'Preparando Google Wallet...'
+                              : 'Agregar a Google Wallet'}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="passenger-trip-search__button"
+                            disabled={walletAction !== null}
+                            onClick={() => void handleAppleWallet(ticket.id)}
+                            aria-busy={isAppleLoading}
+                          >
+                            {isAppleLoading
+                              ? 'Preparando Apple Wallet...'
+                              : 'Agregar a Apple Wallet'}
+                          </button>
+                        </div>
+
+                        {/* Error de generación del pase */}
+                        {currentWalletError && (
+                          <div
+                            role="alert"
+                            className="passenger-trip-search__error"
+                            style={{ marginTop: '1rem' }}
+                          >
+                            <p>{currentWalletError}</p>
+                          </div>
+                        )}
+
+                        {/* Visualización original del código QR */}
                         {isQrVisible && (
                           <div
                             style={{
