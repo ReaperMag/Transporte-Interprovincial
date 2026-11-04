@@ -8,6 +8,15 @@ import {
   type ReservationCreate,
   type ReservationRead,
 } from '../services/reservation.service';
+import {
+  cedulaError,
+  cleanName,
+  cleanPhone,
+  emailError,
+  nameError,
+  onlyDigits,
+  phoneError,
+} from '../../../shared/utils/validation';
 import './PassengerTripSearchPage.css';
 
 interface PassengerForm {
@@ -197,15 +206,14 @@ export function PassengerTripSeatsPage() {
       const firstName = passenger.firstName.trim();
       const lastName = passenger.lastName.trim();
 
-      if (
-        idNumber.length < 5 ||
-        idNumber.length > 13 ||
-        firstName.length < 1 ||
-        firstName.length > 100 ||
-        lastName.length < 1 ||
-        lastName.length > 100
-      ) {
-        setSubmitError(`Revisa la identificación, nombres y apellidos del asiento ${seat.number}.`);
+      const validationError =
+        cedulaError(idNumber) ??
+        nameError(firstName) ??
+        nameError(lastName) ??
+        phoneError(passenger.phone) ??
+        emailError(passenger.email, false);
+      if (validationError) {
+        setSubmitError(`Asiento ${seat.number}: ${validationError}`);
         return;
       }
 
@@ -476,15 +484,20 @@ export function PassengerTripSeatsPage() {
                       }}
                     >
                       <label>
-                        Identificación *
+                        Cédula *
                         <input
                           type="text"
+                          inputMode="numeric"
                           required
-                          minLength={5}
-                          maxLength={13}
+                          minLength={10}
+                          maxLength={10}
                           value={passenger.idNumber}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'idNumber', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'idNumber',
+                              onlyDigits(event.target.value, 10),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />
@@ -498,7 +511,11 @@ export function PassengerTripSeatsPage() {
                           maxLength={100}
                           value={passenger.firstName}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'firstName', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'firstName',
+                              cleanName(event.target.value),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />
@@ -512,7 +529,11 @@ export function PassengerTripSeatsPage() {
                           maxLength={100}
                           value={passenger.lastName}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'lastName', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'lastName',
+                              cleanName(event.target.value),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />
@@ -537,7 +558,11 @@ export function PassengerTripSeatsPage() {
                           maxLength={20}
                           value={passenger.phone}
                           onChange={(event) =>
-                            updatePassengerField(seat.seatId, 'phone', event.target.value)
+                            updatePassengerField(
+                              seat.seatId,
+                              'phone',
+                              cleanPhone(event.target.value),
+                            )
                           }
                           style={{ display: 'block', width: '100%' }}
                         />
