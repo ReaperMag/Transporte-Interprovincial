@@ -89,6 +89,22 @@
   cursor: not-allowed;
 }
 
+.passenger-trip-search__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.passenger-trip-search__button--secondary {
+  border: 1px solid #2563eb;
+  background: transparent;
+  color: #2563eb;
+}
+
+.passenger-trip-search__button--secondary:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
 .passenger-trip-search__error {
   margin-top: 16px;
   color: #b91c1c;

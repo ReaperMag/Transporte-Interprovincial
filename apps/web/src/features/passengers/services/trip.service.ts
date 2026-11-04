@@ -26,10 +26,11 @@ export interface TripSearchResult {
   fares: TripFare[];
 }
 
+/** Filtros opcionales: sin ninguno se listan todos los viajes disponibles. */
 export interface TripSearchParams {
-  originCityId: number;
-  destinationCityId: number;
-  travelDate: string;
+  originCityId?: number;
+  destinationCityId?: number;
+  travelDate?: string;
 }
 
 function getErrorMessage(status: number, fallback: string): string {
@@ -60,12 +61,15 @@ export async function getTripCities(): Promise<TripCity[]> {
   return (await response.json()) as TripCity[];
 }
 
-export async function searchPassengerTrips(params: TripSearchParams): Promise<TripSearchResult[]> {
-  const query = new URLSearchParams({
-    origin_city_id: String(params.originCityId),
-    destination_city_id: String(params.destinationCityId),
-    travel_date: params.travelDate,
-  });
+export async function searchPassengerTrips(
+  params: TripSearchParams = {},
+): Promise<TripSearchResult[]> {
+  const query = new URLSearchParams();
+  if (params.originCityId) query.set('origin_city_id', String(params.originCityId));
+  if (params.destinationCityId) {
+    query.set('destination_city_id', String(params.destinationCityId));
+  }
+  if (params.travelDate) query.set('travel_date', params.travelDate);
 
   const response = await fetch(`/api/v1/trips/search?${query.toString()}`, {
     credentials: 'include',
