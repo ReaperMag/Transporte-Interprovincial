@@ -14,6 +14,7 @@
   [![GitHub issues](https://img.shields.io/github/issues/ReaperMag/Transporte-Interprovincial?style=for-the-badge)](https://github.com/ReaperMag/Transporte-Interprovincial/issues)
   [![GitHub stars](https://img.shields.io/github/stars/ReaperMag/Transporte-Interprovincial?style=for-the-badge)](https://github.com/ReaperMag/Transporte-Interprovincial/stargazers)
   ![Estado del proyecto](https://img.shields.io/badge/Estado-En%20desarrollo-orange?style=for-the-badge)
+  [![Versión](https://img.shields.io/badge/Versi%C3%B3n-1.0.0--alpha.1-purple?style=for-the-badge)](CHANGELOG.md)
   ![Plataforma](https://img.shields.io/badge/Plataforma-Web-blue?style=for-the-badge)
   ![País](https://img.shields.io/badge/Pa%C3%ADs-Ecuador-yellow?style=for-the-badge)
   ![Licencia: GPL-3.0](https://img.shields.io/badge/Licencia-GPL--3.0-blue?style=for-the-badge)
@@ -170,7 +171,7 @@ Buscar viaje → Seleccionar asientos → Crear reserva → Registrar comprobant
 
 **Pruebas pendientes:** validar el flujo completo de compra con viajes reales, aprobación de comprobantes y emisión de boletos.
 
-**Fuera del alcance actual:** integración con Google Wallet y Apple Wallet, prevista para una rama independiente.
+**Google Wallet y Apple Wallet:** el pasajero puede agregar sus boletos a Google Wallet o Apple Wallet desde «Mis boletos». La integración es opcional y requiere configurar las credenciales indicadas en `apps/api/.env.example`.
 
 ## ✨ Funcionalidades principales
 
@@ -277,6 +278,10 @@ Para probar el flujo completo del pasajero se requieren cooperativas, buses, rut
 ## 📍 Estado del proyecto
 
 🚧 **En desarrollo académico.**
+
+🏷️ **Versión actual:** `1.0.0-alpha.1` (pre-release). Es una versión preliminar y no estable: algunas funcionalidades aún no están implementadas o usan datos de demostración.
+
+📝 Consulta el [registro de cambios (CHANGELOG)](CHANGELOG.md) para ver las novedades de cada versión, los problemas conocidos y las notas para el equipo.
 
 Las funcionalidades descritas representan el alcance previsto y deberán actualizarse conforme se implementen, prueben y validen los módulos.
 
