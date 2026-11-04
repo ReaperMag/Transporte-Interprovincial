@@ -62,6 +62,21 @@ class Settings(BaseSettings):
     smtp_from: str | None = None
     smtp_use_tls: bool = True
     verification_code_expire_minutes: int = Field(default=15, gt=0)
+    # Google Wallet
+    google_wallet_issuer_id: str | None = None
+    google_wallet_service_account_email: str | None = None
+    google_wallet_private_key_path: str | None = None
+    google_wallet_class_suffix: str = "interprovincial_ticket"
 
+    # Apple Wallet
+    apple_wallet_pass_type_identifier: str | None = None
+    apple_wallet_team_identifier: str | None = None
+    apple_wallet_organization_name: str = "Transporte Interprovincial"
+    apple_wallet_signing_certificate_path: str | None = None
+    apple_wallet_private_key_path: str | None = None
+    apple_wallet_wwdr_certificate_path: str | None = None
+    apple_wallet_icon_path: str | None = None
+    apple_wallet_icon_2x_path: str | None = None
+    apple_wallet_private_key_password: SecretStr | None = None
 
 settings = Settings()
