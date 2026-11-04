@@ -60,18 +60,18 @@ export function PassengerDashboardPage() {
 
       <div className="passenger-dashboard__grid">
         <article className="passenger-dashboard__card">
-          <article className="passenger-dashboard__card">
-            <h2>Buscar viajes</h2>
-            <p>
-              Consulta las rutas, cooperativas, horarios y tarifas disponibles para tu próximo
-              viaje.
-            </p>
+          <h2>Buscar viajes</h2>
+          <p>
+            Consulta las rutas, cooperativas, horarios y tarifas disponibles. Al elegir tu viaje
+            podrás seleccionar tus asientos.
+          </p>
 
-            <Link className="passenger-dashboard__action" to="/pasajero/viajes">
-              Buscar viajes disponibles
-            </Link>
-          </article>
+          <Link className="passenger-dashboard__action" to="/pasajero/viajes">
+            Buscar viajes disponibles
+          </Link>
+        </article>
 
+        <article className="passenger-dashboard__card">
           <h2>Mi información</h2>
 
           <dl>
@@ -87,18 +87,6 @@ export function PassengerDashboardPage() {
             <dt>Categoría</dt>
             <dd>{profile.category ?? 'No registrada'}</dd>
           </dl>
-        </article>
-
-        <article className="passenger-dashboard__card">
-          <h2>Seleccionar asientos</h2>
-          <p>Explora los diseños de buses y selecciona los asientos que prefieras.</p>
-          <p className="passenger-dashboard__notice">
-            Esta funcionalidad todavía es una demostración y no registra compras.
-          </p>
-
-          <Link className="passenger-dashboard__action" to="/pasajero/asientos">
-            Ver selección de asientos
-          </Link>
         </article>
       </div>
     </section>
