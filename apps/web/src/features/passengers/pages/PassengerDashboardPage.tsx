@@ -424,6 +424,24 @@ export function PassengerDashboardPage() {
                         <span>Unidad de transporte</span>
                         <strong>Bus #{trip.busNumber}</strong>
                       </div>
+
+                      {trip.totalSeats !== undefined && (
+                        <div className="passenger-trip-card__meta-item">
+                          <span>Disponibilidad</span>
+                          <strong
+                            style={{
+                              color:
+                                (trip.availableSeats ?? 0) <= 5
+                                  ? '#b91c1c'
+                                  : (trip.availableSeats ?? 0) <= 15
+                                    ? '#d97706'
+                                    : '#15803d',
+                            }}
+                          >
+                            {trip.availableSeats ?? 0} de {trip.totalSeats} asientos libres
+                          </strong>
+                        </div>
+                      )}
                     </div>
 
                     <div className="passenger-trip-card__fares">

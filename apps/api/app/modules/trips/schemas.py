@@ -38,5 +38,7 @@ class TripSearchResult(BaseModel):
     busTemplateId: int
 
     isPast: bool = False
+    totalSeats: int = 0
+    availableSeats: int = 0
 
     fares: list[TripFareOption]

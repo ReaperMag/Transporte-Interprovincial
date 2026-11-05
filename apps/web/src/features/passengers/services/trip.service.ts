@@ -24,6 +24,8 @@ export interface TripSearchResult {
   busNumber: string;
   busTemplateId: number;
   isPast?: boolean;
+  totalSeats?: number;
+  availableSeats?: number;
   fares: TripFare[];
 }
 

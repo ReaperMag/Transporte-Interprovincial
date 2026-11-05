@@ -1,17 +1,23 @@
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
-from app.modules.buses.models import Bus
+from app.modules.buses.models import Bus, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
+from app.modules.reservations.models import (
+    Reservation,
+    ReservationSeat,
+    ReservationStatus,
+)
 from app.modules.routes.models import City, Fare, Route
 from app.modules.schedules.models import (
     Frequency,
     RouteSheet,
     RouteSheetStatus,
 )
+from app.modules.tickets.models import Ticket, TicketStatus
 from app.modules.trips.models import Trip, TripStatus
 from app.modules.trips.schemas import (
     CityOption,
@@ -196,6 +202,51 @@ def search_trips(
 
     rows = db.execute(statement).all()
 
+    trip_ids = [trip.id for trip, *_ in rows]
+    occupied_by_trip: dict[int, set[int]] = {}
+    capacities_by_trip: dict[int, int] = {}
+
+    if trip_ids:
+        # Calcular capacidad total de cada viaje
+        cap_statement = (
+            select(Trip.id, func.count(TemplateSeat.id))
+            .join(Bus, Trip.bus_id == Bus.id)
+            .join(TemplateSeat, TemplateSeat.template_id == Bus.template_id)
+            .where(Trip.id.in_(trip_ids))
+            .group_by(Trip.id)
+        )
+        capacities_by_trip = dict(db.execute(cap_statement).all())
+
+        # Calcular asientos ocupados por reservas activas
+        res_statement = (
+            select(Reservation.trip_id, ReservationSeat.seat_id)
+            .join(ReservationSeat, ReservationSeat.reservation_id == Reservation.id)
+            .where(
+                Reservation.trip_id.in_(trip_ids),
+                Reservation.status.in_(
+                    (
+                        ReservationStatus.PENDING_PAYMENT,
+                        ReservationStatus.PAYMENT_REVIEW,
+                        ReservationStatus.CONFIRMED,
+                    )
+                ),
+            )
+        )
+        for r_trip_id, seat_id in db.execute(res_statement).all():
+            occupied_by_trip.setdefault(r_trip_id, set()).add(seat_id)
+
+        # Asientos ocupados por boletos directos
+        ticket_statement = (
+            select(Ticket.trip_id, Ticket.seat_id)
+            .where(
+                Ticket.trip_id.in_(trip_ids),
+                Ticket.reservation_seat_id.is_(None),
+                Ticket.status != TicketStatus.CANCELLED,
+            )
+        )
+        for t_trip_id, seat_id in db.execute(ticket_statement).all():
+            occupied_by_trip.setdefault(t_trip_id, set()).add(seat_id)
+
     results: dict[int, TripSearchResult] = {}
 
     for (
@@ -210,6 +261,10 @@ def search_trips(
 
         if trip.id not in results:
             departure_local = as_local(trip.departure_at)
+            total_seats = capacities_by_trip.get(trip.id, 0)
+            occupied_count = len(occupied_by_trip.get(trip.id, set()))
+            available_seats = max(0, total_seats - occupied_count)
+
             results[trip.id] = TripSearchResult(
                 tripId=trip.id,
                 routeId=route.id,
@@ -231,6 +286,8 @@ def search_trips(
                 busTemplateId=bus.template_id,
 
                 isPast=departure_local <= current_time,
+                totalSeats=total_seats,
+                availableSeats=available_seats,
 
                 fares=[],
             )
