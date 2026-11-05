@@ -8,7 +8,6 @@ revierte, no se envía nada. Si la notificación corresponde a boletos emitidos,
 se genera y envía el correo con los detalles del viaje y códigos QR.
 """
 
-import base64
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -150,10 +149,11 @@ def _build_tickets_email_content(db: Session, reservation_id: int) -> EmailConte
         passenger = db.get(Passenger, t.passenger_id)
         seat = db.get(TemplateSeat, t.seat_id)
 
-        qr_b64 = ""
+        qr_png = b""
+        qr_cid = ""
         try:
-            qr_bytes = render_qr_png(t.code)
-            qr_b64 = base64.b64encode(qr_bytes).decode("ascii")
+            qr_png = render_qr_png(t.code)
+            qr_cid = f"ticket-{t.id}@transporte-interprovincial"
         except Exception:
             logger.warning("No se pudo generar QR para boleto %s", t.code)
 
@@ -172,7 +172,8 @@ def _build_tickets_email_content(db: Session, reservation_id: int) -> EmailConte
                     else str(t.passenger_category)
                 ),
                 "price": str(t.price),
-                "qr_base64": qr_b64,
+                "qr_cid": qr_cid,
+                "qr_png": qr_png,
             }
         )
 
