@@ -1,15 +1,454 @@
-.passenger-dashboard { max-width: 1120px; margin: 0 auto; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
-.passenger-dashboard__header { margin-bottom: 28px; }
-.passenger-dashboard__eyebrow { margin: 0 0 8px; color: #0e5a6b; font-size: .72rem; font-weight: 700; letter-spacing: .12em; }
-.passenger-dashboard__header h1 { margin: 0; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.05em; }
-.passenger-dashboard__header p:last-child { margin: 8px 0 0; color: #5b6670; font-size: .85rem; }
-.passenger-dashboard__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); gap: 16px; }
-.passenger-dashboard__card { padding: 24px; border: 1px solid #dcd9d2; border-radius: 14px; background: #fff; box-shadow: 0 12px 30px rgb(20 33 43 / 5%); }
-.passenger-dashboard__card h2 { margin: 0 0 20px; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.25rem; }
-.passenger-dashboard__card dt { margin-top: 14px; color: #5b6670; font-size: .72rem; }
-.passenger-dashboard__card dd { margin: 4px 0 0; color: #14212b; font-size: .85rem; font-weight: 600; }
-.passenger-dashboard__card p { color: #5b6670; font-size: .82rem; line-height: 1.6; }
-.passenger-dashboard__notice { padding: 10px 12px; border-radius: 8px; background: #fbf0d9; color: #79560f !important; font-size: .72rem !important; }
-.passenger-dashboard__action { display: inline-block; margin-top: 12px; padding: 11px 15px; border-radius: 8px; background: #0e5a6b; color: #fff; font-size: .76rem; font-weight: 700; text-decoration: none; }
-.passenger-dashboard__action:hover { background: #0a4250; }
-@media (max-width: 750px) { .passenger-dashboard__grid { grid-template-columns: 1fr; } }
+.passenger-dashboard {
+  max-width: 1140px;
+  margin: 0 auto;
+  color: #14212b;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  padding-bottom: 48px;
+}
+
+.passenger-dashboard__header {
+  margin-bottom: 24px;
+}
+
+.passenger-dashboard__eyebrow {
+  margin: 0 0 6px;
+  color: #0e5a6b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.passenger-dashboard__header h1 {
+  margin: 0;
+  color: #14212b;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  letter-spacing: -0.04em;
+}
+
+.passenger-dashboard__header p:last-child {
+  margin: 8px 0 0;
+  color: #5b6670;
+  font-size: 0.92rem;
+  max-width: 720px;
+}
+
+/* Accesos directos rápidos */
+.passenger-dashboard__quick-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 32px;
+}
+
+.passenger-dashboard__quick-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid #e2ded7;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #14212b;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(20, 33, 43, 0.03);
+}
+
+.passenger-dashboard__quick-link:hover {
+  border-color: #0e5a6b;
+  box-shadow: 0 8px 20px rgba(14, 90, 107, 0.08);
+  transform: translateY(-1px);
+}
+
+.passenger-dashboard__quick-link span {
+  font-size: 1.6rem;
+}
+
+.passenger-dashboard__quick-link strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #0e5a6b;
+}
+
+.passenger-dashboard__quick-link small {
+  display: block;
+  font-size: 0.75rem;
+  color: #6a747d;
+  margin-top: 2px;
+}
+
+/* Sección de Rutas */
+.passenger-dashboard__routes-section {
+  background: #ffffff;
+  border: 1px solid #e0ddd7;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 24px rgba(20, 33, 43, 0.04);
+}
+
+.passenger-dashboard__routes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.passenger-dashboard__routes-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  color: #14212b;
+}
+
+.passenger-dashboard__routes-header p {
+  margin: 6px 0 0;
+  color: #6a747d;
+  font-size: 0.85rem;
+}
+
+.passenger-dashboard__city-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.passenger-dashboard__filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.passenger-dashboard__filter-field select {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.passenger-dashboard__filter-field select:focus {
+  border-color: #0e5a6b;
+  background-color: #ffffff;
+}
+
+/* Pestañas de días (7 días) */
+.passenger-dashboard__day-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #edebe7;
+}
+
+.passenger-dashboard__day-tab {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 16px;
+  background: #f7f6f3;
+  border: 1px solid #dedbd4;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 90px;
+  text-align: center;
+  position: relative;
+}
+
+.passenger-dashboard__day-tab:hover {
+  background: #eae7e0;
+}
+
+.passenger-dashboard__day-tab--active {
+  background: #0e5a6b;
+  border-color: #0e5a6b;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(14, 90, 107, 0.25);
+}
+
+.passenger-dashboard__day-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.passenger-dashboard__day-date {
+  font-size: 0.72rem;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.passenger-dashboard__day-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+}
+
+.passenger-dashboard__day-tab--active .passenger-dashboard__day-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Lista de viajes */
+.passenger-dashboard__trip-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.passenger-trip-card {
+  background: #ffffff;
+  border: 1px solid #e0ddd7;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(20, 33, 43, 0.03);
+}
+
+.passenger-trip-card:not(.passenger-trip-card--past):hover {
+  border-color: #0e5a6b;
+  box-shadow: 0 8px 24px rgba(14, 90, 107, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Tarjeta pasada / bloqueada */
+.passenger-trip-card--past {
+  background: #faf9f6;
+  border-color: #e5e3de;
+  opacity: 0.72;
+}
+
+.passenger-trip-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.passenger-trip-card__company h3 {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  color: #14212b;
+}
+
+.passenger-trip-card__caption {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #6a747d;
+}
+
+.passenger-trip-card__status-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.passenger-trip-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.passenger-trip-badge--active {
+  background: #e6f4ea;
+  color: #137333;
+  border: 1px solid #ceead6;
+}
+
+.passenger-trip-badge--past {
+  background: #fce8e6;
+  color: #c5221f;
+  border: 1px solid #fad2cf;
+}
+
+.passenger-trip-card__id {
+  font-size: 0.7rem;
+  color: #8c959d;
+}
+
+.passenger-trip-card__route-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 14px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0e5a6b;
+}
+
+.passenger-trip-card--past .passenger-trip-card__route-line {
+  color: #55626d;
+}
+
+.passenger-trip-card__arrow {
+  color: #9aa5b1;
+  font-size: 1rem;
+}
+
+.passenger-trip-card__meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px dashed #e6e3dd;
+  border-bottom: 1px dashed #e6e3dd;
+  margin-bottom: 12px;
+}
+
+.passenger-trip-card__meta-item span {
+  display: block;
+  font-size: 0.68rem;
+  color: #6a747d;
+}
+
+.passenger-trip-card__meta-item strong {
+  display: block;
+  font-size: 0.8rem;
+  color: #14212b;
+  margin-top: 2px;
+}
+
+.passenger-trip-card__fares {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 0.74rem;
+  color: #55626d;
+  flex-wrap: wrap;
+}
+
+.passenger-trip-card__fare-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.passenger-trip-card__fare-tag {
+  background: #f1f0eb;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
+
+.passenger-trip-card__fare-tag strong {
+  color: #0e5a6b;
+}
+
+/* Botón de acción */
+.passenger-trip-card__action-box {
+  margin-top: auto;
+}
+
+.passenger-trip-card__button {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  text-align: center;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.passenger-trip-card__button--primary {
+  background: #0e5a6b;
+  color: #ffffff;
+}
+
+.passenger-trip-card__button--primary:hover {
+  background: #093c47;
+}
+
+.passenger-trip-card__button--disabled {
+  background: #e2ded7;
+  color: #7d8790;
+  cursor: not-allowed;
+}
+
+.passenger-trip-card__past-hint {
+  margin: 6px 0 0;
+  font-size: 0.7rem;
+  color: #c5221f;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.passenger-dashboard__empty {
+  grid-column: 1 / -1;
+  padding: 40px 20px;
+  text-align: center;
+  background: #f9f8f5;
+  border-radius: 12px;
+  border: 1px dashed #d5d1c8;
+}
+
+.passenger-dashboard__empty h3 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  color: #14212b;
+}
+
+.passenger-dashboard__empty p {
+  margin: 0;
+  color: #6a747d;
+  font-size: 0.85rem;
+}
+
+.passenger-dashboard__loading {
+  padding: 30px;
+  text-align: center;
+  color: #6a747d;
+  font-size: 0.9rem;
+}
+
+.passenger-dashboard__error {
+  padding: 12px 16px;
+  background: #fdf2f2;
+  border: 1px solid #f8b4b4;
+  color: #9b1c1c;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .passenger-dashboard__routes-header {
+    flex-direction: column;
+  }
+  .passenger-dashboard__city-filters {
+    width: 100%;
+  }
+  .passenger-dashboard__filter-field {
+    flex: 1;
+  }
+  .passenger-dashboard__trip-list {
+    grid-template-columns: 1fr;
+  }
+}
