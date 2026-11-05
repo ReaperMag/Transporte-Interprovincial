@@ -159,7 +159,7 @@ def tickets_confirmation_email(
         <p style="margin:0 0 16px;color:#d99a1e;font-size:12px;font-weight:700;letter-spacing:2px">{escape(SYSTEM_NAME.upper())}</p>
         <h1 style="margin:0 0 12px;font-size:22px;color:#0e5a6b;">{escape(title)}</h1>
         <p style="margin:0 0 16px;font-size:14px;color:#4a5568;">Tu compra fue confirmada con éxito. A continuación encontrarás el detalle de tu viaje y tus boletos con código QR para abordar.</p>
-        
+
         <div style="background:#eaf3f5;border-left:4px solid #0e5a6b;padding:14px;border-radius:4px;margin-bottom:20px;">
             <p style="margin:0 0 6px;font-size:14px;"><strong>Cooperativa:</strong> {escape(cooperative_name)}</p>
             <p style="margin:0 0 6px;font-size:15px;font-weight:bold;color:#0e5a6b;">{escape(origin_name)} &rarr; {escape(destination_name)}</p>

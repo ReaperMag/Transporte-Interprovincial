@@ -1,20 +1,209 @@
-.oficinista-layout { min-height: 100dvh; display: flex; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
-.oficinista-header { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 38px; border-bottom: 1px solid #dcd9d2; background: #f5f4f0; }
-.oficinista-header__brand { display: flex; align-items: center; gap: 11px; }
-.oficinista-header__logo { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #d99a1e; }
-.oficinista-header__logo svg { width: 22px; height: 22px; }
-.oficinista-header__title { margin: 0; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.2rem; }
-.oficinista-header__account { display: flex; align-items: center; gap: 14px; }
-.oficinista-header__user { margin: 0; color: #5b6670; font-size: .75rem; }
-.oficinista-header__avatar { color: #0e5a6b; }
-.oficinista-header__avatar svg { width: 24px; }
-.oficinista-header__logout { padding: 8px 14px; border: 1px solid #b8c2c3; border-radius: 999px; background: transparent; color: #14212b; cursor: pointer; font: inherit; font-size: .72rem; font-weight: 600; }
-.oficinista-header__logout:hover { border-color: #0e5a6b; color: #0e5a6b; }
-.oficinista-toolbar { padding: 12px 38px; background: #fff; border-bottom: 1px solid #dcd9d2; }
-.oficinista-toolbar__link { color: #0e5a6b; font-size: .78rem; font-weight: 700; }
-.oficinista-layout__content { flex: 1; min-width: 0; padding: 34px clamp(18px, 5vw, 64px); }
-.oficinista-layout > .oficinista-header, .oficinista-layout > .oficinista-toolbar { width: 100%; box-sizing: border-box; }
-.oficinista-layout { flex-wrap: wrap; }
-.oficinista-layout__content { order: 3; }
-.oficinista-layout > [role='alert'] { order: 2; width: 100%; }
-@media (max-width: 760px) { .oficinista-header, .oficinista-toolbar { padding-right: 18px; padding-left: 18px; } .oficinista-header__user, .oficinista-header__avatar { display: none; } }
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+body:has(.oficinista-layout) {
+  margin: 0;
+}
+.oficinista-layout {
+  min-height: 100dvh;
+  display: flex;
+  background: #f5f4f0;
+  color: #14212b;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.oficinista-sidebar {
+  width: 248px;
+  flex: 0 0 248px;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 18px 20px;
+  box-sizing: border-box;
+  background: #14212b;
+  color: #f5f4f0;
+}
+.oficinista-sidebar__brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 0 12px 38px;
+  color: #fff;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+}
+.oficinista-sidebar__brand > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #d99a1e;
+  color: #14212b;
+  font-size: 1.1rem;
+}
+.oficinista-sidebar__brand strong,
+.oficinista-sidebar__brand small,
+.oficinista-sidebar__account strong,
+.oficinista-sidebar__account small {
+  display: block;
+}
+.oficinista-sidebar__brand small {
+  margin-top: 5px;
+  color: #aeb9bd;
+  font-size: 0.66rem;
+  letter-spacing: 0.01em;
+}
+.oficinista-sidebar__label {
+  margin: 0 12px 10px;
+  color: #84959c;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.oficinista-sidebar__nav {
+  display: grid;
+  gap: 5px;
+}
+.oficinista-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  color: #c7d0d2;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.oficinista-sidebar__link > span {
+  width: 18px;
+  text-align: center;
+}
+.oficinista-sidebar__link:hover,
+.oficinista-sidebar__link--active {
+  background: #0e5a6b;
+  color: #fff;
+  font-weight: 700;
+}
+.oficinista-sidebar__account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 16px 10px 0;
+  border-top: 1px solid #2b3a42;
+  font-size: 0.72rem;
+}
+.oficinista-sidebar__account > span {
+  display: grid;
+  flex: 0 0 34px;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e3eef0;
+  color: #0e5a6b;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.oficinista-sidebar__account strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.oficinista-sidebar__account small {
+  margin-top: 3px;
+  color: #84959c;
+  font-size: 0.66rem;
+}
+.oficinista-main {
+  min-width: 0;
+  flex: 1;
+}
+.oficinista-header {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 38px;
+  border-bottom: 1px solid #dcd9d2;
+  background: #f5f4f0;
+}
+.oficinista-header__breadcrumb {
+  display: flex;
+  gap: 10px;
+  color: #5b6670;
+  font-size: 0.72rem;
+}
+.oficinista-header__breadcrumb b {
+  color: #aeb4b6;
+  font-weight: 400;
+}
+.oficinista-header__breadcrumb strong {
+  color: #14212b;
+}
+.oficinista-header__logout {
+  padding: 8px 14px;
+  border: 1px solid #b8c2c3;
+  border-radius: 999px;
+  background: transparent;
+  color: #14212b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.oficinista-header__logout:hover {
+  border-color: #0e5a6b;
+  color: #0e5a6b;
+}
+.oficinista-layout__content {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 28px 38px 48px;
+}
+.oficinista-layout__error {
+  margin: 0;
+  padding: 10px 38px;
+  background: #f7e3e0;
+  color: #b3362b;
+  font-size: 0.78rem;
+}
+.oficinista-layout__content input,
+.oficinista-layout__content select {
+  border-color: #dcd9d2;
+  border-radius: 8px;
+  background: #fff;
+}
+.oficinista-layout__content input:focus,
+.oficinista-layout__content select:focus {
+  outline: 2px solid #d99a1e;
+  outline-offset: 1px;
+  border-color: #0e5a6b;
+}
+.oficinista-layout__content button {
+  border-radius: 8px;
+}
+@media (max-width: 760px) {
+  .oficinista-layout {
+    display: block;
+  }
+  .oficinista-sidebar {
+    width: auto;
+    min-height: auto;
+    padding: 16px;
+  }
+  .oficinista-sidebar__brand {
+    padding-bottom: 18px;
+  }
+  .oficinista-sidebar__account {
+    display: none;
+  }
+  .oficinista-sidebar__nav {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+  .oficinista-header {
+    padding: 14px 18px;
+  }
+  .oficinista-layout__content {
+    padding: 20px 18px 36px;
+  }
+}

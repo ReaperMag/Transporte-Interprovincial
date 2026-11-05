@@ -41,10 +41,20 @@ def _schedule_error(error: Exception) -> HTTPException:
             status_code=409,
             detail="La ruta necesita una duración registrada para crear frecuencias.",
         )
+    if isinstance(error, cooperative_service.RouteFareMissingError):
+        return HTTPException(
+            status_code=409,
+            detail="Configura las tarifas Normal y VIP de la ruta antes de agregar frecuencias.",
+        )
     if isinstance(error, cooperative_service.DuplicateFrequencyError):
         return HTTPException(
             status_code=409,
             detail="Ya existe esa frecuencia para la ruta y el grupo seleccionados.",
+        )
+    if isinstance(error, cooperative_service.RouteAssignedToAnotherGroupError):
+        return HTTPException(
+            status_code=409,
+            detail="Todas las frecuencias de una ruta deben pertenecer al mismo grupo de buses.",
         )
     if isinstance(error, cooperative_service.FrequencyNotFoundError):
         return HTTPException(
@@ -102,7 +112,9 @@ def add_frequency(
         cooperative_service.BusGroupNotFoundError,
         cooperative_service.RouteNotFoundError,
         cooperative_service.RouteNotSchedulableError,
+        cooperative_service.RouteFareMissingError,
         cooperative_service.DuplicateFrequencyError,
+        cooperative_service.RouteAssignedToAnotherGroupError,
     ) as exc:
         raise _schedule_error(exc) from exc
 
@@ -143,6 +155,7 @@ def save_route_sheet(
         cooperative_service.FrequencyNotFoundError,
         cooperative_service.RouteSheetPublishedError,
         cooperative_service.RouteSheetHasReservationsError,
+        cooperative_service.RouteFareMissingError,
         cooperative_service.BusAssignmentError,
     ) as exc:
         raise _schedule_error(exc) from exc
@@ -163,6 +176,7 @@ def publish_route_sheet(
         )
     except (
         cooperative_service.RouteSheetNotFoundError,
+        cooperative_service.RouteFareMissingError,
         cooperative_service.BusAssignmentError,
     ) as exc:
         raise _schedule_error(exc) from exc

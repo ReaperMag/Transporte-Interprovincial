@@ -275,7 +275,18 @@ export function CooperativeRoutesPage() {
   const activeRoutes = routes.filter((route) => route.isActive && route.durationMinutes !== null);
   const originCity = cities.find((city) => String(city.id) === selectedCityId);
   const destinationCity = cities.find((city) => String(city.id) === selectedDestinationCityId);
-  const sheetFrequencies = plans[serviceDates[0]]?.frequencies ?? [];
+  const sheetFrequencies =
+    plans[serviceDates[0]]?.frequencies ??
+    frequencies.map((frequency) => ({
+      frequencyId: frequency.id,
+      routeId: frequency.routeId,
+      routeName: frequency.routeName,
+      departureTime: frequency.departureTime,
+      durationMinutes: frequency.durationMinutes,
+      resolutionNumber: frequency.resolutionNumber,
+      stops: frequency.stops,
+      busId: null,
+    }));
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
   const refreshCities = async () => {
@@ -669,7 +680,6 @@ export function CooperativeRoutesPage() {
                   onChange={(event) => setRouteDuration(event.target.value)}
                 />
               </label>
-
               {originCity && destinationCity && (
                 <div
                   className="cooperative-routes__preview"
@@ -841,7 +851,9 @@ export function CooperativeRoutesPage() {
                               }`}
                               onClick={() => {
                                 setSelectedRouteId(String(route.id));
-                                const fareForm = document.querySelector('.cooperative-routes__fares');
+                                const fareForm = document.querySelector(
+                                  '.cooperative-routes__fares',
+                                );
                                 if (fareForm) {
                                   fareForm.scrollIntoView({ behavior: 'smooth' });
                                 }

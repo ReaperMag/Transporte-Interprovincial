@@ -313,7 +313,7 @@ export function PassengerTripSearchPage() {
               <p>
                 {isFiltered
                   ? 'No hay salidas disponibles con esos filtros. Prueba con otra ciudad o fecha.'
-                  : 'Por ahora no hay salidas programadas. Vuelve a consultar más tarde.'}
+                  : 'Por ahora no hay salidas publicadas. La cooperativa debe asignar buses a sus frecuencias y publicar la hoja de ruta de cada fecha.'}
               </p>
             </div>
           ) : (

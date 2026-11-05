@@ -58,6 +58,35 @@ def get_cities(db: Session) -> list[CityOption]:
     ]
 
 
+def get_cities_for_cooperative(db: Session, cooperative_id: int) -> list[CityOption]:
+    route_city_ids = set(
+        db.scalars(
+            select(Route.origin_city_id).where(
+                Route.cooperative_id == cooperative_id,
+                Route.is_active.is_(True),
+            )
+        ).all()
+    )
+    route_city_ids.update(
+        db.scalars(
+            select(Route.destination_city_id).where(
+                Route.cooperative_id == cooperative_id,
+                Route.is_active.is_(True),
+            )
+        ).all()
+    )
+    if not route_city_ids:
+        return []
+    return [
+        CityOption(id=city.id, name=city.name, province=city.province)
+        for city in db.scalars(
+            select(City)
+            .where(City.id.in_(route_city_ids))
+            .order_by(City.name, City.province)
+        ).all()
+    ]
+
+
 def search_trips(
     db: Session,
     origin_city_id: int | None = None,
@@ -65,6 +94,7 @@ def search_trips(
     travel_date: date | None = None,
     end_date: date | None = None,
     include_past: bool = False,
+    cooperative_id: int | None = None,
 ) -> list[TripSearchResult]:
     """
     Busca los viajes programados.
@@ -177,6 +207,11 @@ def search_trips(
             Trip.cooperative_id == Frequency.cooperative_id,
             Trip.cooperative_id == Route.cooperative_id,
             Trip.cooperative_id == Bus.cooperative_id,
+            *(
+                (Trip.cooperative_id == cooperative_id,)
+                if cooperative_id is not None
+                else ()
+            ),
 
             # Si tiene hoja de ruta, debe estar publicada.
             or_(
