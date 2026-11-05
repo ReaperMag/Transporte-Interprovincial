@@ -7,6 +7,7 @@ export function OficinistaDashboardPage() {
   const [profile, setProfile] = useState<OficinistaInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -78,7 +79,24 @@ export function OficinistaDashboardPage() {
             </div>
             <div>
               <dt>Cooperativa</dt>
-              <dd>{profile.cooperativeName}</dd>
+              <dd className="oficinista-dashboard__cooperative">
+                {profile.cooperativeLogoUrl && !logoFailed ? (
+                  <img
+                    className="oficinista-dashboard__cooperative-logo"
+                    src={profile.cooperativeLogoUrl}
+                    alt={`Logo de ${profile.cooperativeName}`}
+                    onError={() => setLogoFailed(true)}
+                  />
+                ) : (
+                  <span
+                    className="oficinista-dashboard__cooperative-placeholder"
+                    aria-hidden="true"
+                  >
+                    {profile.cooperativeName.slice(0, 2).toLocaleUpperCase()}
+                  </span>
+                )}
+                <span>{profile.cooperativeName}</span>
+              </dd>
             </div>
             <div>
               <dt>RUC de la cooperativa</dt>

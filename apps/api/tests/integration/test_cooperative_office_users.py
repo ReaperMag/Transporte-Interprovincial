@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import verify_password
 from app.modules.accounts.models import Account, AccountType
+from app.modules.cooperatives.models import Cooperative
 from app.modules.roles_permissions.models import Role
 from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE
 from app.modules.staff import service as staff_service
@@ -38,6 +39,11 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         email="admin-office@example.com",
         role_code=COOPERATIVE_ADMIN_ROLE,
     )
+    with Session(engine) as db:
+        cooperative = db.get(Cooperative, cooperative_id)
+        assert cooperative is not None
+        cooperative.logo_url = "https://example.com/cooperativa.png"
+        db.commit()
     assert login(client, "admin-office@example.com").status_code == 200
     assert client.get("/api/v1/staff/me").status_code == 403
 
@@ -72,6 +78,7 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         assert profile.json()["lastName"] == "Prueba"
         assert profile.json()["cooperativeId"] == cooperative_id
         assert profile.json()["cooperativeRuc"]
+        assert profile.json()["cooperativeLogoUrl"] == "https://example.com/cooperativa.png"
         assert "cooperativeAddress" in profile.json()
         assert "cooperativeSupportEmail" in profile.json()
 

@@ -54,6 +54,28 @@
   font-size: 0.92rem;
   font-weight: 700;
 }
+.oficinista-dashboard__cooperative {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.oficinista-dashboard__cooperative-logo,
+.oficinista-dashboard__cooperative-placeholder {
+  display: grid;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid #dcd9d2;
+  border-radius: 50%;
+  background: #f3f7f7;
+  object-fit: contain;
+}
+.oficinista-dashboard__cooperative-placeholder {
+  color: #0e5a6b;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
 .oficinista-dashboard__error {
   color: #b3362b;
 }
