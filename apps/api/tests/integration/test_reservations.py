@@ -284,6 +284,55 @@ def test_passenger_searches_trip_and_selects_a_fareable_seat(scenario):
     assert float(reservation.json()["seats"][0]["price"]) == 16.0
 
 
+def test_office_user_searches_only_cooperative_trips_and_sells_ticket(scenario):
+    client, engine, data = scenario
+    with Session(engine) as db:
+        travel_date = db.get(Trip, data["trip_id"]).departure_at.date().isoformat()
+
+    login(client, "oficina@andina.ec")
+    cities = client.get("/api/v1/trips/cities-for-sale")
+    assert cities.status_code == 200, cities.text
+    assert {city["id"] for city in cities.json()} == {
+        data["quito"],
+        data["loja"],
+    }
+    search = client.get(
+        "/api/v1/trips/search-for-sale",
+        params={
+            "origin_city_id": data["quito"],
+            "destination_city_id": data["loja"],
+            "travel_date": travel_date,
+        },
+    )
+    assert search.status_code == 200, search.text
+    assert [trip["tripId"] for trip in search.json()] == [data["trip_id"]]
+
+    reservation = client.post(
+        "/api/v1/reservations/office",
+        json=reservation_payload(
+            data,
+            "quito",
+            "loja",
+            [(3, passenger())],
+        ),
+        headers=ORIGIN,
+    )
+    assert reservation.status_code == 201, reservation.text
+    reservation_id = reservation.json()["id"]
+
+    payment = client.post(
+        f"/api/v1/payments/reservations/{reservation_id}/cash",
+        headers=ORIGIN,
+    )
+    assert payment.status_code == 201, payment.text
+    assert payment.json()["status"] == "approved"
+
+    tickets = client.get(f"/api/v1/tickets/reservations/{reservation_id}")
+    assert tickets.status_code == 200, tickets.text
+    assert len(tickets.json()) == 1
+    assert tickets.json()[0]["passengerIdNumber"] == "1711111111"
+
+
 def test_passenger_reserves_seats_with_fare_and_time_limit(scenario):
     client, _, data = scenario
     login(client, "ana@example.com")

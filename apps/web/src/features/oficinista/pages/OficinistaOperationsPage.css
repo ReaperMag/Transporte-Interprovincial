@@ -1,0 +1,292 @@
+.oficinista-operations {
+  max-width: 1120px;
+  margin: 0 auto;
+  color: #14212b;
+}
+.oficinista-operations__header {
+  margin-bottom: 24px;
+}
+.oficinista-operations__eyebrow {
+  margin: 0 0 6px;
+  color: #0e5a6b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.oficinista-operations__header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  letter-spacing: -0.04em;
+}
+.oficinista-operations__header > p:last-child {
+  margin: 8px 0 0;
+  color: #5b6670;
+  font-size: 0.86rem;
+}
+.oficinista-operations__card {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid #dcd9d2;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgb(20 33 43 / 5%);
+}
+.oficinista-operations__card > h2,
+.oficinista-operations__card-heading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.oficinista-operations__card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.oficinista-operations__card-heading p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+.oficinista-operations__alert,
+.oficinista-operations__notice {
+  padding: 12px 14px;
+  border-radius: 9px;
+}
+.oficinista-operations__alert {
+  background: #fef2f2;
+  color: #991b1b;
+}
+.oficinista-operations__notice {
+  background: #f0fdf4;
+  color: #166534;
+}
+.oficinista-operations__empty {
+  color: #64748b;
+}
+.oficinista-operations__form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+  margin-top: 18px;
+}
+.oficinista-operations__form label,
+.oficinista-operations__reject label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+.oficinista-operations__form input,
+.oficinista-operations__form select,
+.oficinista-operations__reject input,
+.oficinista-operations__reject select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #14212b;
+  font: inherit;
+}
+.oficinista-operations__form > button,
+.oficinista-operations__form > p {
+  grid-column: 1 / -1;
+}
+.oficinista-operations__form button,
+.oficinista-operations__button,
+.oficinista-operations__button--secondary,
+.oficinista-operations__button--danger {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.oficinista-operations__form button,
+.oficinista-operations__button {
+  background: #0e5a6b;
+  color: #fff;
+}
+.oficinista-operations__button--secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+.oficinista-operations__button--danger {
+  background: #fff1f2;
+  color: #b91c1c;
+}
+.oficinista-operations__form button:hover:not(:disabled),
+.oficinista-operations__button:hover:not(:disabled) {
+  background: #0a4250;
+}
+.oficinista-operations__button--danger:hover:not(:disabled) {
+  background: #ffe4e6;
+}
+.oficinista-operations__button--secondary:hover:not(:disabled) {
+  border-color: #0e5a6b;
+}
+.oficinista-operations button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.oficinista-operations__list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.oficinista-operations__item {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e5e1d8;
+  border-radius: 11px;
+}
+.oficinista-operations__item h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+.oficinista-operations__item p {
+  margin: 6px 0 0;
+  color: #5b6670;
+  font-size: 0.8rem;
+}
+.oficinista-operations__item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.oficinista-operations__item-heading > strong {
+  white-space: nowrap;
+}
+.oficinista-operations__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 16px 0 0;
+}
+.oficinista-operations__details dt {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+.oficinista-operations__details dd {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+.oficinista-operations__links,
+.oficinista-operations__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.oficinista-operations__links a {
+  color: #0e5a6b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.oficinista-operations__links span {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+.oficinista-operations__reject {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+.oficinista-operations__reject button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.oficinista-operations__fare-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.oficinista-operations__fare-list span {
+  color: #0e5a6b;
+  font-weight: 650;
+}
+.oficinista-operations__seat-grid {
+  display: grid;
+  gap: 9px;
+  max-width: 600px;
+  margin-top: 16px;
+}
+.oficinista-operations__seat {
+  min-height: 56px;
+  padding: 6px;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background: #fff;
+  color: #14212b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+.oficinista-operations__seat small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+.oficinista-operations__seat--selected {
+  border: 2px solid #0e5a6b;
+  background: #e3eef0;
+  color: #0e5a6b;
+}
+.oficinista-operations__seat:disabled:not(.oficinista-operations__seat--selected) {
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.oficinista-operations__total {
+  margin: 0;
+  color: #14212b;
+  font-size: 1rem;
+  font-weight: 750;
+}
+@media (max-width: 760px) {
+  .oficinista-operations__form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .oficinista-operations__card {
+    padding: 16px;
+  }
+  .oficinista-operations__form,
+  .oficinista-operations__reject {
+    grid-template-columns: 1fr;
+  }
+  .oficinista-operations__reject button {
+    grid-column: auto;
+  }
+  .oficinista-operations__card-heading,
+  .oficinista-operations__item-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .oficinista-operations__details {
+    gap: 14px;
+  }
+}
