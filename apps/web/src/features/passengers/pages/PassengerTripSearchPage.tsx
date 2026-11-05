@@ -4,6 +4,7 @@ import {
   getTripCities,
   searchPassengerTrips,
   type TripCity,
+  type TripSearchParams,
   type TripSearchResult,
 } from '../services/trip.service';
 import './PassengerTripSearchPage.css';
@@ -84,16 +85,62 @@ export function PassengerTripSearchPage() {
   const [cities, setCities] = useState<TripCity[]>([]);
   const [originCityId, setOriginCityId] = useState('');
   const [destinationCityId, setDestinationCityId] = useState('');
-  const [travelDate, setTravelDate] = useState(getTodayInEcuador);
+  const [travelDate, setTravelDate] = useState('');
 
   const [trips, setTrips] = useState<TripSearchResult[]>([]);
   const [loadingCities, setLoadingCities] = useState(true);
-  const [loadingTrips, setLoadingTrips] = useState(false);
+  const [loadingTrips, setLoadingTrips] = useState(true);
   const [citiesError, setCitiesError] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isFiltered, setIsFiltered] = useState(false);
 
   const today = getTodayInEcuador();
+
+  async function loadTrips(filters: TripSearchParams = {}) {
+    setLoadingTrips(true);
+    setSearchError(null);
+
+    try {
+      setTrips(await searchPassengerTrips(filters));
+      setHasSearched(true);
+      setIsFiltered(Object.values(filters).some(Boolean));
+    } catch (error) {
+      setTrips([]);
+      setSearchError(error instanceof Error ? error.message : 'Ocurrió un error al buscar viajes.');
+    } finally {
+      setLoadingTrips(false);
+    }
+  }
+
+  // Al entrar se muestran todos los viajes disponibles, sin filtros.
+  useEffect(() => {
+    let active = true;
+
+    searchPassengerTrips()
+      .then((result) => {
+        if (active) {
+          setTrips(result);
+          setHasSearched(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setSearchError(
+            error instanceof Error ? error.message : 'Ocurrió un error al cargar los viajes.',
+          );
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingTrips(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -125,47 +172,31 @@ export function PassengerTripSearchPage() {
     };
   }, []);
 
-  function clearResults() {
-    setTrips([]);
-    setHasSearched(false);
-    setSearchError(null);
-  }
-
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    clearResults();
 
-    if (!originCityId || !destinationCityId || !travelDate) {
-      setSearchError('Selecciona el origen, destino y fecha del viaje.');
-      return;
-    }
-
-    if (originCityId === destinationCityId) {
+    if (originCityId && originCityId === destinationCityId) {
       setSearchError('El origen y el destino deben ser diferentes.');
       return;
     }
 
-    if (travelDate < today) {
+    if (travelDate && travelDate < today) {
       setSearchError('Selecciona una fecha actual o futura.');
       return;
     }
 
-    setLoadingTrips(true);
+    await loadTrips({
+      originCityId: originCityId ? Number(originCityId) : undefined,
+      destinationCityId: destinationCityId ? Number(destinationCityId) : undefined,
+      travelDate: travelDate || undefined,
+    });
+  }
 
-    try {
-      const result = await searchPassengerTrips({
-        originCityId: Number(originCityId),
-        destinationCityId: Number(destinationCityId),
-        travelDate,
-      });
-
-      setTrips(result);
-      setHasSearched(true);
-    } catch (error) {
-      setSearchError(error instanceof Error ? error.message : 'Ocurrió un error al buscar viajes.');
-    } finally {
-      setLoadingTrips(false);
-    }
+  function handleClearFilters() {
+    setOriginCityId('');
+    setDestinationCityId('');
+    setTravelDate('');
+    void loadTrips();
   }
 
   return (
@@ -174,7 +205,8 @@ export function PassengerTripSearchPage() {
         <p className="passenger-trip-search__eyebrow">PLANIFICA TU VIAJE</p>
         <h1>Buscar viajes</h1>
         <p>
-          Selecciona tu ciudad de origen, destino y fecha para consultar las salidas disponibles.
+          Estas son todas las salidas disponibles. Usa los filtros de origen, destino o fecha para
+          encontrar solo las que necesitas.
         </p>
       </header>
 
@@ -191,13 +223,10 @@ export function PassengerTripSearchPage() {
                 if (value === destinationCityId) {
                   setDestinationCityId('');
                 }
-
-                clearResults();
               }}
               disabled={loadingCities || loadingTrips}
-              required
             >
-              <option value="">Selecciona el origen</option>
+              <option value="">Todos los orígenes</option>
               {cities.map((city) => (
                 <option key={city.id} value={city.id}>
                   {city.name} - {city.province}
@@ -210,14 +239,10 @@ export function PassengerTripSearchPage() {
             <span>Ciudad de destino</span>
             <select
               value={destinationCityId}
-              onChange={(event) => {
-                setDestinationCityId(event.target.value);
-                clearResults();
-              }}
+              onChange={(event) => setDestinationCityId(event.target.value)}
               disabled={loadingCities || loadingTrips}
-              required
             >
-              <option value="">Selecciona el destino</option>
+              <option value="">Todos los destinos</option>
               {cities
                 .filter((city) => String(city.id) !== originCityId)
                 .map((city) => (
@@ -234,12 +259,8 @@ export function PassengerTripSearchPage() {
               type="date"
               min={today}
               value={travelDate}
-              onChange={(event) => {
-                setTravelDate(event.target.value);
-                clearResults();
-              }}
+              onChange={(event) => setTravelDate(event.target.value)}
               disabled={loadingTrips}
-              required
             />
           </label>
         </div>
@@ -250,19 +271,26 @@ export function PassengerTripSearchPage() {
           </p>
         )}
 
-        {!loadingCities && !citiesError && cities.length < 2 && (
-          <p className="passenger-trip-search__notice">
-            Se necesitan al menos dos ciudades registradas para realizar una búsqueda.
-          </p>
-        )}
+        <div className="passenger-trip-search__actions">
+          <button
+            className="passenger-trip-search__button"
+            type="submit"
+            disabled={loadingCities || loadingTrips}
+          >
+            {loadingTrips ? 'Buscando viajes...' : 'Filtrar viajes'}
+          </button>
 
-        <button
-          className="passenger-trip-search__button"
-          type="submit"
-          disabled={loadingCities || loadingTrips || cities.length < 2}
-        >
-          {loadingTrips ? 'Buscando viajes...' : 'Buscar viajes'}
-        </button>
+          {(isFiltered || originCityId || destinationCityId || travelDate) && (
+            <button
+              className="passenger-trip-search__button passenger-trip-search__button--secondary"
+              type="button"
+              onClick={handleClearFilters}
+              disabled={loadingTrips}
+            >
+              Quitar filtros
+            </button>
+          )}
+        </div>
       </form>
 
       {loadingCities && <p role="status">Cargando ciudades...</p>}
@@ -277,14 +305,15 @@ export function PassengerTripSearchPage() {
 
       {hasSearched && !loadingTrips && (
         <div className="passenger-trip-search__results">
-          <h2>Resultados de la búsqueda</h2>
+          <h2>{isFiltered ? 'Resultados de la búsqueda' : 'Viajes disponibles'}</h2>
 
           {trips.length === 0 ? (
             <div className="passenger-trip-search__empty">
               <h3>No se encontraron viajes</h3>
               <p>
-                No hay salidas disponibles para el origen, destino y fecha seleccionados. Prueba con
-                otra fecha.
+                {isFiltered
+                  ? 'No hay salidas disponibles con esos filtros. Prueba con otra ciudad o fecha.'
+                  : 'Por ahora no hay salidas programadas. Vuelve a consultar más tarde.'}
               </p>
             </div>
           ) : (

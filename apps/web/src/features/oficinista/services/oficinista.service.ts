@@ -57,7 +57,9 @@ export async function getOfficeTripCities(): Promise<TripCity[]> {
   return (await response.json()) as TripCity[];
 }
 
-export async function searchOfficeTrips(params: TripSearchParams): Promise<TripSearchResult[]> {
+export async function searchOfficeTrips(
+  params: Required<TripSearchParams>,
+): Promise<TripSearchResult[]> {
   const query = new URLSearchParams({
     origin_city_id: String(params.originCityId),
     destination_city_id: String(params.destinationCityId),

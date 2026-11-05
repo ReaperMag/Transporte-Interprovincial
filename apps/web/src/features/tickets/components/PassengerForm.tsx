@@ -1,4 +1,5 @@
 import type { SalePassengerForm } from '../types/ticketSale.types';
+import { cleanName, cleanPhone, onlyDigits } from '../../../shared/utils/validation';
 import './PassengerForm.css';
 
 interface PassengerFormProps {
@@ -35,7 +36,9 @@ export function PassengerForm({
             type="text"
             value={form.cedula}
             disabled={disabled}
-            onChange={(e) => onChange('cedula', e.target.value.toUpperCase())}
+            inputMode="numeric"
+            maxLength={10}
+            onChange={(e) => onChange('cedula', onlyDigits(e.target.value, 10))}
             className="passenger-form__input"
             placeholder="Ej. 0102030405"
           />
@@ -51,7 +54,7 @@ export function PassengerForm({
             type="text"
             value={form.firstName}
             disabled={disabled}
-            onChange={(e) => onChange('firstName', e.target.value)}
+            onChange={(e) => onChange('firstName', cleanName(e.target.value))}
             className="passenger-form__input"
             placeholder="Nombres"
           />
@@ -67,7 +70,7 @@ export function PassengerForm({
             type="text"
             value={form.lastName}
             disabled={disabled}
-            onChange={(e) => onChange('lastName', e.target.value)}
+            onChange={(e) => onChange('lastName', cleanName(e.target.value))}
             className="passenger-form__input"
             placeholder="Apellidos"
           />
@@ -98,7 +101,7 @@ export function PassengerForm({
             type="tel"
             value={form.phone}
             disabled={disabled}
-            onChange={(e) => onChange('phone', e.target.value)}
+            onChange={(e) => onChange('phone', cleanPhone(e.target.value))}
             className="passenger-form__input"
             placeholder="0999999999"
           />

@@ -48,7 +48,7 @@ def reserve_in_office(client, data, seat=3):
     response = client.post(
         "/api/v1/reservations/office",
         json=reservation_payload(
-            data, "quito", "loja", [(seat, passenger("1799999990", "Juan", "Paz"))]
+            data, "quito", "loja", [(seat, passenger("1756990063", "Juan", "Paz"))]
         ),
         headers=ORIGIN,
     )
@@ -180,7 +180,7 @@ def test_discount_seats_require_the_passenger_document(payments):
     with Session(engine) as db:
         db.add(
             Passenger(
-                id_number="1755555555",
+                id_number="1755555552",
                 first_name="Elena",
                 last_name="Vaca",
                 category=PassengerCategory.SENIOR,
@@ -188,7 +188,7 @@ def test_discount_seats_require_the_passenger_document(payments):
         )
         db.commit()
 
-    senior = passenger("1755555555", "Elena", "Vaca")
+    senior = passenger("1755555552", "Elena", "Vaca")
     senior["category"] = "senior"
 
     login(client, "ana@example.com")

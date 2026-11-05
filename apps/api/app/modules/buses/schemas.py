@@ -10,6 +10,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.validators import validate_digits, validate_plate
 from app.modules.buses.models import BusOrigin, BusStatus, SeatType
 
 def to_camel(value: str) -> str:
@@ -170,7 +171,7 @@ class BusCreate(BusGroupSchema):
         normalized = " ".join(value.split()).upper()
         if not normalized:
             raise ValueError("La placa es obligatoria.")
-        return normalized
+        return validate_plate(normalized)
 
     @field_validator("number")
     @classmethod
@@ -178,7 +179,7 @@ class BusCreate(BusGroupSchema):
         normalized = " ".join(value.split())
         if not normalized:
             raise ValueError("El número de disco es obligatorio.")
-        return normalized
+        return validate_digits(normalized)
 
 
 class BusUpdate(BusGroupSchema):
@@ -223,7 +224,9 @@ class BusUpdate(BusGroupSchema):
     @field_validator("plate")
     @classmethod
     def normalize_update_plate(cls, value: str | None) -> str | None:
-        return " ".join(value.split()).upper() if value is not None else None
+        if value is None:
+            return None
+        return validate_plate(" ".join(value.split()).upper())
 
     @field_validator("number")
     @classmethod
@@ -233,7 +236,7 @@ class BusUpdate(BusGroupSchema):
         normalized = " ".join(value.split())
         if not normalized:
             raise ValueError("El número de disco no puede estar vacío.")
-        return normalized
+        return validate_digits(normalized)
 
 
 class BusTemplateSeatRead(BusGroupSchema):

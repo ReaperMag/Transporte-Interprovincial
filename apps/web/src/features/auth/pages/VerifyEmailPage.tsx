@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
+import { emailError, onlyDigits } from '../../../shared/utils/validation';
 import { AuthPageLayout } from '../components/AuthPageLayout';
 import { RESEND_COOLDOWN_SECONDS, useCooldown } from '../hooks/useCooldown';
 import { AuthApiError } from '../services/authApi';
@@ -17,10 +18,6 @@ const INITIAL_NOTICES = {
   login:
     'Tu cuenta aún no está verificada. Ingresa el código que te enviamos o solicita uno nuevo.',
 };
-
-function onlyDigits(value: string): string {
-  return value.replace(/\D/g, '').slice(0, 6);
-}
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof AuthApiError ? error.message : fallback;
@@ -42,6 +39,12 @@ export function VerifyEmailPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isLoading) return;
+
+    const invalidEmail = emailError(email);
+    if (invalidEmail) {
+      setError(invalidEmail);
+      return;
+    }
 
     if (code.length !== 6) {
       setError('El código debe tener 6 dígitos.');
@@ -135,7 +138,7 @@ export function VerifyEmailPage() {
               inputMode="numeric"
               autoComplete="one-time-code"
               value={code}
-              onChange={(event) => setCode(onlyDigits(event.target.value))}
+              onChange={(event) => setCode(onlyDigits(event.target.value, 6))}
               placeholder="000000"
               maxLength={6}
               required

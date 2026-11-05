@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 
+import { emailError, onlyDigits } from '../../../shared/utils/validation';
 import { AuthPageLayout } from '../components/AuthPageLayout';
 import { RESEND_COOLDOWN_SECONDS, useCooldown } from '../hooks/useCooldown';
 import { AuthApiError } from '../services/authApi';
@@ -15,10 +16,6 @@ export interface ResetPasswordLocationState {
 // Misma política de contraseñas que el registro.
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 128;
-
-function onlyDigits(value: string): string {
-  return value.replace(/\D/g, '').slice(0, 6);
-}
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof AuthApiError ? error.message : fallback;
@@ -41,7 +38,8 @@ export function ResetPasswordPage() {
   const cooldown = useCooldown(codeSent ? RESEND_COOLDOWN_SECONDS : 0);
 
   function validate(): string | null {
-    if (!email.trim()) return 'Ingresa tu correo electrónico.';
+    const invalidEmail = emailError(email);
+    if (invalidEmail) return invalidEmail;
     if (code.length !== 6) return 'El código debe tener 6 dígitos.';
     if (password.length < PASSWORD_MIN_LENGTH) {
       return `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`;
@@ -152,7 +150,7 @@ export function ResetPasswordPage() {
               inputMode="numeric"
               autoComplete="one-time-code"
               value={code}
-              onChange={(event) => setCode(onlyDigits(event.target.value))}
+              onChange={(event) => setCode(onlyDigits(event.target.value, 6))}
               placeholder="000000"
               maxLength={6}
               required

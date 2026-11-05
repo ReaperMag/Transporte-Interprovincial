@@ -1,8 +1,16 @@
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
+from app.core.validators import validate_place_name
 from app.modules.buses.models import SeatType
 from app.modules.routes.models import RouteType
 
@@ -21,9 +29,16 @@ class RouteSchema(BaseModel):
     )
 
 
-CityName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
+# Ciudades y provincias: solo letras y espacios.
+CityName = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=2, max_length=100),
+    AfterValidator(validate_place_name),
+]
 ProvinceName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)
+    str,
+    StringConstraints(strip_whitespace=True, min_length=2, max_length=100),
+    AfterValidator(validate_place_name),
 ]
 
 

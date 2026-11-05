@@ -8,6 +8,10 @@ interface BusSeatMapProps {
   selectedSeatIds: ReadonlySet<string>;
   onFloorChange: (floor: number) => void;
   onToggleSeat: (seat: TemplateSeat) => void;
+  /** Asientos que ya están vendidos o reservados en el tramo. */
+  unavailableSeatIds?: ReadonlySet<string>;
+  /** Bloquea los asientos libres, por ejemplo al llegar al máximo. */
+  isSeatDisabled?: (seat: TemplateSeat) => boolean;
 }
 
 export function BusSeatMap({
@@ -16,6 +20,8 @@ export function BusSeatMap({
   selectedSeatIds,
   onFloorChange,
   onToggleSeat,
+  unavailableSeatIds,
+  isSeatDisabled,
 }: BusSeatMapProps) {
   const floorSeats = template.seats.filter((seat) => seat.floor === selectedFloor);
   const rowCount = Math.max(...floorSeats.map((seat) => seat.row));
@@ -62,10 +68,13 @@ export function BusSeatMap({
         >
           {floorSeats.map((seat) => {
             const isSelected = selectedSeatIds.has(seat.id);
+            const isUnavailable = unavailableSeatIds?.has(seat.id) ?? false;
+            const isDisabled = isUnavailable || (!isSelected && (isSeatDisabled?.(seat) ?? false));
             const seatClasses = [
               'bus-seat-map__seat',
               seat.seatType === 'vip' ? 'bus-seat-map__seat--vip' : '',
               isSelected ? 'bus-seat-map__seat--selected' : '',
+              isUnavailable ? 'bus-seat-map__seat--unavailable' : '',
             ]
               .filter(Boolean)
               .join(' ');
@@ -80,9 +89,10 @@ export function BusSeatMap({
                   gridRow: seat.row,
                 }}
                 aria-label={`Asiento ${seat.number}, ${seat.seatType === 'vip' ? 'VIP' : 'normal'}${
-                  isSelected ? ', seleccionado' : ''
+                  isUnavailable ? ', ocupado' : isSelected ? ', seleccionado' : ''
                 }`}
                 aria-pressed={isSelected}
+                disabled={isDisabled}
                 onClick={() => onToggleSeat(seat)}
               >
                 <span className="bus-seat-map__seat-number">{seat.number}</span>

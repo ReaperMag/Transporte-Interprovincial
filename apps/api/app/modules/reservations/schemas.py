@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.validators import Cedula, EmailWithDomain, PersonName, Phone
 from app.modules.buses.models import SeatType
 from app.modules.passengers.models import PassengerCategory
 from app.modules.reservations.models import ReservationStatus
@@ -33,21 +34,22 @@ class TripSeatsResponse(BaseModel):
 
 
 class ReservationPassengerInput(BaseModel):
-    idNumber: str = Field(min_length=5, max_length=13)
-    firstName: str = Field(min_length=1, max_length=100)
-    lastName: str = Field(min_length=1, max_length=100)
+    # Solo cédulas ecuatorianas, con su dígito verificador.
+    idNumber: Cedula
+    firstName: PersonName = Field(max_length=100)
+    lastName: PersonName = Field(max_length=100)
     birthDate: date | None = None
-    phone: str | None = Field(default=None, max_length=20)
-    email: str | None = Field(default=None, max_length=150)
+    phone: Phone | None = Field(default=None, max_length=20)
+    email: EmailWithDomain | None = Field(default=None, max_length=150)
     # Categoría que declara quien compra. El chofer la verifica al subir al bus.
     category: PassengerCategory = PassengerCategory.REGULAR
 
-    @field_validator("idNumber", "firstName", "lastName")
+    @field_validator("phone", "email", mode="before")
     @classmethod
-    def strip_required_text(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("El campo no puede estar vacío.")
+    def empty_optional_text(cls, value: object) -> object:
+        # Un campo opcional que llega vacío se guarda como no registrado.
+        if isinstance(value, str) and not value.strip():
+            return None
         return value
 
 

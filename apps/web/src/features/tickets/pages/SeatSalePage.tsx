@@ -8,6 +8,7 @@ import { PassengerCountModal } from '../components/PassengerCountModal';
 import { PassengerForm } from '../components/PassengerForm';
 import type { InvoiceData, InvoiceItem } from '../types/invoice.types';
 import type { SalePassengerForm } from '../types/ticketSale.types';
+import { cedulaError, emailError, phoneError } from '../../../shared/utils/validation';
 import './SeatSalePage.css';
 
 const exampleSeatPrices: Record<string, number> = Object.fromEntries(
@@ -37,11 +38,9 @@ function createEmptyForm(): SalePassengerForm {
 function validateForm(form: SalePassengerForm): Partial<Record<keyof SalePassengerForm, string>> {
   const errors: Partial<Record<keyof SalePassengerForm, string>> = {};
 
-  const cedula = form.cedula.trim();
-  if (!cedula) {
-    errors.cedula = 'La cédula es obligatoria.';
-  } else if (!/^[0-9A-Z]{5,13}$/.test(cedula)) {
-    errors.cedula = 'La cédula debe contener solo letras y números (5 a 13 caracteres).';
+  const cedula = cedulaError(form.cedula.trim());
+  if (cedula) {
+    errors.cedula = cedula;
   }
 
   const firstName = form.firstName.trim();
@@ -62,18 +61,14 @@ function validateForm(form: SalePassengerForm): Partial<Record<keyof SalePasseng
     errors.birthDate = 'La fecha de nacimiento es obligatoria.';
   }
 
-  const phone = form.phone.trim();
+  const phone = phoneError(form.phone);
   if (phone) {
-    if (!/^[0-9+\-\s()]{7,20}$/.test(phone)) {
-      errors.phone = 'El teléfono tiene un formato no válido.';
-    }
+    errors.phone = phone;
   }
 
-  const email = form.email.trim();
+  const email = emailError(form.email, false);
   if (email) {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = 'El correo electrónico tiene un formato no válido.';
-    }
+    errors.email = email;
   }
 
   return errors;

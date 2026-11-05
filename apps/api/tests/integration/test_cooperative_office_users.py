@@ -143,7 +143,7 @@ def test_invalid_id_and_forbidden_fields_are_rejected(test_environment):
     ("field", "value"),
     [
         ("phone", "09912345678"),
-        ("phone", "09 91234567"),
+        ("phone", "09 912345678"),
         ("email", "correo-invalido"),
         ("confirmPassword", "OtraClave123!"),
     ],

@@ -39,7 +39,7 @@ def test_successful_signup(test_environment, signup_data):
         assert account is not None
         assert passenger is not None
         assert passenger.first_name == "Ana"
-        assert passenger.id_number == "1712345678"
+        assert passenger.id_number == "1712345675"
 
 
 def test_password_is_hashed(test_environment, signup_data):

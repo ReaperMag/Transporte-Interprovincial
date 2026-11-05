@@ -7,7 +7,19 @@ import {
   OfficeUserApiError,
   updateOfficeUser,
 } from '../services/officeUsers.service';
-import type { OfficeUser, OfficeUserUpdate } from '../services/officeUsers.service';
+import type {
+  OfficeUser,
+  OfficeUserUpdate,
+} from '../services/officeUsers.service';
+import {
+  cedulaError,
+  cleanName,
+  cleanPhone,
+  emailError,
+  nameError,
+  onlyDigits,
+  phoneError,
+} from '../../../shared/utils/validation';
 import './CooperativeOfficeUsersPage.css';
 
 type DialogMode = 'create' | 'edit';
@@ -31,17 +43,6 @@ const emptyValues: FormValues = {
   password: '',
   confirmPassword: '',
 };
-
-function isValidEcuadorianId(value: string): boolean {
-  if (!/^\d{10}$/.test(value)) return false;
-  const province = Number(value.slice(0, 2));
-  if (province < 1 || province > 24 || Number(value[2]) > 5) return false;
-  const total = [...value.slice(0, 9)].reduce((sum, digit, index) => {
-    const product = Number(digit) * (index % 2 === 0 ? 2 : 1);
-    return sum + (product > 9 ? product - 9 : product);
-  }, 0);
-  return (10 - (total % 10)) % 10 === Number(value[9]);
-}
 
 function formValuesFromUser(user?: OfficeUser): FormValues {
   return user
@@ -339,12 +340,14 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
     if (isSaving) return;
     setError(null);
 
-    if (!isValidEcuadorianId(values.idNumber.trim())) {
-      setError('Ingresa una cédula ecuatoriana válida.');
-      return;
-    }
-    if (!isEdit && values.phone.trim() === '') {
-      setError('El teléfono es obligatorio.');
+    const validationError =
+      nameError(values.firstName) ??
+      nameError(values.lastName) ??
+      cedulaError(values.idNumber.trim()) ??
+      emailError(values.email) ??
+      phoneError(values.phone, !isEdit);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     if (!isEdit && values.password.length < 8) {
@@ -356,9 +359,12 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
       return;
     }
     const phoneChanged = values.phone.trim() !== initialValuesRef.current.phone.trim();
-    if ((!isEdit || phoneChanged) && !/^\d{7,10}$/.test(values.phone)) {
-      setError('El teléfono debe contener entre siete y diez dígitos.');
-      return;
+    if (!isEdit || phoneChanged) {
+      const phoneDigits = values.phone.replace(/\D/g, '');
+      if (phoneDigits.length < 7 || phoneDigits.length > 10) {
+        setError('El teléfono debe contener entre siete y diez dígitos.');
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -444,61 +450,16 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
         </header>
         <form onSubmit={handleSubmit}>
           <div className="office-users-dialog__fields">
-            <label>
-              Nombres
-              <input
-                autoFocus
-                maxLength={100}
-                onChange={(event) => updateValue('firstName', event.target.value)}
-                required
-                value={values.firstName}
-                disabled={isSaving}
-              />
-            </label>
-            <label>
-              Apellidos
-              <input
-                maxLength={100}
-                onChange={(event) => updateValue('lastName', event.target.value)}
-                required
-                value={values.lastName}
-                disabled={isSaving}
-              />
-            </label>
-            <label>
-              Cédula ecuatoriana
-              <input
-                inputMode="numeric"
-                maxLength={10}
-                minLength={10}
-                onChange={(event) => updateValue('idNumber', event.target.value)}
-                required
-                value={values.idNumber}
-                disabled={isSaving}
-              />
-            </label>
-            <label>
-              Correo electrónico
-              <input
-                autoComplete="email"
-                maxLength={150}
-                onChange={(event) => updateValue('email', event.target.value)}
-                required
-                type="email"
-                value={values.email}
-                disabled={isSaving}
-              />
-            </label>
+            <label>Nombres<input autoFocus maxLength={100} onChange={(event) => updateValue('firstName', cleanName(event.target.value))} required value={values.firstName} disabled={isSaving} /></label>
+            <label>Apellidos<input maxLength={100} onChange={(event) => updateValue('lastName', cleanName(event.target.value))} required value={values.lastName} disabled={isSaving} /></label>
+            <label>Cédula ecuatoriana<input inputMode="numeric" maxLength={10} minLength={10} onChange={(event) => updateValue('idNumber', onlyDigits(event.target.value, 10))} required value={values.idNumber} disabled={isSaving} /></label>
+            <label>Correo electrónico<input autoComplete="email" maxLength={150} onChange={(event) => updateValue('email', event.target.value)} required type="email" value={values.email} disabled={isSaving} /></label>
             <label>
               Teléfono
               <input
                 autoComplete="tel"
-                inputMode="numeric"
-                maxLength={10}
-                minLength={isEdit ? undefined : 7}
-                onChange={(event) =>
-                  updateValue('phone', event.target.value.replace(/\D/g, '').slice(0, 10))
-                }
+                maxLength={20}
+                onChange={(event) => updateValue('phone', cleanPhone(event.target.value))}
                 required={!isEdit}
                 type="tel"
                 value={values.phone}

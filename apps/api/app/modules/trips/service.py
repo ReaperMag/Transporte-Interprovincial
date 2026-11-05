@@ -76,34 +76,38 @@ def get_cities_for_cooperative(db: Session, cooperative_id: int) -> list[CityOpt
 
 def search_trips(
     db: Session,
-    origin_city_id: int,
-    destination_city_id: int,
-    travel_date: date,
+    origin_city_id: int | None = None,
+    destination_city_id: int | None = None,
+    travel_date: date | None = None,
     cooperative_id: int | None = None,
 ) -> list[TripSearchResult]:
     """
-    Busca viajes programados para una ruta completa
-    y una fecha determinada.
+    Busca los viajes programados que todavía no salen.
+
+    Sin filtros devuelve todos los viajes disponibles. El origen, el destino
+    y la fecha son opcionales y cada uno reduce los resultados.
 
     Solo devuelve viajes con tarifas registradas.
     No calcula todavía disponibilidad de asientos.
     """
 
-    start_of_day = datetime.combine(
-        travel_date,
-        time.min,
-        tzinfo=ECUADOR_TIMEZONE,
-    )
-
-    end_of_day = start_of_day + timedelta(days=1)
-
     current_time = datetime.now(ECUADOR_TIMEZONE)
+    search_start = current_time
+    search_end = None
 
-    # No consultar viajes de fechas que ya terminaron.
-    if end_of_day <= current_time:
-        return []
+    if travel_date is not None:
+        start_of_day = datetime.combine(
+            travel_date,
+            time.min,
+            tzinfo=ECUADOR_TIMEZONE,
+        )
+        search_end = start_of_day + timedelta(days=1)
 
-    search_start = max(start_of_day, current_time)
+        # No consultar viajes de fechas que ya terminaron.
+        if search_end <= current_time:
+            return []
+
+        search_start = max(start_of_day, current_time)
 
     origin_city = aliased(City)
     destination_city = aliased(City)
@@ -145,10 +149,11 @@ def search_trips(
         )
         .join(
             Fare,
+            # Tarifas del recorrido completo de la ruta.
             and_(
                 Fare.route_id == Route.id,
-                Fare.origin_city_id == origin_city_id,
-                Fare.destination_city_id == destination_city_id,
+                Fare.origin_city_id == Route.origin_city_id,
+                Fare.destination_city_id == Route.destination_city_id,
             ),
         )
         .outerjoin(
@@ -161,10 +166,6 @@ def search_trips(
         .where(
             Trip.status == TripStatus.SCHEDULED,
             Trip.departure_at >= search_start,
-            Trip.departure_at < end_of_day,
-
-            Route.origin_city_id == origin_city_id,
-            Route.destination_city_id == destination_city_id,
 
             Frequency.is_active.is_(True),
             Route.is_active.is_(True),
@@ -194,6 +195,13 @@ def search_trips(
             Fare.price,
         )
     )
+
+    if search_end is not None:
+        statement = statement.where(Trip.departure_at < search_end)
+    if origin_city_id is not None:
+        statement = statement.where(Route.origin_city_id == origin_city_id)
+    if destination_city_id is not None:
+        statement = statement.where(Route.destination_city_id == destination_city_id)
 
     rows = db.execute(statement).all()
 

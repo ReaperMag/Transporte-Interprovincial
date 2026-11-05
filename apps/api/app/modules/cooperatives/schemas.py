@@ -4,13 +4,15 @@ from typing import Annotated
 from urllib.parse import urlsplit
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
-    EmailStr,
     Field,
     StringConstraints,
     field_validator,
 )
+
+from app.core.validators import EmailWithDomain, validate_phone, validate_ruc
 
 
 def to_camel(value: str) -> str:
@@ -29,12 +31,18 @@ class CooperativeSchema(BaseModel):
 CooperativeName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=150)
 ]
-Ruc = Annotated[str, StringConstraints(pattern=r"^\d{13}$", strip_whitespace=True)]
-Email = Annotated[
+# RUC ecuatoriano de 13 números con provincia y establecimiento válidos.
+Ruc = Annotated[
     str,
-    StringConstraints(max_length=150, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$"),
+    StringConstraints(strip_whitespace=True, max_length=13),
+    AfterValidator(validate_ruc),
 ]
-Phone = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)]
+Email = Annotated[EmailWithDomain, StringConstraints(max_length=150)]
+Phone = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=20),
+    AfterValidator(validate_phone),
+]
 Address = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
 ProfileUrl = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)
@@ -82,7 +90,7 @@ class CooperativeCreate(CooperativeAdminWrite):
 
 
 class CooperativeAccountCreate(CooperativeCreate):
-    account_email: EmailStr
+    account_email: EmailWithDomain
     initial_password: str = Field(min_length=12, max_length=128)
 
 
@@ -141,20 +149,6 @@ class CooperativeProfileUpdate(CooperativeSchema):
     @classmethod
     def links_must_use_http(cls, value: str | None) -> str | None:
         return validate_http_url(value)
-
-    @field_validator("phone")
-    @classmethod
-    def phone_must_have_a_valid_format(cls, value: str | None) -> str | None:
-        if value is None:
-            return value
-        digits = "".join(character for character in value if character.isdigit())
-        if (
-            len(digits) < 7
-            or len(digits) > 15
-            or re.fullmatch(r"\+?[0-9][0-9 ().-]{5,19}", value) is None
-        ):
-            raise ValueError("Ingresa un número de teléfono válido.")
-        return value
 
 
 class CooperativeProfileRead(CooperativeSchema):
