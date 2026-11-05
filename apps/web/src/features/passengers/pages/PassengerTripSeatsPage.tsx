@@ -321,7 +321,7 @@ export function PassengerTripSeatsPage() {
       <section className="passenger-trip-search">
         <h1>Viaje no válido</h1>
         <p>No se recibió la información necesaria del viaje.</p>
-        <Link to="/pasajero/viajes">Volver a buscar viajes</Link>
+        <Link to="/pasajero">Volver a buscar viajes</Link>
       </section>
     );
   }
@@ -334,7 +334,7 @@ export function PassengerTripSeatsPage() {
         <p>Elige tus asientos e ingresa los datos de cada pasajero.</p>
       </header>
 
-      <Link to="/pasajero/viajes">Volver a buscar viajes</Link>
+      <Link to="/pasajero">Volver a buscar viajes</Link>
 
       {loading && <p role="status">Cargando asientos del viaje...</p>}
 

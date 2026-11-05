@@ -175,7 +175,7 @@ export function PassengerReservationsPage() {
           {loading ? 'Actualizando...' : 'Actualizar reservas'}
         </button>
 
-        <Link to="/pasajero/viajes">Buscar otro viaje</Link>
+        <Link to="/pasajero">Buscar otro viaje</Link>
       </div>
 
       {/* Mensajes de operaciones */}
@@ -212,7 +212,7 @@ export function PassengerReservationsPage() {
             apartados.
           </p>
 
-          <Link to="/pasajero/viajes">Buscar viajes disponibles</Link>
+          <Link to="/pasajero">Buscar viajes disponibles</Link>
         </div>
       )}
 
