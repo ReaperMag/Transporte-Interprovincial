@@ -1,7 +1,9 @@
+from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from app.modules.buses.models import SeatType
 from app.modules.routes.models import RouteType
 
 
@@ -49,14 +51,30 @@ class RouteStopRead(RouteSchema):
     minutes_from_origin: int
 
 
+class RouteFareCreate(RouteSchema):
+    seat_type: SeatType
+    price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+
+
+def _validate_fares(fares: list[RouteFareCreate]) -> list[RouteFareCreate]:
+    seat_types = [fare.seat_type for fare in fares]
+    if fares and set(seat_types) != {SeatType.NORMAL, SeatType.VIP}:
+        raise ValueError("Registra una tarifa Normal y otra VIP.")
+    if len(seat_types) != len(set(seat_types)):
+        raise ValueError("No se puede repetir el tipo de asiento en las tarifas.")
+    return fares
+
+
 class CooperativeRouteCreate(RouteSchema):
     origin_city_id: int = Field(gt=0)
     destination_city_id: int = Field(gt=0)
     duration_minutes: int = Field(ge=10, le=1440)
     stops: list[RouteStopCreate] = Field(default_factory=list, max_length=20)
+    fares: list[RouteFareCreate] = Field(min_length=2, max_length=2)
 
     @model_validator(mode="after")
     def validate_route(self) -> "CooperativeRouteCreate":
+        _validate_fares(self.fares)
         if self.origin_city_id == self.destination_city_id:
             raise ValueError("El origen y el destino deben ser diferentes.")
         if self.origin_city_id in {stop.city_id for stop in self.stops}:
@@ -76,6 +94,20 @@ class CooperativeRouteCreate(RouteSchema):
         return self
 
 
+class RouteFaresUpdate(RouteSchema):
+    fares: list[RouteFareCreate] = Field(min_length=2, max_length=2)
+
+    @model_validator(mode="after")
+    def validate_route_fares(self) -> "RouteFaresUpdate":
+        _validate_fares(self.fares)
+        return self
+
+
+class RouteFareRead(RouteSchema):
+    seat_type: SeatType
+    price: Decimal
+
+
 class CooperativeRouteRead(RouteSchema):
     id: int
     origin_city_id: int
@@ -88,3 +120,4 @@ class CooperativeRouteRead(RouteSchema):
     route_type: RouteType
     is_active: bool
     stops: list[RouteStopRead]
+    fares: list[RouteFareRead]

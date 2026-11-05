@@ -88,7 +88,15 @@ def create_city(client, name: str, province: str) -> int:
     return response.json()["id"]
 
 
-def create_route(client, origin_id: int, destination_id: int, *, duration: int, stops=None):
+def create_route(
+    client,
+    origin_id: int,
+    destination_id: int,
+    *,
+    duration: int,
+    stops=None,
+    fares=None,
+):
     response = client.post(
         f"{PLANNING_URL}/routes",
         json={
@@ -96,6 +104,11 @@ def create_route(client, origin_id: int, destination_id: int, *, duration: int, 
             "destinationCityId": destination_id,
             "durationMinutes": duration,
             "stops": stops or [],
+            "fares": fares
+            or [
+                {"seatType": "normal", "price": "8.00"},
+                {"seatType": "vip", "price": "12.00"},
+            ],
         },
         headers={"Origin": settings.frontend_origin},
     )
@@ -141,6 +154,46 @@ def test_cooperative_can_create_route_with_ordered_stops_and_group_frequency(tes
     assert frequency["busGroupId"] == group_id
     assert frequency["routeName"] == "Ambato - Quito"
     assert frequency["durationMinutes"] == 180
+
+
+def test_cooperative_can_set_and_update_route_fares(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    origin_id = create_city(client, "Quito", "Pichincha")
+    destination_id = create_city(client, "Ambato", "Tungurahua")
+    fares = [
+        {"seatType": "normal", "price": "8.00"},
+        {"seatType": "vip", "price": "12.50"},
+    ]
+
+    route = create_route(
+        client,
+        origin_id,
+        destination_id,
+        duration=180,
+        fares=fares,
+    )
+
+    assert route["fares"] == fares
+    listed_route = next(
+        item
+        for item in client.get(f"{PLANNING_URL}/routes").json()
+        if item["id"] == route["id"]
+    )
+    assert listed_route["fares"] == fares
+
+    updated_fares = [
+        {"seatType": "normal", "price": "9.00"},
+        {"seatType": "vip", "price": "13.50"},
+    ]
+    response = client.put(
+        f"{PLANNING_URL}/routes/{route['id']}/fares",
+        json={"fares": updated_fares},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["fares"] == updated_fares
 
 
 def test_route_rejects_subroutes_out_of_order(test_environment):

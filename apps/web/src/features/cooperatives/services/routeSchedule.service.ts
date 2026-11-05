@@ -12,6 +12,11 @@ export interface RouteStop {
   minutesFromOrigin: number;
 }
 
+export interface CooperativeRouteFare {
+  seatType: 'normal' | 'vip';
+  price: string | number;
+}
+
 export interface CooperativeRoute {
   id: number;
   originCityId: number;
@@ -24,6 +29,7 @@ export interface CooperativeRoute {
   routeType: 'direct' | 'with_stops';
   isActive: boolean;
   stops: RouteStop[];
+  fares: CooperativeRouteFare[];
 }
 
 export interface CooperativeFrequency {
@@ -130,10 +136,21 @@ export function createCooperativeRoute(input: {
   destinationCityId: number;
   durationMinutes: number;
   stops: Array<{ cityId: number; minutesFromOrigin: number }>;
+  fares: CooperativeRouteFare[];
 }): Promise<CooperativeRoute> {
   return request<CooperativeRoute>(`${routePlanningUrl}/routes`, {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function updateCooperativeRouteFares(
+  routeId: number,
+  fares: CooperativeRouteFare[],
+): Promise<CooperativeRoute> {
+  return request<CooperativeRoute>(`${routePlanningUrl}/routes/${routeId}/fares`, {
+    method: 'PUT',
+    body: JSON.stringify({ fares }),
   });
 }
 
