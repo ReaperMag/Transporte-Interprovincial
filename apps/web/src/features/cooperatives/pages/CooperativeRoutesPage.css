@@ -266,6 +266,52 @@
   grid-template-columns: repeat(4, minmax(10rem, 1fr));
 }
 
+.cooperative-routes__fares {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid #dbeafe;
+  border-radius: 0.65rem;
+  padding: 1rem;
+  background: #f8fbff;
+}
+
+.cooperative-routes__fares-heading h4 {
+  margin: 0;
+}
+
+.cooperative-routes__fares-heading p {
+  margin: 0.2rem 0 0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.cooperative-routes__fare-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cooperative-routes__fare-row {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) 8rem 8rem;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.cooperative-routes__fare-row span {
+  font-size: 0.9rem;
+}
+
+.cooperative-routes__fare-row--head span {
+  color: #64748b;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cooperative-routes__fare-row input {
+  width: 100%;
+}
+
 .cooperative-routes__stop-list {
   grid-column: 1 / -1;
   display: grid;
@@ -556,6 +602,10 @@
     grid-column: 2 / -1;
     justify-self: start;
   }
+
+  .cooperative-routes__fare-row {
+    grid-template-columns: minmax(8rem, 1fr) 6rem 6rem;
+  }
 }
 
 @media (max-width: 600px) {
@@ -594,5 +644,13 @@
 
   .cooperative-routes__frequency-list small {
     grid-column: 2;
+  }
+
+  .cooperative-routes__fare-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cooperative-routes__fare-row > span:first-child {
+    grid-column: 1 / -1;
   }
 }
