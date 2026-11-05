@@ -219,7 +219,18 @@ export function CooperativeRoutesPage() {
   const activeRoutes = routes.filter((route) => route.isActive && route.durationMinutes !== null);
   const originCity = cities.find((city) => String(city.id) === selectedCityId);
   const destinationCity = cities.find((city) => String(city.id) === selectedDestinationCityId);
-  const sheetFrequencies = plans[serviceDates[0]]?.frequencies ?? [];
+  const sheetFrequencies =
+    plans[serviceDates[0]]?.frequencies ??
+    frequencies.map((frequency) => ({
+      frequencyId: frequency.id,
+      routeId: frequency.routeId,
+      routeName: frequency.routeName,
+      departureTime: frequency.departureTime,
+      durationMinutes: frequency.durationMinutes,
+      resolutionNumber: frequency.resolutionNumber,
+      stops: frequency.stops,
+      busId: null,
+    }));
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
   const refreshCities = async () => {
@@ -330,9 +341,7 @@ export function CooperativeRoutesPage() {
   const handleFareRouteChange = (routeId: string) => {
     setFareRouteId(routeId);
     const route = routes.find((item) => String(item.id) === routeId);
-    setEditNormalFare(
-      String(route?.fares.find((fare) => fare.seatType === 'normal')?.price ?? ''),
-    );
+    setEditNormalFare(String(route?.fares.find((fare) => fare.seatType === 'normal')?.price ?? ''));
     setEditVipFare(String(route?.fares.find((fare) => fare.seatType === 'vip')?.price ?? ''));
   };
 
@@ -780,7 +789,7 @@ export function CooperativeRoutesPage() {
                       </p>
                       <p>
                         {route.fares.length < 2
-                          ? 'Sin tarifas configuradas'
+                          ? 'Sin tarifas: configúralas para mostrar y vender viajes al pasajero'
                           : `Tarifas: Normal ${formatFare(
                               route.fares.find((fare) => fare.seatType === 'normal')?.price ?? 0,
                             )} · VIP ${formatFare(

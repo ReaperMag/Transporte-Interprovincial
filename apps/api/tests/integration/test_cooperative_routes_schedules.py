@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -10,6 +11,7 @@ from app.modules.cooperatives import service
 from app.modules.cooperatives.models import Cooperative
 from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE, ensure_default_roles
 from app.modules.reservations.models import Reservation, ReservationStatus
+from app.modules.routes.models import Fare
 from app.modules.trips.models import Trip
 
 
@@ -154,6 +156,157 @@ def test_cooperative_can_create_route_with_ordered_stops_and_group_frequency(tes
     assert frequency["busGroupId"] == group_id
     assert frequency["routeName"] == "Ambato - Quito"
     assert frequency["durationMinutes"] == 180
+
+
+def test_published_route_sheet_frequency_appears_in_passenger_trip_search(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    origin_id = create_city(client, "Quito", "Pichincha")
+    destination_id = create_city(client, "Ambato", "Tungurahua")
+    route = create_route(client, origin_id, destination_id, duration=180)
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    service_date = date.today() + timedelta(days=1)
+
+    saved = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json={
+            "busGroupId": group_id,
+            "serviceDate": service_date.isoformat(),
+            "assignments": [{"frequencyId": frequency["id"], "busId": bus_ids[0]}],
+            "startingLocations": [{"busId": bus_ids[0], "cityId": origin_id}],
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert saved.status_code == 200, saved.text
+
+    published = client.post(
+        f"{PLANNING_URL}/route-sheets/{saved.json()['id']}/publish",
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert published.status_code == 200, published.text
+
+    second_frequency = create_frequency(client, route["id"], group_id, "12:00")
+    updated_sheet = client.get(
+        f"{PLANNING_URL}/route-sheets",
+        params={"groupId": group_id, "serviceDate": service_date.isoformat()},
+    )
+    assert updated_sheet.status_code == 200, updated_sheet.text
+    assert {
+        item["frequencyId"] for item in updated_sheet.json()["frequencies"]
+    } == {frequency["id"], second_frequency["id"]}
+    assert updated_sheet.json()["canReassign"] is True
+
+    updated = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json={
+            "busGroupId": group_id,
+            "serviceDate": service_date.isoformat(),
+            "assignments": [
+                {"frequencyId": frequency["id"], "busId": bus_ids[0]},
+                {"frequencyId": second_frequency["id"], "busId": bus_ids[1]},
+            ],
+            "startingLocations": [
+                {"busId": bus_ids[0], "cityId": origin_id},
+                {"busId": bus_ids[1], "cityId": origin_id},
+            ],
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["status"] == "published"
+
+    with Session(engine) as db:
+        db.add(
+            Account(
+                email="pasajero-viajes@example.com",
+                password_hash=hash_password(PASSWORD),
+                account_type=AccountType.PASSENGER,
+            )
+        )
+        db.commit()
+
+    client.cookies.clear()
+    passenger_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "pasajero-viajes@example.com", "password": PASSWORD},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert passenger_login.status_code == 200, passenger_login.text
+
+    search = client.get(
+        "/api/v1/trips/search",
+        params={
+            "origin_city_id": origin_id,
+            "destination_city_id": destination_id,
+            "travel_date": service_date.isoformat(),
+        },
+    )
+    assert search.status_code == 200, search.text
+    assert len(search.json()) == 2
+    assert all(trip["routeId"] == route["id"] for trip in search.json())
+    assert all(trip["fares"] for trip in search.json())
+
+
+def test_route_frequencies_must_share_one_bus_group(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
+    with Session(engine) as db:
+        other_group = BusGroup(cooperative_id=cooperative.id, name="Otro grupo")
+        db.add(other_group)
+        db.commit()
+        db.refresh(other_group)
+        other_group_id = other_group.id
+
+    origin_id = create_city(client, "Quito", "Pichincha")
+    destination_id = create_city(client, "Ambato", "Tungurahua")
+    route = create_route(client, origin_id, destination_id, duration=180)
+    create_frequency(client, route["id"], group_id, "08:00")
+
+    response = client.post(
+        f"{PLANNING_URL}/frequencies",
+        json={
+            "routeId": route["id"],
+            "busGroupId": other_group_id,
+            "departureTime": "09:00",
+            "resolutionNumber": "ANT-09:00",
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 409
+    assert "mismo grupo de buses" in response.json()["detail"]
+
+
+def test_route_without_full_fares_cannot_be_assigned_to_a_sheet(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    origin_id = create_city(client, "Quito", "Pichincha")
+    destination_id = create_city(client, "Ambato", "Tungurahua")
+    route = create_route(client, origin_id, destination_id, duration=180)
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    with Session(engine) as db:
+        db.execute(delete(Fare).where(Fare.route_id == route["id"]))
+        db.commit()
+
+    response = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json={
+            "busGroupId": group_id,
+            "serviceDate": (date.today() + timedelta(days=1)).isoformat(),
+            "assignments": [{"frequencyId": frequency["id"], "busId": bus_ids[0]}],
+            "startingLocations": [{"busId": bus_ids[0], "cityId": origin_id}],
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 409
+    assert "tarifas Normal y VIP" in response.json()["detail"]
 
 
 def test_cooperative_can_set_and_update_route_fares(test_environment):
