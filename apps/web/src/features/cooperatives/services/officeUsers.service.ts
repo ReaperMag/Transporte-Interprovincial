@@ -16,9 +16,10 @@ export interface OfficeUserCreate {
   email: string;
   phone: string;
   password: string;
+  confirmPassword: string;
 }
 
-export type OfficeUserUpdate = Partial<Omit<OfficeUserCreate, 'password'>>;
+export type OfficeUserUpdate = Partial<Omit<OfficeUserCreate, 'password' | 'confirmPassword'>>;
 
 export class OfficeUserApiError extends Error {
   constructor(
@@ -45,10 +46,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new OfficeUserApiError(
-      'No se pudo conectar con el servidor. Inténtalo nuevamente.',
-      0,
-    );
+    throw new OfficeUserApiError('No se pudo conectar con el servidor. Inténtalo nuevamente.', 0);
   }
 
   if (!response.ok) {
@@ -78,13 +76,17 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       403: 'No tienes permisos para administrar oficinistas.',
       404: 'El oficinista no fue encontrado.',
       409: 'El correo o la cédula ya están registrados.',
-      422: message === 'Ocurrió un error al procesar la solicitud.'
-        ? 'Revisa los datos ingresados.'
-        : message,
+      422:
+        message === 'Ocurrió un error al procesar la solicitud.'
+          ? 'Revisa los datos ingresados.'
+          : message,
     };
     throw new OfficeUserApiError(statusMessages[response.status] ?? message, response.status);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return (await response.json()) as T;
 }
 
@@ -103,12 +105,13 @@ export function createOfficeUser(values: OfficeUserCreate): Promise<OfficeUser> 
   });
 }
 
-export function updateOfficeUser(
-  id: number,
-  values: OfficeUserUpdate,
-): Promise<OfficeUser> {
+export function updateOfficeUser(id: number, values: OfficeUserUpdate): Promise<OfficeUser> {
   return request<OfficeUser>(`${officeUsersUrl}/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(values),
   });
+}
+
+export function deleteOfficeUser(id: number): Promise<void> {
+  return request<void>(`${officeUsersUrl}/${id}`, { method: 'DELETE' });
 }

@@ -22,7 +22,12 @@ from app.core.permissions import get_office_staff, require_office_staff
 from app.modules.reservations.router import require_passenger
 from app.modules.sales import service
 from app.modules.sales.models import Payment, PaymentMethod
-from app.modules.sales.schemas import PaymentInfo, PaymentRead, PaymentRejection
+from app.modules.sales.schemas import (
+    PaymentInfo,
+    PaymentMethodSelection,
+    PaymentRead,
+    PaymentRejection,
+)
 from app.modules.staff.models import Staff
 
 
@@ -133,6 +138,30 @@ def upload_receipt(
             receipt_reference=receiptReference,
             documents=documents or [],
             document_seat_ids=documentSeatIds or [],
+        )
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+    return service.build_payment_read(db, payment)
+
+
+@router.put(
+    "/reservations/{reservation_id}/method",
+    response_model=PaymentRead,
+)
+def select_payment_method(
+    reservation_id: int,
+    payload: PaymentMethodSelection,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_passenger)],
+    _: None = Depends(validate_request_origin),
+):
+    """Guarda el método elegido antes de que el pasajero envíe su comprobante."""
+    try:
+        payment = service.select_payment_method(
+            db,
+            reservation_id,
+            account.id,
+            method=PaymentMethod(payload.method),
         )
     except service.PaymentError as exc:
         raise_payment_error(exc)

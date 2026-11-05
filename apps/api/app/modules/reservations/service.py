@@ -23,6 +23,7 @@ from app.modules.reservations.schemas import (
     SeatAvailability,
     TripSeatsResponse,
 )
+from app.modules.sales.models import Payment, PaymentMethod, PaymentStatus
 from app.modules.routes.models import Fare, Route, RouteType
 from app.modules.schedules.models import Frequency
 from app.modules.staff.models import Staff
@@ -41,7 +42,6 @@ ACTIVE_STATUSES = (
 # Estados en los que todavía se puede cancelar una reserva.
 CANCELLABLE_STATUSES = (
     ReservationStatus.PENDING_PAYMENT,
-    ReservationStatus.PAYMENT_REVIEW,
 )
 
 # Menores de edad, tercera edad y personas con discapacidad pagan la mitad.
@@ -485,6 +485,16 @@ def create_reservation(
     db.add(reservation)
     db.flush()
 
+    if buyer_account_id is not None and payload.paymentMethod is not None:
+        db.add(
+            Payment(
+                reservation_id=reservation.id,
+                method=PaymentMethod(payload.paymentMethod),
+                amount=reservation.total,
+                status=PaymentStatus.PENDING,
+            )
+        )
+
     seat_count = len(reservation_seats)
     notify(
         db,
@@ -580,7 +590,7 @@ def cancel_reservation(db: Session, reservation: Reservation) -> Reservation:
 
     if reservation.status not in CANCELLABLE_STATUSES:
         raise ReservationNotCancellableError(
-            "Solo se pueden cancelar reservas pendientes de pago o en revisión."
+            "Solo se pueden cancelar reservas antes de enviar el comprobante de pago."
         )
 
     reservation.status = ReservationStatus.CANCELLED

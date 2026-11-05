@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { BusSeatMap } from '../../buses/components/BusSeatMap';
 import '../../buses/components/TransportTheme.css';
@@ -12,6 +12,11 @@ import {
   type ReservationCreate,
   type ReservationRead,
 } from '../services/reservation.service';
+import {
+  getPassengerPaymentMethods,
+  type OnlinePaymentMethod,
+  type PaymentInfo,
+} from '../services/payment.service';
 import {
   cedulaError,
   cleanName,
@@ -89,6 +94,11 @@ export function PassengerTripSeatsPage() {
   const [selectedFloor, setSelectedFloor] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [reservation, setReservation] = useState<ReservationRead | null>(null);
+  const [isPurchased, setIsPurchased] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<OnlinePaymentMethod | ''>('');
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [paymentInfoError, setPaymentInfoError] = useState<string | null>(null);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
 
   // Consultar los asientos del viaje.
   useEffect(() => {
@@ -104,6 +114,9 @@ export function PassengerTripSeatsPage() {
       setPassengerForms({});
       setSubmitError(null);
       setReservation(null);
+      setIsPurchased(false);
+      setPaymentMethod('');
+      setShowPaymentDetails(false);
 
       try {
         const result = await getTripSeats(tripId, originCityId, destinationCityId);
@@ -130,6 +143,24 @@ export function PassengerTripSeatsPage() {
       active = false;
     };
   }, [validTrip, tripId, originCityId, destinationCityId]);
+
+  useEffect(() => {
+    let active = true;
+    void getPassengerPaymentMethods()
+      .then((result) => {
+        if (active) setPaymentInfo(result);
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setPaymentInfoError(
+            err instanceof Error ? err.message : 'No se pudieron cargar los datos de pago.',
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Evitar mostrar datos de un viaje diferente.
   const currentAvailability =
@@ -214,13 +245,19 @@ export function PassengerTripSeatsPage() {
     }));
   }
 
-  // Crear la reserva utilizando el backend existente.
-  async function handleCreateReservation(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  // Procesar reserva o compra directa del boleto.
+  async function handleProcessReservation(mode: 'reserve' | 'buy') {
     if (!currentAvailability || submitting || reservation) return;
 
     setSubmitError(null);
+    if (mode === 'buy' && !paymentMethod) {
+      setSubmitError('Selecciona depósito o transferencia para continuar con la compra.');
+      return;
+    }
+    if (mode === 'buy' && !paymentInfo) {
+      setSubmitError(paymentInfoError ?? 'Espera a que se carguen los datos de pago.');
+      return;
+    }
 
     if (selectedSeats.length < 1 || selectedSeats.length > 10) {
       setSubmitError('Debes seleccionar entre 1 y 10 asientos.');
@@ -257,10 +294,13 @@ export function PassengerTripSeatsPage() {
       usedIds.add(normalizedId);
     }
 
+    const selectedPaymentMethod: OnlinePaymentMethod | undefined =
+      mode === 'buy' && paymentMethod ? paymentMethod : undefined;
     const payload: ReservationCreate = {
       tripId,
       originCityId,
       destinationCityId,
+      ...(selectedPaymentMethod ? { paymentMethod: selectedPaymentMethod } : {}),
       seats: selectedSeats.map((seat) => {
         const passenger = passengerForms[seat.seatId] ?? emptyPassenger;
 
@@ -283,7 +323,15 @@ export function PassengerTripSeatsPage() {
 
     try {
       const createdReservation = await createPassengerReservation(payload);
-      setReservation(createdReservation);
+
+      if (mode === 'buy') {
+        setReservation(createdReservation);
+        setIsPurchased(true);
+        setShowPaymentDetails(true);
+      } else {
+        setReservation(createdReservation);
+        setIsPurchased(false);
+      }
     } catch (err) {
       if (err instanceof ReservationRequestError && err.status === 409) {
         setSelectedSeatIds(new Set<number>());
@@ -298,7 +346,9 @@ export function PassengerTripSeatsPage() {
         }
       }
 
-      setSubmitError(err instanceof Error ? err.message : 'Ocurrió un error al crear la reserva.');
+      setSubmitError(
+        err instanceof Error ? err.message : 'Ocurrió un error al procesar tu solicitud.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -309,7 +359,7 @@ export function PassengerTripSeatsPage() {
       <section className="passenger-trip-search">
         <h1>Viaje no válido</h1>
         <p>No se recibió la información necesaria del viaje.</p>
-        <Link to="/pasajero/viajes">Volver a buscar viajes</Link>
+        <Link to="/pasajero">Volver a buscar viajes</Link>
       </section>
     );
   }
@@ -322,7 +372,7 @@ export function PassengerTripSeatsPage() {
         <p>Elige tus asientos e ingresa los datos de cada pasajero.</p>
       </header>
 
-      <Link to="/pasajero/viajes">Volver a buscar viajes</Link>
+      <Link to="/pasajero">Volver a buscar viajes</Link>
 
       {loading && <p role="status">Cargando asientos del viaje...</p>}
 
@@ -332,24 +382,151 @@ export function PassengerTripSeatsPage() {
         </p>
       )}
 
-      {/* Confirmación de la reserva */}
+      {/* Confirmación de la compra o reserva */}
       {reservation && (
         <div className="passenger-trip-search__results" role="status">
-          <h2>¡Reserva creada correctamente!</h2>
+          {isPurchased ? (
+            <div
+              style={{
+                background: '#fff9e6',
+                border: '1px solid #ffd566',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '20px',
+              }}
+            >
+              <h2 style={{ color: '#79560f', margin: '0 0 10px' }}>
+                Solicitud de compra registrada
+              </h2>
+              <p style={{ fontSize: '1rem', color: '#55421a', margin: '0 0 14px' }}>
+                El asiento quedó apartado temporalmente. Realiza el pago y envía una imagen del
+                comprobante; el oficinista confirmará la compra después de revisarla.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '18px', flexWrap: 'wrap' }}>
+                <Link
+                  to={`/pasajero/reservas/${reservation.id}/pago`}
+                  className="passenger-trip-search__button"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Subir evidencia de pago
+                </Link>
+                <Link
+                  to="/pasajero/reservas"
+                  className="passenger-trip-search__button passenger-trip-search__button--secondary"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Ir a Mis reservas
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                background: '#fff9e6',
+                border: '1px solid #ffd566',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '20px',
+              }}
+            >
+              <h2 style={{ color: '#79560f', margin: '0 0 10px' }}>
+                ¡Reserva creada correctamente!
+              </h2>
+              <p style={{ fontSize: '0.95rem', color: '#55421a', margin: '0 0 14px' }}>
+                Tus asientos han sido apartados temporalmente. Para confirmar tu viaje y emitir tus
+                boletos, realiza el pago antes del vencimiento.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
+                <Link
+                  to={`/pasajero/reservas/${reservation.id}/pago`}
+                  className="passenger-trip-search__button"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Continuar al pago de la reserva
+                </Link>
+                <Link
+                  to="/pasajero/reservas"
+                  className="passenger-trip-search__button passenger-trip-search__button--secondary"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Ir a Mis Reservas
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {showPaymentDetails && reservation && paymentInfo && (
+            <div className="passenger-trip-seats__payment-overlay">
+              <section
+                className="passenger-trip-seats__payment-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="purchase-payment-title"
+              >
+                <button
+                  type="button"
+                  className="passenger-trip-seats__payment-close"
+                  aria-label="Cerrar datos de pago"
+                  onClick={() => setShowPaymentDetails(false)}
+                >
+                  ×
+                </button>
+                <p className="passenger-trip-seats__payment-eyebrow">RESERVA #{reservation.id}</p>
+                <h2 id="purchase-payment-title">Datos para completar el pago</h2>
+                <p>
+                  Elegiste{' '}
+                  <strong>{paymentMethod === 'deposit' ? 'depósito' : 'transferencia'}</strong>.
+                  Envía el valor de <strong>{formatMoney(reservation.total)}</strong> y luego sube
+                  una imagen del comprobante para que el oficinista la revise.
+                </p>
+                <dl className="passenger-trip-seats__payment-data">
+                  <div>
+                    <dt>Banco</dt>
+                    <dd>{paymentInfo.bankName}</dd>
+                  </div>
+                  <div>
+                    <dt>Tipo de cuenta</dt>
+                    <dd>{paymentInfo.accountType}</dd>
+                  </div>
+                  <div>
+                    <dt>Número de cuenta</dt>
+                    <dd>{paymentInfo.accountNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>Titular</dt>
+                    <dd>{paymentInfo.accountHolder}</dd>
+                  </div>
+                  <div>
+                    <dt>Cédula/RUC</dt>
+                    <dd>{paymentInfo.accountIdNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>Correo</dt>
+                    <dd>{paymentInfo.accountEmail}</dd>
+                  </div>
+                </dl>
+                <Link
+                  to={`/pasajero/reservas/${reservation.id}/pago`}
+                  state={{ paymentMethod }}
+                  className="passenger-trip-search__button"
+                  onClick={() => setShowPaymentDetails(false)}
+                >
+                  Continuar para subir evidencia
+                </Link>
+              </section>
+            </div>
+          )}
 
           <p>
-            <strong>Número de reserva:</strong> {reservation.id}
-          </p>
-
-          <p>
-            <strong>Estado:</strong> {reservation.status}
+            <strong>Número de reserva:</strong> #{reservation.id}
           </p>
 
           <p>
             <strong>Salida:</strong> {formatDate(reservation.departureAt)}
           </p>
 
-          {reservation.expiresAt && (
+          {reservation.expiresAt && !isPurchased && (
             <p>
               <strong>La reserva vence:</strong> {formatDate(reservation.expiresAt)}
             </p>
@@ -367,12 +544,7 @@ export function PassengerTripSeatsPage() {
 
           <h3>Total: {formatMoney(reservation.total)}</h3>
 
-          <p>
-            Los asientos han sido apartados según las condiciones del sistema. Esta confirmación no
-            significa que el pago se haya realizado.
-          </p>
-
-          <Link to="/pasajero/viajes">Buscar otro viaje</Link>
+          <Link to="/pasajero">Volver a las rutas</Link>
         </div>
       )}
 
@@ -441,7 +613,7 @@ export function PassengerTripSeatsPage() {
           {selectedSeats.length > 0 && (
             <form
               onSubmit={(event) => {
-                void handleCreateReservation(event);
+                event.preventDefault();
               }}
               style={{ marginTop: '2rem' }}
             >
@@ -609,18 +781,62 @@ export function PassengerTripSeatsPage() {
                 </p>
               )}
 
-              <button
-                type="submit"
-                className="passenger-trip-search__button"
-                disabled={submitting}
-                style={{ marginTop: '1.5rem' }}
-              >
-                {submitting ? 'Creando reserva...' : 'Confirmar reserva'}
-              </button>
+              <fieldset className="passenger-trip-seats__payment-method">
+                <legend>Elige cómo pagar la compra</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="purchase-payment-method"
+                    value="deposit"
+                    checked={paymentMethod === 'deposit'}
+                    onChange={() => setPaymentMethod('deposit')}
+                    disabled={submitting}
+                  />
+                  Depósito bancario
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="purchase-payment-method"
+                    value="transfer"
+                    checked={paymentMethod === 'transfer'}
+                    onChange={() => setPaymentMethod('transfer')}
+                    disabled={submitting}
+                  />
+                  Transferencia bancaria
+                </label>
+                {paymentInfoError && (
+                  <p role="alert" className="passenger-trip-search__error">
+                    {paymentInfoError}
+                  </p>
+                )}
+              </fieldset>
 
-              <p style={{ marginTop: '1rem' }}>
-                La reserva aparta temporalmente los asientos. El pago se realizará en un paso
-                posterior.
+              {/* Botones de acción: Reservar o Comprar */}
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="passenger-trip-search__button passenger-trip-search__button--secondary"
+                  disabled={submitting}
+                  onClick={() => handleProcessReservation('reserve')}
+                >
+                  {submitting ? 'Procesando...' : 'Reservar'}
+                </button>
+                <button
+                  type="button"
+                  className="passenger-trip-search__button"
+                  disabled={submitting || !paymentInfo}
+                  onClick={() => handleProcessReservation('buy')}
+                >
+                  {submitting ? 'Procesando...' : 'Comprar'}
+                </button>
+              </div>
+
+              <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#6b7280' }}>
+                <strong>Reservar:</strong> aparta los asientos temporalmente y paga después.
+                <br />
+                <strong>Comprar:</strong> aparta los asientos mientras realizas el pago y envías el
+                comprobante para revisión.
               </p>
             </form>
           )}

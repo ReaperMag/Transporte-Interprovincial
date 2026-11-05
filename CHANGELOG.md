@@ -7,6 +7,14 @@ y el proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [1.1.0-beta.1] - 2026-11-04
+
+Versión beta de preparación para el despliegue.
+
+### Fixed
+
+- Los códigos QR de los boletos se incorporan al correo electrónico como imágenes PNG MIME, compatibles con los principales clientes de correo.
+
 ## [1.0.1] - 2026-11-04
 
 Corrección sobre la versión 1.0.0.

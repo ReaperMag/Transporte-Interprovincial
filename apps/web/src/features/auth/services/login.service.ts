@@ -7,7 +7,7 @@ export const EMAIL_NOT_VERIFIED = 'email_not_verified';
 export interface AuthenticatedAccount {
   accountId: number;
   email: string;
-  accountType: 'passenger' | 'cooperative' | 'super_admin';
+  accountType: 'passenger' | 'cooperative' | 'oficinista' | 'super_admin';
 }
 
 export async function loginAccount(credentials: LoginCredentials): Promise<AuthenticatedAccount> {

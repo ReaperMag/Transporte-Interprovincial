@@ -1,6 +1,7 @@
 import enum
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -15,10 +16,13 @@ class PaymentInfo(BaseModel):
     accountType: str
     accountNumber: str
     accountHolder: str
+    accountEmail: str
+    accountIdNumber: str
     deunaQr: str
     isDemo: bool
     maxFileSizeMb: int
     acceptedFileTypes: list[str]
+    acceptedReceiptFileTypes: list[str]
     receiptTimeLimitNote: str
 
 
@@ -32,6 +36,10 @@ class RejectionReason(enum.StrEnum):
 class PaymentRejection(BaseModel):
     reason: RejectionReason
     comment: str | None = Field(default=None, max_length=150)
+
+
+class PaymentMethodSelection(BaseModel):
+    method: Literal["deposit", "transfer"]
 
 
 class CategoryDocumentRead(BaseModel):

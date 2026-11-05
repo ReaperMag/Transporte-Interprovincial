@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.dependencies import get_current_account
-from app.modules.accounts.models import Account
+from app.modules.accounts.models import Account, AccountType
 from app.modules.auth.schemas import (
     EmailRequest,
     LoginRequest,
@@ -39,6 +39,7 @@ from app.modules.auth.service import (
 )
 from app.modules.auth.verification import InvalidVerificationCodeError
 from app.modules.passengers.linking import PassengerLinkError
+from app.modules.roles_permissions.seed import COOPERATIVE_CLERK_ROLE
 
 from app.modules.login_attempts.service import (
     is_login_blocked,
@@ -51,6 +52,16 @@ router = APIRouter(
     prefix="/auth",
     tags=["Autenticación"],
 )
+
+
+def _account_type_for_response(account: Account) -> str:
+    if (
+        account.account_type == AccountType.COOPERATIVE
+        and account.role is not None
+        and account.role.code == COOPERATIVE_CLERK_ROLE
+    ):
+        return "oficinista"
+    return account.account_type.value
 
 
 def get_client_ip(request: Request) -> str:
@@ -154,7 +165,7 @@ def login(
     return LoginResponse(
         accountId=account.id,
         email=account.email,
-        accountType=account.account_type.value,
+        accountType=_account_type_for_response(account),
     )
 
 
@@ -302,7 +313,7 @@ def get_me(
     return LoginResponse(
         accountId=account.id,
         email=account.email,
-        accountType=account.account_type.value,
+        accountType=_account_type_for_response(account),
     )
 
 

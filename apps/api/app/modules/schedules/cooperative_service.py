@@ -4,9 +4,9 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.modules.buses.models import Bus, BusGroup, BusStatus
+from app.modules.buses.models import Bus, BusGroup, BusStatus, SeatType
 from app.modules.reservations.models import Reservation
-from app.modules.routes.models import City, Route, RouteStop
+from app.modules.routes.models import City, Fare, Route, RouteStop
 from app.modules.schedules.cooperative_schemas import (
     FrequencyCreate,
     RouteSheetSave,
@@ -25,6 +25,19 @@ LOCAL_TIMEZONE = ZoneInfo("America/Guayaquil")
 BUS_TURNAROUND_MINUTES = 30
 
 
+def _has_full_route_fares(db: Session, route: Route) -> bool:
+    fares = set(
+        db.scalars(
+            select(Fare.seat_type).where(
+                Fare.route_id == route.id,
+                Fare.origin_city_id == route.origin_city_id,
+                Fare.destination_city_id == route.destination_city_id,
+            )
+        ).all()
+    )
+    return fares == {SeatType.NORMAL, SeatType.VIP}
+
+
 class BusGroupNotFoundError(Exception):
     pass
 
@@ -37,7 +50,15 @@ class RouteNotSchedulableError(Exception):
     pass
 
 
+class RouteFareMissingError(Exception):
+    pass
+
+
 class DuplicateFrequencyError(Exception):
+    pass
+
+
+class RouteAssignedToAnotherGroupError(Exception):
     pass
 
 
@@ -137,6 +158,22 @@ def create_frequency(
         raise RouteNotFoundError
     if route.duration_minutes is None:
         raise RouteNotSchedulableError
+    if not _has_full_route_fares(db, route):
+        raise RouteFareMissingError
+
+    existing_group_ids = set(
+        db.scalars(
+            select(Frequency.bus_group_id)
+            .where(
+                Frequency.cooperative_id == cooperative_id,
+                Frequency.route_id == route.id,
+                Frequency.bus_group_id.is_not(None),
+            )
+        ).all()
+    )
+    if existing_group_ids and existing_group_ids != {group.id}:
+        raise RouteAssignedToAnotherGroupError
+
     duplicate = db.scalar(
         select(Frequency.id).where(
             Frequency.cooperative_id == cooperative_id,
@@ -337,12 +374,6 @@ def get_route_sheet(
         else []
     )
     frequencies = list_frequencies(db, cooperative_id, bus_group_id)
-    if sheet is not None and sheet.status == RouteSheetStatus.PUBLISHED:
-        frequencies = [
-            frequency
-            for frequency in frequencies
-            if frequency["id"] in trips_by_frequency
-        ]
     buses = db.scalars(
         select(Bus)
         .where(
@@ -465,7 +496,7 @@ def save_route_sheet(
     if is_published:
         published_frequency_ids = {trip.frequency_id for trip in sheet.trips}
         if (
-            set(assignment_ids) != published_frequency_ids
+            not published_frequency_ids.issubset(assignment_ids)
             or any(item.bus_id is None for item in payload.assignments)
             or any(
                 trip.status != TripStatus.SCHEDULED
@@ -480,6 +511,9 @@ def save_route_sheet(
     for item in payload.assignments:
         if item.bus_id is None:
             continue
+        frequency = frequencies_by_id[item.frequency_id]
+        if not _has_full_route_fares(db, frequency.route):
+            raise RouteFareMissingError
         bus = db.scalar(
             select(Bus).where(
                 Bus.id == item.bus_id,
@@ -496,7 +530,7 @@ def save_route_sheet(
                 f"El bus {bus.number} no está operativo; no puede asignarse al servicio."
             )
         buses_by_id[bus.id] = bus
-        selected_assignments.append((frequencies_by_id[item.frequency_id], bus))
+        selected_assignments.append((frequency, bus))
 
     starting_location_ids = [item.bus_id for item in payload.starting_locations]
     if len(set(starting_location_ids)) != len(starting_location_ids):
@@ -564,7 +598,23 @@ def save_route_sheet(
     if is_published:
         trips_by_frequency = {trip.frequency_id: trip for trip in sheet.trips}
         for frequency, bus in selected_assignments:
-            trips_by_frequency[frequency.id].bus_id = bus.id
+            existing_trip = trips_by_frequency.get(frequency.id)
+            if existing_trip is not None:
+                existing_trip.bus_id = bus.id
+            else:
+                db.add(
+                    Trip(
+                        cooperative_id=cooperative_id,
+                        frequency_id=frequency.id,
+                        bus_id=bus.id,
+                        route_sheet_id=sheet.id,
+                        departure_at=_local_datetime(
+                            payload.service_date,
+                            frequency.departure_time,
+                        ),
+                        status=TripStatus.SCHEDULED,
+                    )
+                )
     else:
         db.add_all(
             [
@@ -660,7 +710,9 @@ def publish_route_sheet(
             Route.cooperative_id == cooperative_id,
         )
     ).all()
-    for _, bus in assigned_pairs:
+    for frequency, bus in assigned_pairs:
+        if not _has_full_route_fares(db, frequency.route):
+            raise RouteFareMissingError
         if not bus.is_active or bus.status != BusStatus.OPERATIONAL:
             raise BusAssignmentError(
                 f"El bus {bus.number} ya no está operativo; reemplázalo antes de publicar."

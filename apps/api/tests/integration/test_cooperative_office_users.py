@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import verify_password
 from app.modules.accounts.models import Account, AccountType
+from app.modules.cooperatives.models import Cooperative
 from app.modules.roles_permissions.models import Role
 from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE
 from app.modules.staff import service as staff_service
@@ -27,6 +28,7 @@ VALID_PAYLOAD = {
     "email": "oficinista@example.com",
     "phone": "0999999999",
     "password": "ClaveSegura123!",
+    "confirmPassword": "ClaveSegura123!",
 }
 
 
@@ -37,7 +39,13 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         email="admin-office@example.com",
         role_code=COOPERATIVE_ADMIN_ROLE,
     )
+    with Session(engine) as db:
+        cooperative = db.get(Cooperative, cooperative_id)
+        assert cooperative is not None
+        cooperative.logo_url = "https://example.com/cooperativa.png"
+        db.commit()
     assert login(client, "admin-office@example.com").status_code == 200
+    assert client.get("/api/v1/staff/me").status_code == 403
 
     response = client.post(URL, json=VALID_PAYLOAD, headers=ORIGIN)
 
@@ -58,6 +66,21 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         assert staff.cooperative_id == cooperative_id
         assert staff.position == StaffPosition.CLERK
         assert verify_password(VALID_PAYLOAD["password"], account.password_hash)
+
+        clerk_login = login(client, VALID_PAYLOAD["email"])
+        assert clerk_login.status_code == 200
+        assert clerk_login.json()["accountType"] == "oficinista"
+        assert client.get("/api/v1/auth/me").json()["accountType"] == "oficinista"
+        profile = client.get("/api/v1/staff/me")
+        assert profile.status_code == 200
+        assert profile.json()["email"] == VALID_PAYLOAD["email"]
+        assert profile.json()["firstName"] == "Oficinista"
+        assert profile.json()["lastName"] == "Prueba"
+        assert profile.json()["cooperativeId"] == cooperative_id
+        assert profile.json()["cooperativeRuc"]
+        assert profile.json()["cooperativeLogoUrl"] == "https://example.com/cooperativa.png"
+        assert "cooperativeAddress" in profile.json()
+        assert "cooperativeSupportEmail" in profile.json()
 
 
 @pytest.mark.parametrize(
@@ -121,6 +144,29 @@ def test_invalid_id_and_forbidden_fields_are_rejected(test_environment):
 
     forged = {**VALID_PAYLOAD, "roleId": 1, "cooperativeId": 999, "position": "admin"}
     assert client.post(URL, json=forged, headers=ORIGIN).status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("phone", "09912345678"),
+        ("phone", "09 912345678"),
+        ("email", "correo-invalido"),
+        ("confirmPassword", "OtraClave123!"),
+    ],
+)
+def test_invalid_phone_and_password_confirmation_are_rejected(
+    test_environment, field, value
+):
+    client, _ = test_environment
+    create_cooperative_account(
+        test_environment[1],
+        email="invalid-fields-admin@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "invalid-fields-admin@example.com").status_code == 200
+    payload = {**VALID_PAYLOAD, field: value}
+    assert client.post(URL, json=payload, headers=ORIGIN).status_code == 422
 
 
 def test_only_cooperative_admin_can_create_office_users(test_environment):
@@ -309,13 +355,13 @@ def test_admin_updates_clerk_and_can_keep_current_identity(test_environment):
             "lastName": "Apellido Actualizado",
             "idNumber": clerk["idNumber"],
             "email": clerk["email"],
-            "phone": "+593 99 111 2233",
+            "phone": "0991112233",
         },
         headers=ORIGIN,
     )
     assert response.status_code == 200
     assert response.json()["firstName"] == "Nombre Actualizado"
-    assert response.json()["phone"] == "+593 99 111 2233"
+    assert response.json()["phone"] == "0991112233"
 
     with Session(engine) as db:
         account = db.query(Account).filter_by(id=clerk["accountId"]).one()
@@ -349,6 +395,47 @@ def test_admin_updates_email_and_id_and_rejects_forbidden_fields(test_environmen
         headers=ORIGIN,
     )
     assert forbidden.status_code == 422
+
+
+def test_admin_deletes_only_own_office_users(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine,
+        email="delete-admin@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "delete-admin@example.com").status_code == 200
+    clerk = _create_registered_clerk(client, "delete-clerk@example.com")
+
+    response = client.delete(DETAIL_URL.format(clerk["id"]), headers=ORIGIN)
+    assert response.status_code == 204
+    assert client.get(DETAIL_URL.format(clerk["id"])).status_code == 404
+    with Session(engine) as db:
+        assert db.query(Account).filter_by(id=clerk["accountId"]).one_or_none() is None
+        assert db.query(Staff).filter_by(id=clerk["id"]).one_or_none() is None
+
+
+def test_admin_cannot_delete_another_cooperatives_office_user(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(
+        engine,
+        email="delete-owner@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "delete-owner@example.com").status_code == 200
+    clerk = _create_registered_clerk(client, "foreign-delete-clerk@example.com")
+    client.cookies.clear()
+    create_cooperative_account(
+        engine,
+        email="delete-outsider@example.com",
+        role_code=COOPERATIVE_ADMIN_ROLE,
+    )
+    assert login(client, "delete-outsider@example.com").status_code == 200
+
+    assert client.delete(DETAIL_URL.format(clerk["id"]), headers=ORIGIN).status_code == 404
+    with Session(engine) as db:
+        assert db.query(Account).filter_by(id=clerk["accountId"]).one_or_none() is not None
+        assert db.query(Staff).filter_by(id=clerk["id"]).one_or_none() is not None
 
 
 @pytest.mark.parametrize(

@@ -48,7 +48,7 @@ def test_approved_payment_sends_an_email_and_fills_email_sent_at(payments, fake_
         "Reserva creada - Transporte Interprovincial",
         "Comprobante recibido - Transporte Interprovincial",
         "Pago aprobado - Transporte Interprovincial",
-        "Boletos emitidos - Transporte Interprovincial",
+        "Boletos confirmados: Quito a Loja - Transporte Interprovincial",
     ]
     approved_email = fake_smtp.sent_to(PASSENGER_EMAIL)[2]
     assert "Tu pago fue aprobado y tu compra está confirmada." in fake_smtp.text(approved_email)

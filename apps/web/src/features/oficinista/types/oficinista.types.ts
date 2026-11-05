@@ -3,15 +3,17 @@ export interface OficinistaInfo {
   firstName: string;
   lastName: string;
   fullName: string;
-  cooperativeId?: number | null;
-}
-
-export interface UpcomingTrip {
-  tripId: number;
-  routeOrigin: string;
-  routeDestination: string;
-  departureAt: string; // ISO datetime
-  departureTime: string; // formatted time
-  busPlate?: string | null;
-  frequencyResolutionNumber?: string | null;
+  idNumber: string;
+  email: string;
+  phone: string | null;
+  position: string;
+  cooperativeId: number;
+  cooperativeName: string;
+  cooperativeLogoUrl: string | null;
+  cooperativeRuc: string;
+  cooperativeAddress: string | null;
+  cooperativePhone: string | null;
+  cooperativeEmail: string | null;
+  cooperativeSupportPhone: string | null;
+  cooperativeSupportEmail: string | null;
 }

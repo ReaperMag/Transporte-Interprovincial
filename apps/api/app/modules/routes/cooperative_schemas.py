@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Annotated
 
 from pydantic import (
@@ -10,6 +11,7 @@ from pydantic import (
 )
 
 from app.core.validators import validate_place_name
+from app.modules.buses.models import SeatType
 from app.modules.routes.models import RouteType
 
 
@@ -91,6 +93,42 @@ class CooperativeRouteCreate(RouteSchema):
         return self
 
 
+class FareUpsert(RouteSchema):
+    origin_city_id: int = Field(gt=0)
+    destination_city_id: int = Field(gt=0)
+    seat_type: SeatType
+    price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+
+    @model_validator(mode="after")
+    def validate_segment(self) -> "FareUpsert":
+        if self.origin_city_id == self.destination_city_id:
+            raise ValueError("El origen y el destino de la tarifa deben ser diferentes.")
+        return self
+
+
+class RouteFareSave(RouteSchema):
+    fares: list[FareUpsert] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_unique_fares(self) -> "RouteFareSave":
+        keys = [
+            (fare.origin_city_id, fare.destination_city_id, fare.seat_type)
+            for fare in self.fares
+        ]
+        if len(set(keys)) != len(keys):
+            raise ValueError(
+                "No se puede repetir una tarifa para el mismo tramo y tipo de asiento."
+            )
+        return self
+
+
+class FareRead(RouteSchema):
+    origin_city_id: int
+    destination_city_id: int
+    seat_type: SeatType
+    price: Decimal
+
+
 class CooperativeRouteRead(RouteSchema):
     id: int
     origin_city_id: int
@@ -103,3 +141,4 @@ class CooperativeRouteRead(RouteSchema):
     route_type: RouteType
     is_active: bool
     stops: list[RouteStopRead]
+    fares: list[FareRead]

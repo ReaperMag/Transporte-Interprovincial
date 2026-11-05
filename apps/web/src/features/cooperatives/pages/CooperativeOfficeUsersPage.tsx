@@ -2,14 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
   createOfficeUser,
+  deleteOfficeUser,
   getOfficeUsers,
   OfficeUserApiError,
   updateOfficeUser,
 } from '../services/officeUsers.service';
-import type {
-  OfficeUser,
-  OfficeUserUpdate,
-} from '../services/officeUsers.service';
+import type { OfficeUser, OfficeUserUpdate } from '../services/officeUsers.service';
 import {
   cedulaError,
   cleanName,
@@ -30,6 +28,7 @@ interface FormValues {
   email: string;
   phone: string;
   password: string;
+  confirmPassword: string;
 }
 
 const emptyValues: FormValues = {
@@ -39,6 +38,7 @@ const emptyValues: FormValues = {
   email: '',
   phone: '',
   password: '',
+  confirmPassword: '',
 };
 
 function formValuesFromUser(user?: OfficeUser): FormValues {
@@ -50,6 +50,7 @@ function formValuesFromUser(user?: OfficeUser): FormValues {
         email: user.email,
         phone: user.phone ?? '',
         password: '',
+        confirmPassword: '',
       }
     : emptyValues;
 }
@@ -125,6 +126,24 @@ export function CooperativeOfficeUsersPage() {
     closeDialog();
   };
 
+  const removeOfficeUser = async (user: OfficeUser) => {
+    if (
+      !window.confirm(
+        `¿Eliminar la cuenta de ${user.firstName} ${user.lastName}? Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
+
+    setError(null);
+    try {
+      await deleteOfficeUser(user.id);
+      setOfficeUsers((current) => current.filter((officeUser) => officeUser.id !== user.id));
+    } catch (requestError) {
+      setError(errorMessage(requestError, 'No se pudo eliminar el oficinista.'));
+    }
+  };
+
   return (
     <div className="office-users-page">
       <header className="office-users-page__intro">
@@ -149,7 +168,9 @@ export function CooperativeOfficeUsersPage() {
         <div className="office-users-card__toolbar">
           <div>
             <h2 id="office-users-title">Oficinistas registrados</h2>
-            <p>{officeUsers.length} cuenta{officeUsers.length === 1 ? '' : 's'} en la cooperativa</p>
+            <p>
+              {officeUsers.length} cuenta{officeUsers.length === 1 ? '' : 's'} en la cooperativa
+            </p>
           </div>
           <label className="office-users-card__search">
             <span>Buscar oficinista</span>
@@ -190,31 +211,50 @@ export function CooperativeOfficeUsersPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td className="office-users-table__message" colSpan={5}>Cargando oficinistas...</td></tr>
+                <tr>
+                  <td className="office-users-table__message" colSpan={5}>
+                    Cargando oficinistas...
+                  </td>
+                </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td className="office-users-table__message" colSpan={5}>
-                    {search ? 'No hay resultados para la búsqueda.' : 'Aún no hay oficinistas registrados.'}
+                    {search
+                      ? 'No hay resultados para la búsqueda.'
+                      : 'Aún no hay oficinistas registrados.'}
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
                   <tr key={user.id}>
-                    <td><strong>{user.firstName} {user.lastName}</strong></td>
+                    <td>
+                      <strong>
+                        {user.firstName} {user.lastName}
+                      </strong>
+                    </td>
                     <td>{user.idNumber}</td>
                     <td>{user.email}</td>
                     <td>{user.phone || '—'}</td>
                     <td>
-                      <button
-                        className="office-users-table__edit"
-                        onClick={(event) => {
-                          dialogTriggerRef.current = event.currentTarget;
-                          setDialog({ mode: 'edit', user });
-                        }}
-                        type="button"
-                      >
-                        Editar
-                      </button>
+                      <div className="office-users-table__actions">
+                        <button
+                          className="office-users-table__edit"
+                          onClick={(event) => {
+                            dialogTriggerRef.current = event.currentTarget;
+                            setDialog({ mode: 'edit', user });
+                          }}
+                          type="button"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          className="office-users-table__delete"
+                          onClick={() => void removeOfficeUser(user)}
+                          type="button"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -247,6 +287,8 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
   const [values, setValues] = useState(() => formValuesFromUser(user));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isEdit = mode === 'edit';
   const dialogRef = useRef<HTMLElement | null>(null);
   const initialValuesRef = useRef(values);
@@ -270,9 +312,7 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
       if (event.key !== 'Tab') return;
 
       const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'input:not([disabled]), button:not([disabled])',
-        ),
+        dialog.querySelectorAll<HTMLElement>('input:not([disabled]), button:not([disabled])'),
       );
       if (focusable.length === 0) return;
       const first = focusable[0];
@@ -312,6 +352,18 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
     if (!isEdit && values.password.length < 8) {
       setError('La contraseña debe tener entre 8 y 128 caracteres.');
       return;
+    }
+    if (!isEdit && values.password !== values.confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+    const phoneChanged = values.phone.trim() !== initialValuesRef.current.phone.trim();
+    if (!isEdit || phoneChanged) {
+      const phoneDigits = values.phone.replace(/\D/g, '');
+      if (phoneDigits.length < 7 || phoneDigits.length > 10) {
+        setError('El teléfono debe contener entre siete y diez dígitos.');
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -355,7 +407,11 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
         return;
       }
 
-      const savedUser = await createOfficeUser({ ...commonValues, password: values.password });
+      const savedUser = await createOfficeUser({
+        ...commonValues,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+      });
       onSaved(savedUser);
     } catch (requestError) {
       setError(errorMessage(requestError, 'No se pudo guardar el oficinista.'));
@@ -377,7 +433,9 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
         <header className="office-users-dialog__header">
           <div>
             <span className="office-users-dialog__eyebrow">Personal de oficina</span>
-            <h2 id="office-user-dialog-title">{isEdit ? 'Editar oficinista' : 'Registrar oficinista'}</h2>
+            <h2 id="office-user-dialog-title">
+              {isEdit ? 'Editar oficinista' : 'Registrar oficinista'}
+            </h2>
           </div>
           <button
             aria-label="Cerrar"
@@ -391,10 +449,51 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
         </header>
         <form onSubmit={handleSubmit}>
           <div className="office-users-dialog__fields">
-            <label>Nombres<input autoFocus maxLength={100} onChange={(event) => updateValue('firstName', cleanName(event.target.value))} required value={values.firstName} disabled={isSaving} /></label>
-            <label>Apellidos<input maxLength={100} onChange={(event) => updateValue('lastName', cleanName(event.target.value))} required value={values.lastName} disabled={isSaving} /></label>
-            <label>Cédula ecuatoriana<input inputMode="numeric" maxLength={10} minLength={10} onChange={(event) => updateValue('idNumber', onlyDigits(event.target.value, 10))} required value={values.idNumber} disabled={isSaving} /></label>
-            <label>Correo electrónico<input autoComplete="email" maxLength={150} onChange={(event) => updateValue('email', event.target.value)} required type="email" value={values.email} disabled={isSaving} /></label>
+            <label>
+              Nombres
+              <input
+                autoFocus
+                maxLength={100}
+                onChange={(event) => updateValue('firstName', cleanName(event.target.value))}
+                required
+                value={values.firstName}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Apellidos
+              <input
+                maxLength={100}
+                onChange={(event) => updateValue('lastName', cleanName(event.target.value))}
+                required
+                value={values.lastName}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Cédula ecuatoriana
+              <input
+                inputMode="numeric"
+                maxLength={10}
+                minLength={10}
+                onChange={(event) => updateValue('idNumber', onlyDigits(event.target.value, 10))}
+                required
+                value={values.idNumber}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Correo electrónico
+              <input
+                autoComplete="email"
+                maxLength={150}
+                onChange={(event) => updateValue('email', event.target.value)}
+                required
+                type="email"
+                value={values.email}
+                disabled={isSaving}
+              />
+            </label>
             <label>
               Teléfono
               <input
@@ -407,12 +506,73 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
                 disabled={isSaving}
               />
             </label>
-            {!isEdit && <label>Contraseña inicial<input autoComplete="new-password" minLength={8} maxLength={128} onChange={(event) => updateValue('password', event.target.value)} required type="password" value={values.password} disabled={isSaving} /></label>}
+            {!isEdit && (
+              <label className="office-users-dialog__password-field">
+                Contraseña inicial
+                <span className="office-users-dialog__password-control">
+                  <input
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    onChange={(event) => updateValue('password', event.target.value)}
+                    required
+                    type={showPassword ? 'text' : 'password'}
+                    value={values.password}
+                    disabled={isSaving}
+                  />
+                  <button
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    disabled={isSaving}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    type="button"
+                  >
+                    {showPassword ? 'Ocultar' : 'Ver'}
+                  </button>
+                </span>
+              </label>
+            )}
+            {!isEdit && (
+              <label className="office-users-dialog__password-field">
+                Confirmar contraseña
+                <span className="office-users-dialog__password-control">
+                  <input
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    onChange={(event) => updateValue('confirmPassword', event.target.value)}
+                    required
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={values.confirmPassword}
+                    disabled={isSaving}
+                  />
+                  <button
+                    aria-label={
+                      showConfirmPassword
+                        ? 'Ocultar confirmación de contraseña'
+                        : 'Mostrar confirmación de contraseña'
+                    }
+                    disabled={isSaving}
+                    onClick={() => setShowConfirmPassword((visible) => !visible)}
+                    type="button"
+                  >
+                    {showConfirmPassword ? 'Ocultar' : 'Ver'}
+                  </button>
+                </span>
+              </label>
+            )}
           </div>
-          {error && <p className="office-users-dialog__error" id="office-user-dialog-error" role="alert">{error}</p>}
+          {error && (
+            <p className="office-users-dialog__error" id="office-user-dialog-error" role="alert">
+              {error}
+            </p>
+          )}
           <footer className="office-users-dialog__actions">
-            <button onClick={onClose} type="button" disabled={isSaving}>Cancelar</button>
-            <button className="office-users-dialog__submit" type="submit" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</button>
+            <button onClick={onClose} type="button" disabled={isSaving}>
+              Cancelar
+            </button>
+            <button className="office-users-dialog__submit" type="submit" disabled={isSaving}>
+              {isSaving ? 'Guardando...' : 'Guardar'}
+            </button>
           </footer>
         </form>
       </section>
