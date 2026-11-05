@@ -429,12 +429,18 @@ export function PassengerDashboardPage() {
                     <div className="passenger-trip-card__fares">
                       <span>Tarifas base:</span>
                       <div className="passenger-trip-card__fare-tags">
-                        {trip.fares.map((fare) => (
-                          <span key={fare.seatType} className="passenger-trip-card__fare-tag">
-                            {fare.seatType.toUpperCase()}:{' '}
-                            <strong>{formatPrice(fare.price)}</strong>
+                        {trip.fares.length > 0 ? (
+                          trip.fares.map((fare) => (
+                            <span key={fare.seatType} className="passenger-trip-card__fare-tag">
+                              {fare.seatType.toUpperCase()}:{' '}
+                              <strong>{formatPrice(fare.price)}</strong>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="passenger-trip-card__fare-tag">
+                            Tarifas no configuradas
                           </span>
-                        ))}
+                        )}
                       </div>
                     </div>
 

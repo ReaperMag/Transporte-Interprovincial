@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { BusSeatMap } from '../../buses/components/BusSeatMap';
 import '../../buses/components/TransportTheme.css';
@@ -695,18 +695,30 @@ export function PassengerTripSeatsPage() {
                 </p>
               )}
 
-              <button
-                type="submit"
-                className="passenger-trip-search__button"
-                disabled={submitting}
-                style={{ marginTop: '1.5rem' }}
-              >
-                {submitting ? 'Creando reserva...' : 'Confirmar reserva'}
-              </button>
+              {/* Botones de acción: Reservar o Comprar */}
+              <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="passenger-trip-search__button passenger-trip-search__button--secondary"
+                  disabled={submitting}
+                  onClick={() => handleProcessReservation('reserve')}
+                >
+                  {submitting ? 'Procesando...' : 'Reservar'}
+                </button>
+                <button
+                  type="button"
+                  className="passenger-trip-search__button"
+                  disabled={submitting}
+                  onClick={() => handleProcessReservation('buy')}
+                >
+                  {submitting ? 'Procesando...' : 'Comprar'}
+                </button>
+              </div>
 
-              <p style={{ marginTop: '1rem' }}>
-                La reserva aparta temporalmente los asientos. El pago se realizará en un paso
-                posterior.
+              <p style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#6b7280" }}>
+                <strong>Reservar:</strong> aparta los asientos temporalmente y paga después.
+                <br />
+                <strong>Comprar:</strong> confirma el pago y emite tus boletos de inmediato.
               </p>
             </form>
           )}
