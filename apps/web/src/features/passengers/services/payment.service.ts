@@ -7,10 +7,13 @@ export interface PaymentInfo {
   accountType: string;
   accountNumber: string;
   accountHolder: string;
+  accountEmail: string;
+  accountIdNumber: string;
   deunaQr: string;
   isDemo: boolean;
   maxFileSizeMb: number;
   acceptedFileTypes: string[];
+  acceptedReceiptFileTypes: string[];
   receiptTimeLimitNote: string;
 }
 
@@ -112,6 +115,25 @@ export async function getPassengerReservationPayments(
   return (await response.json()) as PaymentRead[];
 }
 
+// Guardar el método elegido antes de adjuntar el comprobante.
+export async function savePassengerPaymentMethod(
+  reservationId: number,
+  method: OnlinePaymentMethod,
+): Promise<PaymentRead> {
+  const response = await fetch(`/api/v1/payments/reservations/${reservationId}/method`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method }),
+  });
+
+  if (!response.ok) {
+    throw await readPaymentError(response, 'No se pudo guardar el método de pago.');
+  }
+
+  return (await response.json()) as PaymentRead;
+}
+
 // Subir comprobante y documentos de respaldo mediante FormData.
 export async function uploadPassengerPayment(input: UploadPaymentInput): Promise<PaymentRead> {
   const formData = new FormData();
@@ -180,26 +202,6 @@ export async function rejectOfficePayment(
   });
   if (!response.ok) {
     throw await readPaymentError(response, 'No se pudo rechazar el comprobante.');
-  }
-  return (await response.json()) as PaymentRead;
-}
-
-// Confirmar compra / pago directo de una reserva para emitir boletos inmediatamente.
-export async function confirmPassengerPayment(
-  reservationId: number,
-  method: OnlinePaymentMethod = 'transfer',
-): Promise<PaymentRead> {
-  const formData = new FormData();
-  formData.append('method', method);
-
-  const response = await fetch(`/api/v1/payments/reservations/${reservationId}/confirm`, {
-    method: 'POST',
-    credentials: 'include',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw await readPaymentError(response, 'No se pudo confirmar el pago de la reserva.');
   }
   return (await response.json()) as PaymentRead;
 }

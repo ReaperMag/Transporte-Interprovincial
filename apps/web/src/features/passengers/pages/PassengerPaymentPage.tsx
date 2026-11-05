@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { getPassengerReservations, type ReservationRead } from '../services/reservation.service';
 import {
   getPassengerPaymentMethods,
   getPassengerReservationPayments,
+  savePassengerPaymentMethod,
   uploadPassengerPayment,
   type OnlinePaymentMethod,
   type PaymentInfo,
@@ -30,10 +31,10 @@ function formatDate(value: string): string {
   });
 }
 
-function getPaymentStatusLabel(status: string): string {
+function getPaymentStatusLabel(status: string, hasReceipt: boolean): string {
   switch (status) {
     case 'pending':
-      return 'Pendiente de revisión';
+      return hasReceipt ? 'Pendiente de revisión' : 'Pendiente de comprobante';
     case 'approved':
       return 'Aprobado';
     case 'rejected':
@@ -86,6 +87,7 @@ function getRejectionLabel(reason: string): string {
 
 export function PassengerPaymentPage() {
   const { reservationId } = useParams<{ reservationId: string }>();
+  const location = useLocation();
   const parsedReservationId = Number(reservationId);
 
   const validReservationId = Number.isSafeInteger(parsedReservationId) && parsedReservationId > 0;
@@ -96,11 +98,19 @@ export function PassengerPaymentPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [savingMethod, setSavingMethod] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [method, setMethod] = useState<OnlinePaymentMethod | ''>('');
+  const requestedMethod =
+    typeof location.state === 'object' &&
+    location.state !== null &&
+    'paymentMethod' in location.state &&
+    (location.state.paymentMethod === 'deposit' || location.state.paymentMethod === 'transfer')
+      ? location.state.paymentMethod
+      : '';
+  const [method, setMethod] = useState<OnlinePaymentMethod | ''>(requestedMethod);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [receiptReference, setReceiptReference] = useState('');
   const [documentFiles, setDocumentFiles] = useState<Record<number, File>>({});
@@ -137,6 +147,10 @@ export function PassengerPaymentPage() {
         setReservation(selectedReservation);
         setPaymentInfo(methods);
         setPayments(previousPayments);
+        const pendingSelection = previousPayments.find(
+          (payment) => payment.status === 'pending' && !payment.hasReceipt,
+        );
+        setMethod(requestedMethod || pendingSelection?.method || '');
       } catch (err) {
         if (active) {
           setError(
@@ -153,7 +167,7 @@ export function PassengerPaymentPage() {
     return () => {
       active = false;
     };
-  }, [parsedReservationId, validReservationId]);
+  }, [parsedReservationId, validReservationId, requestedMethod]);
 
   // Identificar documentos de descuento entregados anteriormente.
   const uploadedDocumentSeatIds = new Set(
@@ -168,10 +182,14 @@ export function PassengerPaymentPage() {
   const canUpload = reservation?.status === 'pending_payment';
 
   const acceptedFileTypes = paymentInfo?.acceptedFileTypes.join(',') ?? '';
+  const acceptedReceiptFileTypes = paymentInfo?.acceptedReceiptFileTypes.join(',') ?? '';
 
   const maxFileSizeMb = paymentInfo?.maxFileSizeMb ?? 0;
 
-  function validateFile(file: File): string | null {
+  function validateFile(
+    file: File,
+    acceptedTypes: string[] = paymentInfo?.acceptedFileTypes ?? [],
+  ): string | null {
     if (!paymentInfo) {
       return 'No se ha cargado la configuración de archivos.';
     }
@@ -180,6 +198,9 @@ export function PassengerPaymentPage() {
 
     if (file.size > maxBytes) {
       return `El archivo "${file.name}" supera el límite de ${maxFileSizeMb} MB.`;
+    }
+    if (!acceptedTypes.includes(file.type)) {
+      return 'El archivo debe ser una imagen JPG o PNG.';
     }
 
     return null;
@@ -197,6 +218,30 @@ export function PassengerPaymentPage() {
 
       return updated;
     });
+  }
+
+  async function handleMethodChange(nextMethod: OnlinePaymentMethod | '') {
+    if (!reservation || savingMethod || submitting) return;
+
+    if (!nextMethod) {
+      setMethod('');
+      return;
+    }
+
+    const previousMethod = method;
+    setMethod(nextMethod);
+    setActionError(null);
+    setSavingMethod(true);
+
+    try {
+      const payment = await savePassengerPaymentMethod(reservation.id, nextMethod);
+      setPayments((current) => [...current.filter((item) => item.id !== payment.id), payment]);
+    } catch (err) {
+      setMethod(previousMethod);
+      setActionError(err instanceof Error ? err.message : 'No se pudo guardar el método de pago.');
+    } finally {
+      setSavingMethod(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -219,7 +264,7 @@ export function PassengerPaymentPage() {
       return;
     }
 
-    const receiptError = validateFile(receipt);
+    const receiptError = validateFile(receipt, paymentInfo.acceptedReceiptFileTypes);
 
     if (receiptError) {
       setActionError(receiptError);
@@ -262,7 +307,7 @@ export function PassengerPaymentPage() {
         documents,
       });
 
-      setPayments((current) => [...current, payment]);
+      setPayments((current) => [...current.filter((item) => item.id !== payment.id), payment]);
 
       setReservation((current) =>
         current ? { ...current, status: payment.reservationStatus } : current,
@@ -367,6 +412,12 @@ export function PassengerPaymentPage() {
             <p>
               <strong>Titular:</strong> {paymentInfo.accountHolder}
             </p>
+            <p>
+              <strong>Cédula/RUC:</strong> {paymentInfo.accountIdNumber}
+            </p>
+            <p>
+              <strong>Correo:</strong> {paymentInfo.accountEmail}
+            </p>
 
             {paymentInfo.deunaQr && (
               <div style={{ marginTop: '1rem' }}>
@@ -430,9 +481,11 @@ export function PassengerPaymentPage() {
                   <select
                     id="payment-method"
                     value={method}
-                    onChange={(event) => setMethod(event.target.value as OnlinePaymentMethod | '')}
+                    onChange={(event) => {
+                      void handleMethodChange(event.target.value as OnlinePaymentMethod | '');
+                    }}
                     required
-                    disabled={submitting}
+                    disabled={submitting || savingMethod}
                     style={{
                       display: 'block',
                       width: '100%',
@@ -440,10 +493,13 @@ export function PassengerPaymentPage() {
                       marginTop: '0.5rem',
                     }}
                   >
-                    <option value="">Selecciona una opción</option>
+                    <option value="" disabled={Boolean(method)}>
+                      Selecciona una opción
+                    </option>
                     <option value="deposit">Depósito bancario</option>
                     <option value="transfer">Transferencia bancaria</option>
                   </select>
+                  {savingMethod && <p role="status">Guardando método de pago...</p>}
                 </div>
 
                 <div>
@@ -470,13 +526,13 @@ export function PassengerPaymentPage() {
 
                 <div>
                   <label htmlFor="payment-receipt">
-                    <strong>Comprobante de pago</strong>
+                    <strong>Evidencia de pago (imagen JPG o PNG)</strong>
                   </label>
 
                   <input
                     id="payment-receipt"
                     type="file"
-                    accept={acceptedFileTypes}
+                    accept={acceptedReceiptFileTypes}
                     required
                     disabled={submitting}
                     onChange={(event) => setReceipt(event.target.files?.[0] ?? null)}
@@ -488,7 +544,7 @@ export function PassengerPaymentPage() {
 
                   <p>
                     Tamaño máximo: {maxFileSizeMb} MB. Formatos admitidos:{' '}
-                    {paymentInfo.acceptedFileTypes.join(', ')}.
+                    {paymentInfo.acceptedReceiptFileTypes.join(', ')}.
                   </p>
                 </div>
 
@@ -593,7 +649,8 @@ export function PassengerPaymentPage() {
                     <h3>Pago #{payment.id}</h3>
 
                     <p>
-                      <strong>Estado:</strong> {getPaymentStatusLabel(payment.status)}
+                      <strong>Estado:</strong>{' '}
+                      {getPaymentStatusLabel(payment.status, payment.hasReceipt)}
                     </p>
 
                     <p>
