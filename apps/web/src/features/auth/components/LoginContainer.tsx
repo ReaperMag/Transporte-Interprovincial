@@ -23,7 +23,9 @@ export function LoginContainer() {
           ? '/admin/cooperativas'
           : account.accountType === 'cooperative'
             ? '/cooperativa/panel'
-            : '/pasajero',
+            : account.accountType === 'oficinista'
+              ? '/oficinista/panel'
+              : '/pasajero',
         { replace: true },
       );
     } catch (err) {

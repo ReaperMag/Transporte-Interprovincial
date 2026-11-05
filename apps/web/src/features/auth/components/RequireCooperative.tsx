@@ -21,6 +21,10 @@ export function RequireCooperative({ children }: { children: ReactNode }) {
     return <Navigate to="/pasajero" replace />;
   }
 
+  if (account.accountType === 'oficinista') {
+    return <Navigate to="/oficinista/panel" replace />;
+  }
+
   if (account.accountType !== 'cooperative') {
     return <Navigate to="/login" replace />;
   }

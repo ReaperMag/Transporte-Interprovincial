@@ -59,6 +59,11 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         assert staff.position == StaffPosition.CLERK
         assert verify_password(VALID_PAYLOAD["password"], account.password_hash)
 
+        clerk_login = login(client, VALID_PAYLOAD["email"])
+        assert clerk_login.status_code == 200
+        assert clerk_login.json()["accountType"] == "oficinista"
+        assert client.get("/api/v1/auth/me").json()["accountType"] == "oficinista"
+
 
 @pytest.mark.parametrize(
     ("field", "value"),
