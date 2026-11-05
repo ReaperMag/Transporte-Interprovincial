@@ -23,6 +23,13 @@ from app.modules.trips.schemas import (
 ECUADOR_TIMEZONE = ZoneInfo("America/Guayaquil")
 
 
+def as_local(value: datetime) -> datetime:
+    """Convierte o asegura que una fecha esté en la zona horaria de Ecuador."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=ECUADOR_TIMEZONE)
+    return value.astimezone(ECUADOR_TIMEZONE)
+
+
 def get_cities(db: Session) -> list[CityOption]:
     """
     Obtiene las ciudades registradas para utilizarlas
@@ -50,19 +57,22 @@ def search_trips(
     origin_city_id: int | None = None,
     destination_city_id: int | None = None,
     travel_date: date | None = None,
+    end_date: date | None = None,
+    include_past: bool = False,
 ) -> list[TripSearchResult]:
     """
-    Busca los viajes programados que todavía no salen.
+    Busca los viajes programados.
 
     Sin filtros devuelve todos los viajes disponibles. El origen, el destino
-    y la fecha son opcionales y cada uno reduce los resultados.
+    y el rango de fechas son opcionales y sirven para acotar la búsqueda.
+    Si include_past es True, incluye también viajes que ya salieron marcando isPast=True.
 
     Solo devuelve viajes con tarifas registradas.
     No calcula todavía disponibilidad de asientos.
     """
 
     current_time = datetime.now(ECUADOR_TIMEZONE)
-    search_start = current_time
+    search_start = None if include_past else current_time
     search_end = None
 
     if travel_date is not None:
@@ -71,13 +81,28 @@ def search_trips(
             time.min,
             tzinfo=ECUADOR_TIMEZONE,
         )
-        search_end = start_of_day + timedelta(days=1)
+        if end_date is not None:
+            search_end = datetime.combine(
+                end_date + timedelta(days=1),
+                time.min,
+                tzinfo=ECUADOR_TIMEZONE,
+            )
+        else:
+            search_end = start_of_day + timedelta(days=1)
 
-        # No consultar viajes de fechas que ya terminaron.
-        if search_end <= current_time:
-            return []
-
-        search_start = max(start_of_day, current_time)
+        if not include_past:
+            # No consultar viajes de fechas que ya terminaron si no se incluyen pasados.
+            if search_end <= current_time:
+                return []
+            search_start = max(start_of_day, current_time)
+        else:
+            search_start = start_of_day
+    elif end_date is not None:
+        search_end = datetime.combine(
+            end_date + timedelta(days=1),
+            time.min,
+            tzinfo=ECUADOR_TIMEZONE,
+        )
 
     origin_city = aliased(City)
     destination_city = aliased(City)
@@ -135,7 +160,6 @@ def search_trips(
         )
         .where(
             Trip.status == TripStatus.SCHEDULED,
-            Trip.departure_at >= search_start,
 
             Frequency.is_active.is_(True),
             Route.is_active.is_(True),
@@ -161,6 +185,8 @@ def search_trips(
         )
     )
 
+    if search_start is not None:
+        statement = statement.where(Trip.departure_at >= search_start)
     if search_end is not None:
         statement = statement.where(Trip.departure_at < search_end)
     if origin_city_id is not None:
@@ -183,6 +209,7 @@ def search_trips(
     ) in rows:
 
         if trip.id not in results:
+            departure_local = as_local(trip.departure_at)
             results[trip.id] = TripSearchResult(
                 tripId=trip.id,
                 routeId=route.id,
@@ -202,6 +229,8 @@ def search_trips(
                 busId=bus.id,
                 busNumber=bus.number,
                 busTemplateId=bus.template_id,
+
+                isPast=departure_local <= current_time,
 
                 fares=[],
             )
