@@ -9,4 +9,10 @@ export interface OficinistaInfo {
   position: string;
   cooperativeId: number;
   cooperativeName: string;
+  cooperativeRuc: string;
+  cooperativeAddress: string | null;
+  cooperativePhone: string | null;
+  cooperativeEmail: string | null;
+  cooperativeSupportPhone: string | null;
+  cooperativeSupportEmail: string | null;
 }

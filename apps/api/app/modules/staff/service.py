@@ -180,3 +180,26 @@ def update_office_user(
     except Exception:
         db.rollback()
         raise
+
+
+def delete_office_user(
+    db: Session,
+    *,
+    cooperative_id: int,
+    office_user_id: int,
+) -> None:
+    staff, _ = get_office_user(
+        db,
+        cooperative_id=cooperative_id,
+        office_user_id=office_user_id,
+    )
+    account = db.get(Account, staff.account_id)
+    if account is None:
+        raise OfficeUserNotFoundError
+
+    try:
+        db.delete(account)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

@@ -45,13 +45,8 @@ def validate_ecuadorian_id(value: str) -> str:
 
 
 def validate_phone(value: str) -> str:
-    digits = "".join(character for character in value if character.isdigit())
-    if (
-        len(digits) < 7
-        or len(digits) > 15
-        or re.fullmatch(r"\+?[0-9][0-9 ().-]{5,19}", value) is None
-    ):
-        raise ValueError("Ingresa un número de teléfono válido.")
+    if re.fullmatch(r"\d{7,10}", value) is None:
+        raise ValueError("El teléfono debe contener entre siete y diez dígitos.")
     return value
 
 
@@ -87,9 +82,19 @@ class OfficeUserCreate(StaffSchema):
         min_length=PASSWORD_MIN_LENGTH,
         max_length=PASSWORD_MAX_LENGTH,
     )
+    confirm_password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+    )
 
     _validate_id_number = field_validator("id_number")(validate_ecuadorian_id)
     _validate_phone = field_validator("phone")(validate_phone)
+
+    @model_validator(mode="after")
+    def passwords_must_match(self) -> "OfficeUserCreate":
+        if self.password != self.confirm_password:
+            raise ValueError("Las contraseñas no coinciden.")
+        return self
 
 
 class OfficeUserUpdate(StaffSchema):
@@ -138,3 +143,9 @@ class StaffSelfRead(StaffSchema):
     phone: str | None
     position: str
     cooperative_name: str
+    cooperative_ruc: str
+    cooperative_address: str | None
+    cooperative_phone: str | None
+    cooperative_email: EmailStr | None
+    cooperative_support_phone: str | None
+    cooperative_support_email: EmailStr | None

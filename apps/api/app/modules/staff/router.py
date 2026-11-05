@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
@@ -43,6 +43,12 @@ def read_my_staff_profile(
         phone=staff.phone,
         position=staff.position.value,
         cooperative_name=cooperative.name,
+        cooperative_ruc=cooperative.ruc,
+        cooperative_address=cooperative.address,
+        cooperative_phone=cooperative.phone,
+        cooperative_email=cooperative.email,
+        cooperative_support_phone=cooperative.support_phone,
+        cooperative_support_email=cooperative.support_email,
     )
 
 
@@ -179,3 +185,32 @@ def update_office_user(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
+
+@router.delete(
+    "/me/office-users/{office_user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_office_user(
+    office_user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_cooperative_admin)],
+    _: Annotated[None, Depends(validate_request_origin)],
+) -> Response:
+    if account.cooperative_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta no tiene una cooperativa asociada.",
+        )
+    try:
+        service.delete_office_user(
+            db,
+            cooperative_id=account.cooperative_id,
+            office_user_id=office_user_id,
+        )
+    except service.OfficeUserNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Oficinista no encontrado.",
+        ) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

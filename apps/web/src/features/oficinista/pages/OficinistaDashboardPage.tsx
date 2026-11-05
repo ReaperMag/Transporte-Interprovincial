@@ -80,6 +80,30 @@ export function OficinistaDashboardPage() {
               <dt>Cooperativa</dt>
               <dd>{profile.cooperativeName}</dd>
             </div>
+            <div>
+              <dt>RUC de la cooperativa</dt>
+              <dd>{profile.cooperativeRuc}</dd>
+            </div>
+            <div>
+              <dt>Dirección</dt>
+              <dd>{profile.cooperativeAddress || 'No registrada'}</dd>
+            </div>
+            <div>
+              <dt>Teléfono de la cooperativa</dt>
+              <dd>{profile.cooperativePhone || 'No registrado'}</dd>
+            </div>
+            <div>
+              <dt>Correo de la cooperativa</dt>
+              <dd>{profile.cooperativeEmail || 'No registrado'}</dd>
+            </div>
+            <div>
+              <dt>Contacto de soporte</dt>
+              <dd>
+                {[profile.cooperativeSupportPhone, profile.cooperativeSupportEmail]
+                  .filter(Boolean)
+                  .join(' · ') || 'No registrado'}
+              </dd>
+            </div>
           </dl>
         </section>
       )}
