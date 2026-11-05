@@ -428,6 +428,44 @@
   padding: 0.8rem;
 }
 
+.cooperative-routes__registered-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cooperative-routes__registered-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cooperative-routes__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.cooperative-routes__badge--success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cooperative-routes__badge--warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.cooperative-routes__button--small {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+}
+
 .cooperative-routes__registered li > div {
   display: flex;
   flex-wrap: wrap;

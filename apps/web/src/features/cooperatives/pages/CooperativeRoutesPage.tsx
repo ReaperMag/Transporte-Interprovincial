@@ -808,27 +808,59 @@ export function CooperativeRoutesPage() {
                 </p>
               ) : (
                 <ul>
-                  {routes.map((route) => (
-                    <li key={route.id}>
-                      <div>
-                        <strong>
-                          {route.originCity} → {route.destinationCity}
-                        </strong>
-                        <small>
-                          {route.durationMinutes === null
-                            ? 'Duración no configurada'
-                            : `${Math.floor(route.durationMinutes / 60)} h ${route.durationMinutes % 60} min`}
-                        </small>
-                      </div>
-                      <p>
-                        {[
-                          route.originCity,
-                          ...route.stops.map((stop) => stop.cityName),
-                          route.destinationCity,
-                        ].join(' → ')}
-                      </p>
-                    </li>
-                  ))}
+                  {routes.map((route) => {
+                    const hasFares = route.fares.length > 0;
+                    const isSelected = selectedRouteId === String(route.id);
+                    return (
+                      <li key={route.id}>
+                        <div className="cooperative-routes__registered-header">
+                          <div>
+                            <strong>
+                              {route.originCity} → {route.destinationCity}
+                            </strong>
+                            <small style={{ marginLeft: '0.5rem' }}>
+                              {route.durationMinutes === null
+                                ? 'Duración no configurada'
+                                : `${Math.floor(route.durationMinutes / 60)} h ${route.durationMinutes % 60} min`}
+                            </small>
+                          </div>
+                          <div className="cooperative-routes__registered-actions">
+                            <span
+                              className={`cooperative-routes__badge ${
+                                hasFares
+                                  ? 'cooperative-routes__badge--success'
+                                  : 'cooperative-routes__badge--warning'
+                              }`}
+                            >
+                              {hasFares ? `${route.fares.length} tarifas` : 'Sin tarifas'}
+                            </span>
+                            <button
+                              type="button"
+                              className={`cooperative-routes__button cooperative-routes__button--small ${
+                                isSelected ? '' : 'cooperative-routes__button--secondary'
+                              }`}
+                              onClick={() => {
+                                setSelectedRouteId(String(route.id));
+                                const fareForm = document.querySelector('.cooperative-routes__fares');
+                                if (fareForm) {
+                                  fareForm.scrollIntoView({ behavior: 'smooth' });
+                                }
+                              }}
+                            >
+                              {isSelected ? 'Tarifando...' : 'Tarifar ruta'}
+                            </button>
+                          </div>
+                        </div>
+                        <p>
+                          {[
+                            route.originCity,
+                            ...route.stops.map((stop) => stop.cityName),
+                            route.destinationCity,
+                          ].join(' → ')}
+                        </p>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
