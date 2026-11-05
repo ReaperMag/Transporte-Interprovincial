@@ -5,17 +5,45 @@ from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
-from app.core.permissions import require_cooperative_admin
+from app.core.permissions import require_cooperative_admin, require_office_staff
 from app.modules.accounts.models import Account
+from app.modules.cooperatives.models import Cooperative
 from app.modules.staff import service
 from app.modules.staff.schemas import (
     OfficeUserCreate,
     OfficeUserRead,
     OfficeUserUpdate,
+    StaffSelfRead,
 )
+from app.modules.staff.models import Staff
 
 
 router = APIRouter(prefix="/cooperatives", tags=["Cooperative staff"])
+staff_self_router = APIRouter(prefix="/staff", tags=["Staff"])
+
+
+@staff_self_router.get("/me", response_model=StaffSelfRead)
+def read_my_staff_profile(
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    db: Annotated[Session, Depends(get_db)],
+) -> StaffSelfRead:
+    cooperative = db.get(Cooperative, staff.cooperative_id)
+    if cooperative is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El oficinista no tiene una cooperativa asociada.",
+        )
+    return StaffSelfRead(
+        account_id=staff.account_id,
+        cooperative_id=staff.cooperative_id,
+        first_name=staff.first_name,
+        last_name=staff.last_name,
+        id_number=staff.id_number,
+        email=service.get_staff_account_email(db, staff),
+        phone=staff.phone,
+        position=staff.position.value,
+        cooperative_name=cooperative.name,
+    )
 
 
 def _to_read(staff, email: str) -> OfficeUserRead:

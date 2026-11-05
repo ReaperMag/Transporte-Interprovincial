@@ -126,3 +126,15 @@ class OfficeUserRead(StaffSchema):
     email: EmailStr
     phone: str | None
     position: str
+
+
+class StaffSelfRead(StaffSchema):
+    account_id: int
+    cooperative_id: int
+    first_name: str
+    last_name: str
+    id_number: str
+    email: EmailStr
+    phone: str | None
+    position: str
+    cooperative_name: str

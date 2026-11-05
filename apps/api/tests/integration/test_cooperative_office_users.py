@@ -38,6 +38,7 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         role_code=COOPERATIVE_ADMIN_ROLE,
     )
     assert login(client, "admin-office@example.com").status_code == 200
+    assert client.get("/api/v1/staff/me").status_code == 403
 
     response = client.post(URL, json=VALID_PAYLOAD, headers=ORIGIN)
 
@@ -63,6 +64,12 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         assert clerk_login.status_code == 200
         assert clerk_login.json()["accountType"] == "oficinista"
         assert client.get("/api/v1/auth/me").json()["accountType"] == "oficinista"
+        profile = client.get("/api/v1/staff/me")
+        assert profile.status_code == 200
+        assert profile.json()["email"] == VALID_PAYLOAD["email"]
+        assert profile.json()["firstName"] == "Oficinista"
+        assert profile.json()["lastName"] == "Prueba"
+        assert profile.json()["cooperativeId"] == cooperative_id
 
 
 @pytest.mark.parametrize(

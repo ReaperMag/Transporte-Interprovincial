@@ -1,89 +1,88 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getOficinistaInfo } from '../services/oficinista.service';
+import type { OficinistaInfo } from '../types/oficinista.types';
 import './OficinistaDashboardPage.css';
 
 export function OficinistaDashboardPage() {
-  // Datos simulados (listos para reemplazar con datos reales desde API)
-  const oficinista = {
-    fullName: 'Juan Carlos Pérez',
-  };
+  const [profile, setProfile] = useState<OficinistaInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [upcomingTrips] = useState([
-    {
-      tripId: 1,
-      departureTime: '08:30',
-      routeOrigin: 'Quito',
-      routeDestination: 'Ambato',
-      busPlate: 'ABC-1234',
-    },
-    {
-      tripId: 2,
-      departureTime: '10:15',
-      routeOrigin: 'Quito',
-      routeDestination: 'Latacunga',
-      busPlate: 'DEF-5678',
-    },
-    {
-      tripId: 3,
-      departureTime: '12:00',
-      routeOrigin: 'Quito',
-      routeDestination: 'Riobamba',
-      busPlate: 'GHI-9012',
-    },
-  ]);
-
-  const navigate = useNavigate();
-
-  const handleComprar = (tripId: number) => {
-    navigate(`/oficinista/vender-asientos/${tripId}`);
-  };
+  useEffect(() => {
+    let active = true;
+    getOficinistaInfo()
+      .then((result) => {
+        if (active) {
+          setProfile(result);
+          if (!result) setError('No se encontró el perfil del oficinista.');
+        }
+      })
+      .catch((requestError: unknown) => {
+        if (active) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : 'No se pudo cargar la información del oficinista.',
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
-    <div className="oficinista-dashboard">
+    <section className="oficinista-dashboard" aria-labelledby="oficinista-profile-title">
       <header className="oficinista-dashboard__header">
-        <h1 className="oficinista-dashboard__title">Panel Oficinista</h1>
-        <p className="oficinista-dashboard__oficinista-name">Oficinista: {oficinista.fullName}</p>
+        <p className="oficinista-dashboard__eyebrow">Cuenta personal</p>
+        <h1 className="oficinista-dashboard__title" id="oficinista-profile-title">
+          Perfil del oficinista
+        </h1>
+        <p className="oficinista-dashboard__oficinista-name">
+          Consulta tus datos y la cooperativa a la que perteneces.
+        </p>
       </header>
 
-      <section className="oficinista-dashboard__section">
-        <h2 className="oficinista-dashboard__section-title">Rutas próximas por salir</h2>
-        {upcomingTrips.length === 0 ? (
-          <p className="oficinista-dashboard__empty">No hay rutas próximas por salir.</p>
-        ) : (
-          <div className="oficinista-dashboard__table-wrapper">
-            <table className="oficinista-dashboard__table">
-              <thead>
-                <tr>
-                  <th>Hora de salida</th>
-                  <th>Origen</th>
-                  <th>Destino</th>
-                  <th>Placa</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upcomingTrips.map((trip) => (
-                  <tr key={trip.tripId}>
-                    <td>{trip.departureTime}</td>
-                    <td>{trip.routeOrigin}</td>
-                    <td>{trip.routeDestination}</td>
-                    <td>{trip.busPlate}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="oficinista-dashboard__sell-button"
-                        onClick={() => handleComprar(trip.tripId)}
-                      >
-                        Comprar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </div>
+      {loading && <p role="status">Cargando perfil...</p>}
+      {error && (
+        <p className="oficinista-dashboard__error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {profile && (
+        <section className="oficinista-dashboard__section" aria-label="Datos del oficinista">
+          <dl className="oficinista-dashboard__profile">
+            <div>
+              <dt>Nombres y apellidos</dt>
+              <dd>{profile.fullName}</dd>
+            </div>
+            <div>
+              <dt>Correo electrónico</dt>
+              <dd>{profile.email}</dd>
+            </div>
+            <div>
+              <dt>Cédula</dt>
+              <dd>{profile.idNumber}</dd>
+            </div>
+            <div>
+              <dt>Teléfono</dt>
+              <dd>{profile.phone || 'No registrado'}</dd>
+            </div>
+            <div>
+              <dt>Cargo</dt>
+              <dd>Oficinista</dd>
+            </div>
+            <div>
+              <dt>Cooperativa</dt>
+              <dd>{profile.cooperativeName}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
+    </section>
   );
 }
