@@ -238,6 +238,52 @@ def test_all_seats_are_available_before_any_reservation(scenario):
     }
 
 
+def test_passenger_searches_trip_and_selects_a_fareable_seat(scenario):
+    client, engine, data = scenario
+    login(client, "ana@example.com")
+    with Session(engine) as db:
+        travel_date = db.get(Trip, data["trip_id"]).departure_at.date().isoformat()
+
+    search = client.get(
+        "/api/v1/trips/search",
+        params={
+            "origin_city_id": data["quito"],
+            "destination_city_id": data["loja"],
+            "travel_date": travel_date,
+        },
+    )
+    assert search.status_code == 200, search.text
+    results = search.json()
+    assert len(results) == 1
+    trip = results[0]
+    assert trip["tripId"] == data["trip_id"]
+    fares = {fare["seatType"]: float(fare["price"]) for fare in trip["fares"]}
+    assert fares == {"normal": 16.0, "vip": 18.0}
+
+    seats = client.get(
+        f"/api/v1/reservations/trips/{trip['tripId']}/seats",
+        params={
+            "origin_city_id": trip["originCityId"],
+            "destination_city_id": trip["destinationCityId"],
+        },
+    )
+    assert seats.status_code == 200, seats.text
+    assert any(seat["number"] == 3 and seat["isAvailable"] for seat in seats.json()["seats"])
+
+    reservation = client.post(
+        "/api/v1/reservations",
+        json=reservation_payload(
+            data,
+            "quito",
+            "loja",
+            [(3, passenger())],
+        ),
+        headers=ORIGIN,
+    )
+    assert reservation.status_code == 201, reservation.text
+    assert float(reservation.json()["seats"][0]["price"]) == 16.0
+
+
 def test_passenger_reserves_seats_with_fare_and_time_limit(scenario):
     client, _, data = scenario
     login(client, "ana@example.com")
