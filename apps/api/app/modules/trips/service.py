@@ -142,7 +142,7 @@ def search_trips(
             destination_city,
             Route.destination_city_id == destination_city.id,
         )
-        .join(
+        .outerjoin(
             Fare,
             # Tarifas del recorrido completo de la ruta.
             and_(
@@ -235,11 +235,12 @@ def search_trips(
                 fares=[],
             )
 
-        results[trip.id].fares.append(
-            TripFareOption(
-                seatType=fare.seat_type,
-                price=fare.price,
+        if fare is not None:
+            results[trip.id].fares.append(
+                TripFareOption(
+                    seatType=fare.seat_type,
+                    price=fare.price,
+                )
             )
-        )
 
     return list(results.values())
