@@ -12,6 +12,7 @@ import {
   type ReservationCreate,
   type ReservationRead,
 } from '../services/reservation.service';
+import { confirmPassengerPayment } from '../services/payment.service';
 import {
   cedulaError,
   cleanName,
@@ -89,6 +90,7 @@ export function PassengerTripSeatsPage() {
   const [selectedFloor, setSelectedFloor] = useState(1);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [reservation, setReservation] = useState<ReservationRead | null>(null);
+  const [isPurchased, setIsPurchased] = useState(false);
 
   // Consultar los asientos del viaje.
   useEffect(() => {
@@ -104,6 +106,7 @@ export function PassengerTripSeatsPage() {
       setPassengerForms({});
       setSubmitError(null);
       setReservation(null);
+      setIsPurchased(false);
 
       try {
         const result = await getTripSeats(tripId, originCityId, destinationCityId);
@@ -214,10 +217,8 @@ export function PassengerTripSeatsPage() {
     }));
   }
 
-  // Crear la reserva utilizando el backend existente.
-  async function handleCreateReservation(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  // Procesar reserva o compra directa del boleto.
+  async function handleProcessReservation(mode: 'reserve' | 'buy') {
     if (!currentAvailability || submitting || reservation) return;
 
     setSubmitError(null);
@@ -283,7 +284,16 @@ export function PassengerTripSeatsPage() {
 
     try {
       const createdReservation = await createPassengerReservation(payload);
-      setReservation(createdReservation);
+
+      if (mode === 'buy') {
+        // Confirmar la reserva y emitir los boletos de inmediato
+        await confirmPassengerPayment(createdReservation.id);
+        setReservation({ ...createdReservation, status: 'confirmed' });
+        setIsPurchased(true);
+      } else {
+        setReservation(createdReservation);
+        setIsPurchased(false);
+      }
     } catch (err) {
       if (err instanceof ReservationRequestError && err.status === 409) {
         setSelectedSeatIds(new Set<number>());
@@ -298,7 +308,9 @@ export function PassengerTripSeatsPage() {
         }
       }
 
-      setSubmitError(err instanceof Error ? err.message : 'Ocurrió un error al crear la reserva.');
+      setSubmitError(
+        err instanceof Error ? err.message : 'Ocurrió un error al procesar tu solicitud.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -332,30 +344,109 @@ export function PassengerTripSeatsPage() {
         </p>
       )}
 
-      {/* Confirmación de la reserva */}
+      {/* Confirmación de la compra o reserva */}
       {reservation && (
         <div className="passenger-trip-search__results" role="status">
-          <h2>¡Reserva creada correctamente!</h2>
+          {isPurchased ? (
+            <div
+              style={{
+                background: '#e6f4ea',
+                border: '1px solid #34a853',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '20px',
+              }}
+            >
+              <h2 style={{ color: '#137333', margin: '0 0 10px' }}>
+                🎉 ¡Boleto confirmado y emitido con éxito!
+              </h2>
+              <p style={{ fontSize: '1rem', color: '#1e4620', margin: '0 0 14px' }}>
+                Tu compra ha sido procesada correctamente.
+              </p>
+
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  border: '1px solid #ceead6',
+                  margin: '14px 0',
+                }}
+              >
+                <p style={{ margin: '0 0 6px', fontWeight: 'bold', color: '#0e5a6b' }}>
+                  📧 Te hemos enviado el boleto con su código QR directamente a tu correo electrónico.
+                </p>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#4b5563' }}>
+                  Revisa tu bandeja de entrada para tenerlo listo al momento de abordar el bus.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '18px', flexWrap: 'wrap' }}>
+                <Link
+                  to="/pasajero/boletos"
+                  className="passenger-trip-search__button"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Ver mis boletos y código QR
+                </Link>
+                <Link
+                  to="/pasajero"
+                  className="passenger-trip-search__button passenger-trip-search__button--secondary"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Volver al panel principal
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                background: '#fff9e6',
+                border: '1px solid #ffd566',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '20px',
+              }}
+            >
+              <h2 style={{ color: '#79560f', margin: '0 0 10px' }}>¡Reserva creada correctamente!</h2>
+              <p style={{ fontSize: '0.95rem', color: '#55421a', margin: '0 0 14px' }}>
+                Tus asientos han sido apartados temporalmente. Para confirmar tu viaje y emitir tus
+                boletos, realiza el pago antes del vencimiento.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
+                <Link
+                  to={`/pasajero/reservas/${reservation.id}/pago`}
+                  className="passenger-trip-search__button"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Continuar al pago de la reserva
+                </Link>
+                <Link
+                  to="/pasajero/reservas"
+                  className="passenger-trip-search__button passenger-trip-search__button--secondary"
+                  style={{ textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Ir a Mis Reservas
+                </Link>
+              </div>
+            </div>
+          )}
 
           <p>
-            <strong>Número de reserva:</strong> {reservation.id}
-          </p>
-
-          <p>
-            <strong>Estado:</strong> {reservation.status}
+            <strong>Número de reserva:</strong> #{reservation.id}
           </p>
 
           <p>
             <strong>Salida:</strong> {formatDate(reservation.departureAt)}
           </p>
 
-          {reservation.expiresAt && (
+          {reservation.expiresAt && !isPurchased && (
             <p>
               <strong>La reserva vence:</strong> {formatDate(reservation.expiresAt)}
             </p>
           )}
 
-          <h3>Asientos reservados</h3>
+          <h3>Asientos {isPurchased ? 'adquiridos' : 'reservados'}</h3>
 
           <ul>
             {reservation.seats.map((seat) => (
@@ -367,12 +458,7 @@ export function PassengerTripSeatsPage() {
 
           <h3>Total: {formatMoney(reservation.total)}</h3>
 
-          <p>
-            Los asientos han sido apartados según las condiciones del sistema. Esta confirmación no
-            significa que el pago se haya realizado.
-          </p>
-
-          <Link to="/pasajero/viajes">Buscar otro viaje</Link>
+          <Link to="/pasajero">Volver a las rutas</Link>
         </div>
       )}
 
@@ -441,7 +527,7 @@ export function PassengerTripSeatsPage() {
           {selectedSeats.length > 0 && (
             <form
               onSubmit={(event) => {
-                void handleCreateReservation(event);
+                event.preventDefault();
               }}
               style={{ marginTop: '2rem' }}
             >

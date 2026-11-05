@@ -4,23 +4,35 @@ Envía por correo las notificaciones después de guardarlas.
 notify() deja la notificación pendiente en la sesión. Cuando la transacción
 se confirma (after_commit), se envía un correo con el mismo título y mensaje
 y, si el envío fue exitoso, se guarda email_sent_at. Si la transacción se
-revierte, no se envía nada. Así ningún módulo repite esta lógica y un correo
-nunca anuncia una compra o un pago que no se guardó.
+revierte, no se envía nada. Si la notificación corresponde a boletos emitidos,
+se genera y envía el correo con los detalles del viaje y códigos QR.
 """
 
+import base64
 import logging
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import event, update
+from sqlalchemy import event, select, update
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.orm import Session
 
 from app.modules.accounts.models import Account
-from app.modules.notifications.models import Notification
-from app.modules.notifications.providers.smtp import send_email
-from app.modules.notifications.templates.emails import notification_email
-from app.modules.trips.service import ECUADOR_TIMEZONE
+from app.modules.buses.models import Bus, TemplateSeat
+from app.modules.cooperatives.models import Cooperative
+from app.modules.notifications.models import Notification, NotificationEvent
+from app.modules.notifications.providers.smtp import EmailContent, send_email
+from app.modules.notifications.templates.emails import (
+    notification_email,
+    tickets_confirmation_email,
+)
+from app.modules.passengers.models import Passenger
+from app.modules.reservations.models import Reservation, ReservationSeat
+from app.modules.routes.models import City
+from app.modules.tickets.generator import render_qr_png
+from app.modules.tickets.models import Ticket
+from app.modules.trips.models import Trip
+from app.modules.trips.service import ECUADOR_TIMEZONE, as_local
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +49,8 @@ class NotificationEmail:
     account_id: int
     title: str
     message: str
+    event: str | None = None
+    reservation_id: int | None = None
 
 
 def queue_notification_email(db: Session, notification: Notification) -> None:
@@ -58,12 +72,21 @@ def _collect_flushed_notifications(session: Session, _flush_context) -> None:
         if notification.id is None:
             waiting.append(notification)
             continue
+
+        event_str = (
+            notification.event.value
+            if hasattr(notification.event, "value")
+            else str(notification.event)
+        )
+
         ready.append(
             NotificationEmail(
                 notification_id=notification.id,
                 account_id=notification.account_id,
                 title=notification.title,
                 message=notification.message,
+                event=event_str,
+                reservation_id=notification.reservation_id,
             )
         )
     session.info[PENDING_KEY] = waiting
@@ -90,6 +113,80 @@ def _send_committed_notification_emails(session: Session) -> None:
     deliver_notification_emails(bind, emails)
 
 
+def _build_tickets_email_content(db: Session, reservation_id: int) -> EmailContent | None:
+    """Construye el correo de confirmación de boletos con códigos QR."""
+    reservation = db.get(Reservation, reservation_id)
+    if reservation is None:
+        return None
+
+    trip = db.get(Trip, reservation.trip_id)
+    if trip is None:
+        return None
+
+    cooperative = db.get(Cooperative, trip.cooperative_id)
+    bus = db.get(Bus, trip.bus_id)
+
+    seat_ids = [s.id for s in reservation.seats]
+    tickets = list(
+        db.scalars(
+            select(Ticket)
+            .where(Ticket.reservation_seat_id.in_(seat_ids))
+            .order_by(Ticket.id)
+        ).all()
+    )
+
+    if not tickets:
+        return None
+
+    first_ticket = tickets[0]
+    origin = db.get(City, first_ticket.origin_city_id)
+    destination = db.get(City, first_ticket.destination_city_id)
+
+    dep_dt = as_local(trip.departure_at)
+    dep_str = dep_dt.strftime("%d/%m/%Y a las %H:%M")
+
+    tickets_data: list[dict] = []
+    for t in tickets:
+        passenger = db.get(Passenger, t.passenger_id)
+        seat = db.get(TemplateSeat, t.seat_id)
+
+        qr_b64 = ""
+        try:
+            qr_bytes = render_qr_png(t.code)
+            qr_b64 = base64.b64encode(qr_bytes).decode("ascii")
+        except Exception:
+            logger.warning("No se pudo generar QR para boleto %s", t.code)
+
+        tickets_data.append(
+            {
+                "ticket_code": t.code,
+                "passenger_name": (
+                    f"{passenger.first_name} {passenger.last_name}" if passenger else "Pasajero"
+                ),
+                "passenger_id_number": passenger.id_number if passenger else "",
+                "seat_number": seat.number if seat else "",
+                "seat_type": seat.seat_type.value if hasattr(seat.seat_type, "value") else str(seat.seat_type),
+                "category": (
+                    t.passenger_category.value
+                    if hasattr(t.passenger_category, "value")
+                    else str(t.passenger_category)
+                ),
+                "price": str(t.price),
+                "qr_base64": qr_b64,
+            }
+        )
+
+    return tickets_confirmation_email(
+        cooperative_name=cooperative.name if cooperative else "Transporte Interprovincial",
+        origin_name=origin.name if origin else "Origen",
+        destination_name=destination.name if destination else "Destino",
+        departure_str=dep_str,
+        bus_number=bus.number if bus else "1",
+        tickets=tickets_data,
+        total_price=str(reservation.total),
+    )
+
+
 def deliver_notification_emails(
     bind: Engine | Connection,
     emails: list[NotificationEmail],
@@ -105,10 +202,23 @@ def deliver_notification_emails(
                 if account is None or not account.is_active:
                     continue
 
-                sent = send_email(
-                    account.email,
-                    notification_email(email.title, email.message),
-                )
+                content: EmailContent | None = None
+                if (
+                    email.event == NotificationEvent.TICKET_ISSUED.value
+                    and email.reservation_id is not None
+                ):
+                    try:
+                        content = _build_tickets_email_content(db, email.reservation_id)
+                    except Exception:
+                        logger.exception(
+                            "Error construyendo plantilla de boletos para reserva %s",
+                            email.reservation_id,
+                        )
+
+                if content is None:
+                    content = notification_email(email.title, email.message)
+
+                sent = send_email(account.email, content)
                 if not sent:
                     continue
 
