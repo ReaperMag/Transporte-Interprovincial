@@ -1,7 +1,7 @@
 
 {
   "name": "transporte-interprovincial",
-  "version": "1.0.1",
+  "version": "1.1.0-beta.1",
   "private": true,
   "scripts": {
     "dev:web": "pnpm --filter @transporte/web dev",
