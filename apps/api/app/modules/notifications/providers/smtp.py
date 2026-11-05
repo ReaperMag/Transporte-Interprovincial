@@ -28,6 +28,7 @@ class EmailContent:
     subject: str
     text: str
     html: str
+    inline_images: dict[str, bytes] | None = None
 
 
 def _clean(value: str | None) -> str:
@@ -42,6 +43,18 @@ def _build_message(sender: str, to: str, content: EmailContent) -> EmailMessage:
     message["To"] = to
     message.set_content(content.text)
     message.add_alternative(content.html, subtype="html")
+    html_part = message.get_body(preferencelist=("html",))
+
+    if html_part is None:
+        raise ValueError("No se pudo construir la parte HTML del correo.")
+
+    for content_id, image in (content.inline_images or {}).items():
+        html_part.add_related(
+            image,
+            maintype="image",
+            subtype="png",
+            cid=f"<{content_id}>",
+        )
     return message
 
 

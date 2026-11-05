@@ -114,7 +114,7 @@ def tickets_confirmation_email(
         p_id = t.get("passenger_id_number") or "No registrado"
         cat = t.get("category", "regular")
         code = t.get("ticket_code", "")
-        qr_b64 = t.get("qr_base64", "")
+        qr_cid = t.get("qr_cid", "")
         price = t.get("price", "0.00")
 
         text_parts.append(
@@ -123,10 +123,10 @@ def tickets_confirmation_email(
 
         qr_tag = (
             f'<div style="text-align:center;margin-top:12px;">'
-            f'<img src="data:image/png;base64,{qr_b64}" alt="QR Boleto" width="140" height="140" style="border:1px solid #ddd;padding:4px;border-radius:6px;background:#fff;" />'
+            f'<img src="cid:{escape(qr_cid)}" alt="QR Boleto" width="140" height="140" style="border:1px solid #ddd;padding:4px;border-radius:6px;background:#fff;" />'
             f'<p style="margin:4px 0 0;font-size:11px;color:#666;font-family:monospace;">{escape(code)}</p>'
             f'</div>'
-            if qr_b64
+            if qr_cid
             else ""
         )
 
@@ -185,4 +185,5 @@ def tickets_confirmation_email(
         subject=f"{subject} - {SYSTEM_NAME}",
         text="\n".join(text_parts),
         html=html,
+        inline_images={t["qr_cid"]: t["qr_png"] for t in tickets if t.get("qr_cid")},
     )
