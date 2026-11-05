@@ -21,7 +21,18 @@ export async function getOficinistaInfo(): Promise<OficinistaInfo | null> {
   }
 
   if (!response.ok) {
-    throw new Error('No fue posible obtener la información del oficinista.');
+    const body: unknown = await response.json().catch(() => null);
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      'detail' in body &&
+      typeof body.detail === 'string'
+    ) {
+      throw new Error(body.detail);
+    }
+    throw new Error(
+      `No fue posible obtener la información del oficinista (HTTP ${response.status}).`,
+    );
   }
 
   const data = (await response.json()) as Omit<OficinistaInfo, 'fullName'>;

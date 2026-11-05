@@ -124,6 +124,6 @@ class StaffSelfRead(StaffSchema):
     cooperative_ruc: str
     cooperative_address: str | None
     cooperative_phone: str | None
-    cooperative_email: EmailStr | None
+    cooperative_email: str | None
     cooperative_support_phone: str | None
-    cooperative_support_email: EmailStr | None
+    cooperative_support_email: str | None

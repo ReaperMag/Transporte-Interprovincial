@@ -46,9 +46,9 @@ def read_my_staff_profile(
         cooperative_ruc=cooperative.ruc,
         cooperative_address=cooperative.address,
         cooperative_phone=cooperative.phone,
-        cooperative_email=cooperative.email,
+        cooperative_email=cooperative.email or None,
         cooperative_support_phone=cooperative.support_phone,
-        cooperative_support_email=cooperative.support_email,
+        cooperative_support_email=cooperative.support_email or None,
     )
 
 
