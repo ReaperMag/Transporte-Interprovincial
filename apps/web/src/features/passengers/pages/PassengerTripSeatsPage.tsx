@@ -12,7 +12,11 @@ import {
   type ReservationCreate,
   type ReservationRead,
 } from '../services/reservation.service';
-import { confirmPassengerPayment } from '../services/payment.service';
+import {
+  getPassengerPaymentMethods,
+  type OnlinePaymentMethod,
+  type PaymentInfo,
+} from '../services/payment.service';
 import {
   cedulaError,
   cleanName,
@@ -91,6 +95,10 @@ export function PassengerTripSeatsPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [reservation, setReservation] = useState<ReservationRead | null>(null);
   const [isPurchased, setIsPurchased] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<OnlinePaymentMethod | ''>('');
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [paymentInfoError, setPaymentInfoError] = useState<string | null>(null);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
 
   // Consultar los asientos del viaje.
   useEffect(() => {
@@ -107,6 +115,8 @@ export function PassengerTripSeatsPage() {
       setSubmitError(null);
       setReservation(null);
       setIsPurchased(false);
+      setPaymentMethod('');
+      setShowPaymentDetails(false);
 
       try {
         const result = await getTripSeats(tripId, originCityId, destinationCityId);
@@ -133,6 +143,24 @@ export function PassengerTripSeatsPage() {
       active = false;
     };
   }, [validTrip, tripId, originCityId, destinationCityId]);
+
+  useEffect(() => {
+    let active = true;
+    void getPassengerPaymentMethods()
+      .then((result) => {
+        if (active) setPaymentInfo(result);
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setPaymentInfoError(
+            err instanceof Error ? err.message : 'No se pudieron cargar los datos de pago.',
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Evitar mostrar datos de un viaje diferente.
   const currentAvailability =
@@ -222,6 +250,14 @@ export function PassengerTripSeatsPage() {
     if (!currentAvailability || submitting || reservation) return;
 
     setSubmitError(null);
+    if (mode === 'buy' && !paymentMethod) {
+      setSubmitError('Selecciona depósito o transferencia para continuar con la compra.');
+      return;
+    }
+    if (mode === 'buy' && !paymentInfo) {
+      setSubmitError(paymentInfoError ?? 'Espera a que se carguen los datos de pago.');
+      return;
+    }
 
     if (selectedSeats.length < 1 || selectedSeats.length > 10) {
       setSubmitError('Debes seleccionar entre 1 y 10 asientos.');
@@ -258,10 +294,13 @@ export function PassengerTripSeatsPage() {
       usedIds.add(normalizedId);
     }
 
+    const selectedPaymentMethod: OnlinePaymentMethod | undefined =
+      mode === 'buy' && paymentMethod ? paymentMethod : undefined;
     const payload: ReservationCreate = {
       tripId,
       originCityId,
       destinationCityId,
+      ...(selectedPaymentMethod ? { paymentMethod: selectedPaymentMethod } : {}),
       seats: selectedSeats.map((seat) => {
         const passenger = passengerForms[seat.seatId] ?? emptyPassenger;
 
@@ -286,10 +325,9 @@ export function PassengerTripSeatsPage() {
       const createdReservation = await createPassengerReservation(payload);
 
       if (mode === 'buy') {
-        // Confirmar la reserva y emitir los boletos de inmediato
-        await confirmPassengerPayment(createdReservation.id);
-        setReservation({ ...createdReservation, status: 'confirmed' });
+        setReservation(createdReservation);
         setIsPurchased(true);
+        setShowPaymentDetails(true);
       } else {
         setReservation(createdReservation);
         setIsPurchased(false);
@@ -350,51 +388,35 @@ export function PassengerTripSeatsPage() {
           {isPurchased ? (
             <div
               style={{
-                background: '#e6f4ea',
-                border: '1px solid #34a853',
+                background: '#fff9e6',
+                border: '1px solid #ffd566',
                 borderRadius: '12px',
                 padding: '24px',
                 marginBottom: '20px',
               }}
             >
-              <h2 style={{ color: '#137333', margin: '0 0 10px' }}>
-                🎉 ¡Boleto confirmado y emitido con éxito!
+              <h2 style={{ color: '#79560f', margin: '0 0 10px' }}>
+                Solicitud de compra registrada
               </h2>
-              <p style={{ fontSize: '1rem', color: '#1e4620', margin: '0 0 14px' }}>
-                Tu compra ha sido procesada correctamente.
+              <p style={{ fontSize: '1rem', color: '#55421a', margin: '0 0 14px' }}>
+                El asiento quedó apartado temporalmente. Realiza el pago y envía una imagen del
+                comprobante; el oficinista confirmará la compra después de revisarla.
               </p>
-
-              <div
-                style={{
-                  background: '#ffffff',
-                  borderRadius: '8px',
-                  padding: '16px',
-                  border: '1px solid #ceead6',
-                  margin: '14px 0',
-                }}
-              >
-                <p style={{ margin: '0 0 6px', fontWeight: 'bold', color: '#0e5a6b' }}>
-                  📧 Te hemos enviado el boleto con su código QR directamente a tu correo electrónico.
-                </p>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#4b5563' }}>
-                  Revisa tu bandeja de entrada para tenerlo listo al momento de abordar el bus.
-                </p>
-              </div>
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '18px', flexWrap: 'wrap' }}>
                 <Link
-                  to="/pasajero/boletos"
+                  to={`/pasajero/reservas/${reservation.id}/pago`}
                   className="passenger-trip-search__button"
                   style={{ textDecoration: 'none', display: 'inline-block' }}
                 >
-                  Ver mis boletos y código QR
+                  Subir evidencia de pago
                 </Link>
                 <Link
-                  to="/pasajero"
+                  to="/pasajero/reservas"
                   className="passenger-trip-search__button passenger-trip-search__button--secondary"
                   style={{ textDecoration: 'none', display: 'inline-block' }}
                 >
-                  Volver al panel principal
+                  Ir a Mis reservas
                 </Link>
               </div>
             </div>
@@ -408,7 +430,9 @@ export function PassengerTripSeatsPage() {
                 marginBottom: '20px',
               }}
             >
-              <h2 style={{ color: '#79560f', margin: '0 0 10px' }}>¡Reserva creada correctamente!</h2>
+              <h2 style={{ color: '#79560f', margin: '0 0 10px' }}>
+                ¡Reserva creada correctamente!
+              </h2>
               <p style={{ fontSize: '0.95rem', color: '#55421a', margin: '0 0 14px' }}>
                 Tus asientos han sido apartados temporalmente. Para confirmar tu viaje y emitir tus
                 boletos, realiza el pago antes del vencimiento.
@@ -432,6 +456,68 @@ export function PassengerTripSeatsPage() {
             </div>
           )}
 
+          {showPaymentDetails && reservation && paymentInfo && (
+            <div className="passenger-trip-seats__payment-overlay">
+              <section
+                className="passenger-trip-seats__payment-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="purchase-payment-title"
+              >
+                <button
+                  type="button"
+                  className="passenger-trip-seats__payment-close"
+                  aria-label="Cerrar datos de pago"
+                  onClick={() => setShowPaymentDetails(false)}
+                >
+                  ×
+                </button>
+                <p className="passenger-trip-seats__payment-eyebrow">RESERVA #{reservation.id}</p>
+                <h2 id="purchase-payment-title">Datos para completar el pago</h2>
+                <p>
+                  Elegiste{' '}
+                  <strong>{paymentMethod === 'deposit' ? 'depósito' : 'transferencia'}</strong>.
+                  Envía el valor de <strong>{formatMoney(reservation.total)}</strong> y luego sube
+                  una imagen del comprobante para que el oficinista la revise.
+                </p>
+                <dl className="passenger-trip-seats__payment-data">
+                  <div>
+                    <dt>Banco</dt>
+                    <dd>{paymentInfo.bankName}</dd>
+                  </div>
+                  <div>
+                    <dt>Tipo de cuenta</dt>
+                    <dd>{paymentInfo.accountType}</dd>
+                  </div>
+                  <div>
+                    <dt>Número de cuenta</dt>
+                    <dd>{paymentInfo.accountNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>Titular</dt>
+                    <dd>{paymentInfo.accountHolder}</dd>
+                  </div>
+                  <div>
+                    <dt>Cédula/RUC</dt>
+                    <dd>{paymentInfo.accountIdNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>Correo</dt>
+                    <dd>{paymentInfo.accountEmail}</dd>
+                  </div>
+                </dl>
+                <Link
+                  to={`/pasajero/reservas/${reservation.id}/pago`}
+                  state={{ paymentMethod }}
+                  className="passenger-trip-search__button"
+                  onClick={() => setShowPaymentDetails(false)}
+                >
+                  Continuar para subir evidencia
+                </Link>
+              </section>
+            </div>
+          )}
+
           <p>
             <strong>Número de reserva:</strong> #{reservation.id}
           </p>
@@ -446,7 +532,7 @@ export function PassengerTripSeatsPage() {
             </p>
           )}
 
-          <h3>Asientos {isPurchased ? 'adquiridos' : 'reservados'}</h3>
+          <h3>Asientos reservados</h3>
 
           <ul>
             {reservation.seats.map((seat) => (
@@ -695,8 +781,39 @@ export function PassengerTripSeatsPage() {
                 </p>
               )}
 
+              <fieldset className="passenger-trip-seats__payment-method">
+                <legend>Elige cómo pagar la compra</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="purchase-payment-method"
+                    value="deposit"
+                    checked={paymentMethod === 'deposit'}
+                    onChange={() => setPaymentMethod('deposit')}
+                    disabled={submitting}
+                  />
+                  Depósito bancario
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="purchase-payment-method"
+                    value="transfer"
+                    checked={paymentMethod === 'transfer'}
+                    onChange={() => setPaymentMethod('transfer')}
+                    disabled={submitting}
+                  />
+                  Transferencia bancaria
+                </label>
+                {paymentInfoError && (
+                  <p role="alert" className="passenger-trip-search__error">
+                    {paymentInfoError}
+                  </p>
+                )}
+              </fieldset>
+
               {/* Botones de acción: Reservar o Comprar */}
-              <div style={{ display: "flex", gap: "1rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className="passenger-trip-search__button passenger-trip-search__button--secondary"
@@ -708,17 +825,18 @@ export function PassengerTripSeatsPage() {
                 <button
                   type="button"
                   className="passenger-trip-search__button"
-                  disabled={submitting}
+                  disabled={submitting || !paymentInfo}
                   onClick={() => handleProcessReservation('buy')}
                 >
                   {submitting ? 'Procesando...' : 'Comprar'}
                 </button>
               </div>
 
-              <p style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#6b7280" }}>
+              <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#6b7280' }}>
                 <strong>Reservar:</strong> aparta los asientos temporalmente y paga después.
                 <br />
-                <strong>Comprar:</strong> confirma el pago y emite tus boletos de inmediato.
+                <strong>Comprar:</strong> aparta los asientos mientras realizas el pago y envías el
+                comprobante para revisión.
               </p>
             </form>
           )}
