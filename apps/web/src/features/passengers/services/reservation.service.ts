@@ -19,6 +19,7 @@ export interface ReservationCreate {
   tripId: number;
   originCityId: number;
   destinationCityId: number;
+  paymentMethod?: 'deposit' | 'transfer';
   seats: ReservationSeatInput[];
 }
 

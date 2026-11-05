@@ -5,10 +5,11 @@ import {
   getPassengerReservations,
   type ReservationRead,
 } from '../services/reservation.service';
+import { getPassengerPaymentMethods, type PaymentInfo } from '../services/payment.service';
 import './PassengerTripSearchPage.css';
 
 // Estados que el backend permite cancelar.
-const cancellableStatuses = ['pending_payment', 'payment_review'];
+const cancellableStatuses = ['pending_payment'];
 
 function canCancelReservation(status: string): boolean {
   return cancellableStatuses.includes(status);
@@ -57,6 +58,8 @@ export function PassengerReservationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
+  const [paymentInfoError, setPaymentInfoError] = useState<string | null>(null);
 
   // Controlar la cancelación de reservas.
   const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -96,6 +99,24 @@ export function PassengerReservationsPage() {
       active = false;
     };
   }, [refreshKey]);
+
+  useEffect(() => {
+    let active = true;
+    void getPassengerPaymentMethods()
+      .then((result) => {
+        if (active) setPaymentInfo(result);
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setPaymentInfoError(
+            err instanceof Error ? err.message : 'No se pudieron cargar los datos de pago.',
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function handleRefresh() {
     if (loading || cancellingId !== null) return;
@@ -314,9 +335,56 @@ export function PassengerReservationsPage() {
                   )}
 
                   {!isOfficeSale && reservation.status === 'pending_payment' && (
-                    <p style={{ marginTop: '1rem' }}>
-                      <Link to={`/pasajero/reservas/${reservation.id}/pago`}>Registrar pago</Link>
-                    </p>
+                    <section
+                      aria-label={`Datos de pago de la reserva ${reservation.id}`}
+                      style={{
+                        marginTop: '1.25rem',
+                        padding: '1rem',
+                        border: '1px solid #d5e5e8',
+                        borderRadius: '12px',
+                        background: '#f5fafb',
+                      }}
+                    >
+                      <h4>Completa el pago para confirmar tu boleto</h4>
+                      {paymentInfoError && (
+                        <p role="alert" className="passenger-trip-search__error">
+                          {paymentInfoError}
+                        </p>
+                      )}
+                      {paymentInfo && (
+                        <>
+                          {paymentInfo.isDemo && (
+                            <p role="note">
+                              <strong>Datos de ejemplo:</strong> no realices pagos reales a esta
+                              cuenta.
+                            </p>
+                          )}
+                          <p>
+                            <strong>Banco:</strong> {paymentInfo.bankName} ·{' '}
+                            {paymentInfo.accountType}
+                          </p>
+                          <p>
+                            <strong>Cuenta:</strong> {paymentInfo.accountNumber}
+                          </p>
+                          <p>
+                            <strong>Titular:</strong> {paymentInfo.accountHolder}
+                          </p>
+                          <p>
+                            <strong>Cédula/RUC:</strong> {paymentInfo.accountIdNumber}
+                          </p>
+                          <p>
+                            <strong>Correo:</strong> {paymentInfo.accountEmail}
+                          </p>
+                        </>
+                      )}
+                      <Link
+                        to={`/pasajero/reservas/${reservation.id}/pago`}
+                        className="passenger-trip-search__button"
+                        style={{ display: 'inline-block', textDecoration: 'none' }}
+                      >
+                        Seleccionar método y subir evidencia (imagen)
+                      </Link>
+                    </section>
                   )}
 
                   {!isOfficeSale &&
@@ -357,7 +425,8 @@ export function PassengerReservationsPage() {
                           fontSize: '0.9rem',
                         }}
                       >
-                        Puedes cancelar mientras la reserva esté pendiente de pago o en revisión.
+                        Puedes cancelar mientras la reserva esté pendiente y no hayas enviado la
+                        evidencia de pago.
                       </p>
                     </div>
                   )}

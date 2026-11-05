@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     payment_account_type: str = "Ahorros"
     payment_account_number: str = "2200000000"
     payment_account_holder: str = "Transporte Interprovincial (demostración)"
+    payment_account_email: str = "pagos@transporte-demo.ec"
+    payment_account_id_number: str = "0000000000"
     payment_deuna_qr: str = "DEMO-DEUNA-TRANSPORTE-INTERPROVINCIAL"
 
     # Envío de correos. Con email_enabled en False no se envía nada: el

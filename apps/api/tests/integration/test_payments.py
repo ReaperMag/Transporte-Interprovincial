@@ -31,13 +31,23 @@ def payments(scenario, tmp_path, monkeypatch):
     return scenario
 
 
-def reserve_online(client, data, seats=((1, None),), origin="quito", destination="loja"):
+def reserve_online(
+    client,
+    data,
+    seats=((1, None),),
+    origin="quito",
+    destination="loja",
+    payment_method=None,
+):
     people = []
     for number, person in seats:
         people.append((number, person or passenger()))
     response = client.post(
         "/api/v1/reservations",
-        json=reservation_payload(data, origin, destination, people),
+        json={
+            **reservation_payload(data, origin, destination, people),
+            **({"paymentMethod": payment_method} if payment_method else {}),
+        },
         headers=ORIGIN,
     )
     assert response.status_code == 201, response.text
@@ -56,8 +66,17 @@ def reserve_in_office(client, data, seat=3):
     return response.json()
 
 
-def upload_receipt(client, reservation_id, *, receipt=PDF, documents=(), method="transfer"):
-    files = [("receipt", ("comprobante.pdf", receipt, "application/pdf"))]
+def upload_receipt(
+    client,
+    reservation_id,
+    *,
+    receipt=PNG,
+    receipt_type="image/png",
+    documents=(),
+    method="transfer",
+):
+    extension = "pdf" if receipt_type == "application/pdf" else "png"
+    files = [("receipt", (f"comprobante.{extension}", receipt, receipt_type))]
     data = {"method": method, "receiptReference": "TRX-001"}
     seat_ids = []
     for seat_id, content in documents:
@@ -83,7 +102,87 @@ def test_payment_methods_show_demo_bank_data(payments):
     body = response.json()
     assert body["bankName"] == "Banco Pichincha"
     assert body["isDemo"] is True
+    assert body["accountEmail"] == "pagos@transporte-demo.ec"
+    assert body["accountIdNumber"] == "0000000000"
+    assert body["acceptedReceiptFileTypes"] == ["image/jpeg", "image/png"]
     assert body["deunaQr"]
+
+
+def test_purchase_selection_stays_pending_until_image_receipt_is_uploaded(payments):
+    client, _, data = payments
+    login(client, "ana@example.com")
+
+    reservation = reserve_online(client, data, payment_method="deposit")
+    assert reservation["status"] == "pending_payment"
+    assert (
+        client.post(
+            f"/api/v1/payments/reservations/{reservation['id']}/confirm",
+            headers=ORIGIN,
+        ).status_code
+        == 404
+    )
+
+    history = client.get(f"/api/v1/payments/reservations/{reservation['id']}")
+    assert history.status_code == 200
+    assert len(history.json()) == 1
+    pending = history.json()[0]
+    assert pending["method"] == "deposit"
+    assert pending["status"] == "pending"
+    assert pending["hasReceipt"] is False
+
+    login(client, "oficina@andina.ec")
+    assert client.get("/api/v1/payments/pending").json() == []
+
+    login(client, "ana@example.com")
+    uploaded = upload_receipt(
+        client,
+        reservation["id"],
+        method="deposit",
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    assert uploaded.json()["id"] == pending["id"]
+    assert uploaded.json()["hasReceipt"] is True
+    assert uploaded.json()["reservationStatus"] == "payment_review"
+
+    login(client, "oficina@andina.ec")
+    assert [item["id"] for item in client.get("/api/v1/payments/pending").json()] == [
+        pending["id"]
+    ]
+
+
+def test_selecting_payment_method_is_saved_before_receipt_upload(payments):
+    client, _, data = payments
+    login(client, "ana@example.com")
+    reservation = reserve_online(client, data)
+
+    assert client.get(f"/api/v1/payments/reservations/{reservation['id']}").json() == []
+
+    selected = client.put(
+        f"/api/v1/payments/reservations/{reservation['id']}/method",
+        json={"method": "transfer"},
+        headers=ORIGIN,
+    )
+
+    assert selected.status_code == 200, selected.text
+    payment = selected.json()
+    assert payment["method"] == "transfer"
+    assert payment["status"] == "pending"
+    assert payment["hasReceipt"] is False
+
+    history = client.get(f"/api/v1/payments/reservations/{reservation['id']}")
+    assert history.status_code == 200
+    assert len(history.json()) == 1
+    assert history.json()[0]["method"] == "transfer"
+    assert history.json()[0]["hasReceipt"] is False
+
+    updated = client.put(
+        f"/api/v1/payments/reservations/{reservation['id']}/method",
+        json={"method": "deposit"},
+        headers=ORIGIN,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["id"] == payment["id"]
+    assert updated.json()["method"] == "deposit"
 
 
 def test_clerk_charges_cash_for_an_office_reservation(payments):
@@ -145,20 +244,42 @@ def test_receipt_puts_the_reservation_in_review(payments):
 
     receipt = client.get(f"/api/v1/payments/{body['id']}/receipt")
     assert receipt.status_code == 200
-    assert receipt.content == PDF
+    assert receipt.content == PNG
 
 
-def test_rejects_files_that_are_not_pdf_or_images(payments):
+def test_receipt_must_be_an_image(payments):
     client, _, data = payments
     login(client, "ana@example.com")
     reservation = reserve_online(client, data)
 
     response = upload_receipt(client, reservation["id"], receipt=b"MZ ejecutable")
     assert response.status_code == 422
+    pdf_receipt = upload_receipt(
+        client,
+        reservation["id"],
+        receipt=PDF,
+        receipt_type="application/pdf",
+    )
+    assert pdf_receipt.status_code == 422
 
-    monkey_big = PDF + b"0" * (settings.max_upload_size_mb * 1024 * 1024)
+    monkey_big = PNG + b"0" * (settings.max_upload_size_mb * 1024 * 1024)
     too_big = upload_receipt(client, reservation["id"], receipt=monkey_big)
     assert too_big.status_code == 422
+
+
+def test_passenger_cannot_cancel_after_uploading_receipt(payments):
+    client, _, data = payments
+    login(client, "ana@example.com")
+    reservation = reserve_online(client, data)
+    assert upload_receipt(client, reservation["id"]).status_code == 201
+
+    cancelled = client.post(
+        f"/api/v1/reservations/{reservation['id']}/cancel",
+        headers=ORIGIN,
+    )
+
+    assert cancelled.status_code == 409
+    assert seat_map(client, data, "quito", "loja")[1] is False
 
 
 def test_cannot_upload_after_the_time_limit(payments):

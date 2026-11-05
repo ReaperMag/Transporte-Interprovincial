@@ -22,7 +22,12 @@ from app.core.permissions import get_office_staff, require_office_staff
 from app.modules.reservations.router import require_passenger
 from app.modules.sales import service
 from app.modules.sales.models import Payment, PaymentMethod
-from app.modules.sales.schemas import PaymentInfo, PaymentRead, PaymentRejection
+from app.modules.sales.schemas import (
+    PaymentInfo,
+    PaymentMethodSelection,
+    PaymentRead,
+    PaymentRejection,
+)
 from app.modules.staff.models import Staff
 
 
@@ -104,31 +109,6 @@ def pay_reservation_in_cash(
 
 
 @router.post(
-    "/reservations/{reservation_id}/confirm",
-    response_model=PaymentRead,
-    status_code=status.HTTP_201_CREATED,
-)
-def confirm_online_payment(
-    reservation_id: int,
-    db: Annotated[Session, Depends(get_db)],
-    account: Annotated[Account, Depends(require_passenger)],
-    method: Annotated[PaymentMethod, Form()] = PaymentMethod.TRANSFER,
-    _: None = Depends(validate_request_origin),
-):
-    """El pasajero confirma el pago directo de su reserva para emitir sus boletos de inmediato."""
-    try:
-        payment = service.confirm_passenger_payment(
-            db,
-            reservation_id,
-            account,
-            method=method,
-        )
-    except service.PaymentError as exc:
-        raise_payment_error(exc)
-    return service.build_payment_read(db, payment)
-
-
-@router.post(
     "/reservations/{reservation_id}/receipt",
     response_model=PaymentRead,
     status_code=status.HTTP_201_CREATED,
@@ -158,6 +138,30 @@ def upload_receipt(
             receipt_reference=receiptReference,
             documents=documents or [],
             document_seat_ids=documentSeatIds or [],
+        )
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+    return service.build_payment_read(db, payment)
+
+
+@router.put(
+    "/reservations/{reservation_id}/method",
+    response_model=PaymentRead,
+)
+def select_payment_method(
+    reservation_id: int,
+    payload: PaymentMethodSelection,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_passenger)],
+    _: None = Depends(validate_request_origin),
+):
+    """Guarda el método elegido antes de que el pasajero envíe su comprobante."""
+    try:
+        payment = service.select_payment_method(
+            db,
+            reservation_id,
+            account.id,
+            method=PaymentMethod(payload.method),
         )
     except service.PaymentError as exc:
         raise_payment_error(exc)
