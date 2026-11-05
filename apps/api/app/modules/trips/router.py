@@ -61,12 +61,15 @@ def search_available_trips(
     origin_city_id: Annotated[int | None, Query(gt=0)] = None,
     destination_city_id: Annotated[int | None, Query(gt=0)] = None,
     travel_date: date | None = None,
+    end_date: date | None = None,
+    include_past: bool = False,
 ):
     """
     Lista los viajes programados disponibles.
 
-    Sin filtros devuelve todos; el origen, el destino y la fecha son
-    opcionales y sirven para reducir los resultados.
+    Sin filtros devuelve todos; el origen, el destino y el rango de fechas son
+    opcionales y sirven para reducir los resultados. Si include_past es True,
+    incluye también viajes pasados para poder identificarlos y bloquearlos.
     """
 
     if (
@@ -78,12 +81,19 @@ def search_available_trips(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="El origen y el destino deben ser diferentes.",
         )
+    if travel_date is not None and end_date is not None and end_date < travel_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="La fecha final no puede ser anterior a la fecha inicial.",
+        )
 
     return service.search_trips(
         db=db,
         origin_city_id=origin_city_id,
         destination_city_id=destination_city_id,
         travel_date=travel_date,
+        end_date=end_date,
+        include_past=include_past,
     )
 
 

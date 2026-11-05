@@ -104,6 +104,31 @@ def pay_reservation_in_cash(
 
 
 @router.post(
+    "/reservations/{reservation_id}/confirm",
+    response_model=PaymentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def confirm_online_payment(
+    reservation_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_passenger)],
+    method: Annotated[PaymentMethod, Form()] = PaymentMethod.TRANSFER,
+    _: None = Depends(validate_request_origin),
+):
+    """El pasajero confirma el pago directo de su reserva para emitir sus boletos de inmediato."""
+    try:
+        payment = service.confirm_passenger_payment(
+            db,
+            reservation_id,
+            account,
+            method=method,
+        )
+    except service.PaymentError as exc:
+        raise_payment_error(exc)
+    return service.build_payment_read(db, payment)
+
+
+@router.post(
     "/reservations/{reservation_id}/receipt",
     response_model=PaymentRead,
     status_code=status.HTTP_201_CREATED,

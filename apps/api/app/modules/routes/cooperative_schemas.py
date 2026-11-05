@@ -66,30 +66,14 @@ class RouteStopRead(RouteSchema):
     minutes_from_origin: int
 
 
-class RouteFareCreate(RouteSchema):
-    seat_type: SeatType
-    price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
-
-
-def _validate_fares(fares: list[RouteFareCreate]) -> list[RouteFareCreate]:
-    seat_types = [fare.seat_type for fare in fares]
-    if fares and set(seat_types) != {SeatType.NORMAL, SeatType.VIP}:
-        raise ValueError("Registra una tarifa Normal y otra VIP.")
-    if len(seat_types) != len(set(seat_types)):
-        raise ValueError("No se puede repetir el tipo de asiento en las tarifas.")
-    return fares
-
-
 class CooperativeRouteCreate(RouteSchema):
     origin_city_id: int = Field(gt=0)
     destination_city_id: int = Field(gt=0)
     duration_minutes: int = Field(ge=10, le=1440)
     stops: list[RouteStopCreate] = Field(default_factory=list, max_length=20)
-    fares: list[RouteFareCreate] = Field(min_length=2, max_length=2)
 
     @model_validator(mode="after")
     def validate_route(self) -> "CooperativeRouteCreate":
-        _validate_fares(self.fares)
         if self.origin_city_id == self.destination_city_id:
             raise ValueError("El origen y el destino deben ser diferentes.")
         if self.origin_city_id in {stop.city_id for stop in self.stops}:
@@ -109,16 +93,38 @@ class CooperativeRouteCreate(RouteSchema):
         return self
 
 
-class RouteFaresUpdate(RouteSchema):
-    fares: list[RouteFareCreate] = Field(min_length=2, max_length=2)
+class FareUpsert(RouteSchema):
+    origin_city_id: int = Field(gt=0)
+    destination_city_id: int = Field(gt=0)
+    seat_type: SeatType
+    price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
 
     @model_validator(mode="after")
-    def validate_route_fares(self) -> "RouteFaresUpdate":
-        _validate_fares(self.fares)
+    def validate_segment(self) -> "FareUpsert":
+        if self.origin_city_id == self.destination_city_id:
+            raise ValueError("El origen y el destino de la tarifa deben ser diferentes.")
         return self
 
 
-class RouteFareRead(RouteSchema):
+class RouteFareSave(RouteSchema):
+    fares: list[FareUpsert] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_unique_fares(self) -> "RouteFareSave":
+        keys = [
+            (fare.origin_city_id, fare.destination_city_id, fare.seat_type)
+            for fare in self.fares
+        ]
+        if len(set(keys)) != len(keys):
+            raise ValueError(
+                "No se puede repetir una tarifa para el mismo tramo y tipo de asiento."
+            )
+        return self
+
+
+class FareRead(RouteSchema):
+    origin_city_id: int
+    destination_city_id: int
     seat_type: SeatType
     price: Decimal
 
@@ -135,4 +141,4 @@ class CooperativeRouteRead(RouteSchema):
     route_type: RouteType
     is_active: bool
     stops: list[RouteStopRead]
-    fares: list[RouteFareRead]
+    fares: list[FareRead]

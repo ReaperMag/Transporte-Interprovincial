@@ -23,6 +23,9 @@ export interface TripSearchResult {
   busId: number;
   busNumber: string;
   busTemplateId: number;
+  isPast?: boolean;
+  totalSeats?: number;
+  availableSeats?: number;
   fares: TripFare[];
 }
 
@@ -31,6 +34,8 @@ export interface TripSearchParams {
   originCityId?: number;
   destinationCityId?: number;
   travelDate?: string;
+  endDate?: string;
+  includePast?: boolean;
 }
 
 function getErrorMessage(status: number, fallback: string): string {
@@ -70,6 +75,10 @@ export async function searchPassengerTrips(
     query.set('destination_city_id', String(params.destinationCityId));
   }
   if (params.travelDate) query.set('travel_date', params.travelDate);
+  if (params.endDate) query.set('end_date', params.endDate);
+  if (params.includePast !== undefined) {
+    query.set('include_past', String(params.includePast));
+  }
 
   const response = await fetch(`/api/v1/trips/search?${query.toString()}`, {
     credentials: 'include',

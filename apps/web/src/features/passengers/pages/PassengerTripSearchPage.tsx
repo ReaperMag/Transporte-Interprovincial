@@ -364,7 +364,7 @@ export function PassengerTripSearchPage() {
                   </div>
                   <Link
                     className="passenger-trip-search__button"
-                    to={`/pasajero/viajes/${trip.tripId}/asientos?origen=${trip.originCityId}&destino=${trip.destinationCityId}`}
+                    to={`/pasajero/${trip.tripId}/asientos?origen=${trip.originCityId}&destino=${trip.destinationCityId}`}
                     style={{
                       display: 'inline-block',
                       marginTop: '1rem',

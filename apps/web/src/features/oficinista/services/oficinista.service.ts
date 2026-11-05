@@ -69,7 +69,7 @@ export async function getOfficeTripCities(): Promise<TripCity[]> {
 }
 
 export async function searchOfficeTrips(
-  params: Required<TripSearchParams>,
+  params: Required<Pick<TripSearchParams, 'originCityId' | 'destinationCityId' | 'travelDate'>>,
 ): Promise<TripSearchResult[]> {
   const query = new URLSearchParams({
     origin_city_id: String(params.originCityId),

@@ -9,8 +9,8 @@ import {
   getRouteCities,
   getRouteSheet,
   publishRouteSheet,
+  saveCooperativeRouteFares,
   saveRouteSheet,
-  updateCooperativeRouteFares,
   type CooperativeFrequency,
   type CooperativeRoute,
   type RouteCity,
@@ -26,6 +26,15 @@ const exampleCities = [
   { name: 'Riobamba', province: 'Chimborazo' },
   { name: 'Latacunga', province: 'Cotopaxi' },
 ];
+
+function farePriceKey(
+  routeId: number,
+  originCityId: number,
+  destinationCityId: number,
+  seatType: 'normal' | 'vip',
+): string {
+  return `${routeId}:${originCityId}:${destinationCityId}:${seatType}`;
+}
 
 function localDateValue(): string {
   const now = new Date();
@@ -51,13 +60,6 @@ function dayLabel(value: string): string {
   });
 }
 
-function formatFare(value: string | number): string {
-  return new Intl.NumberFormat('es-EC', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(Number(value));
-}
-
 export function CooperativeRoutesPage() {
   const [cities, setCities] = useState<RouteCity[]>([]);
   const [routes, setRoutes] = useState<CooperativeRoute[]>([]);
@@ -70,16 +72,13 @@ export function CooperativeRoutesPage() {
   const [selectedCityId, setSelectedCityId] = useState('');
   const [selectedDestinationCityId, setSelectedDestinationCityId] = useState('');
   const [routeDuration, setRouteDuration] = useState('240');
-  const [normalFare, setNormalFare] = useState('');
-  const [vipFare, setVipFare] = useState('');
-  const [fareRouteId, setFareRouteId] = useState('');
-  const [editNormalFare, setEditNormalFare] = useState('');
-  const [editVipFare, setEditVipFare] = useState('');
   const [stops, setStops] = useState<Array<{ cityId: string; minutes: string }>>([]);
   const [cityName, setCityName] = useState('');
   const [cityProvince, setCityProvince] = useState('');
   const [frequencyTime, setFrequencyTime] = useState('08:00');
   const [resolutionNumber, setResolutionNumber] = useState('');
+  const [farePrices, setFarePrices] = useState<Record<string, string>>({});
+  const [isSavingFares, setIsSavingFares] = useState(false);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [startingCities, setStartingCities] = useState<Record<string, Record<number, string>>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -87,7 +86,6 @@ export function CooperativeRoutesPage() {
   const [savingDate, setSavingDate] = useState<string | null>(null);
   const [isCreatingCity, setIsCreatingCity] = useState(false);
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
-  const [isSavingFares, setIsSavingFares] = useState(false);
   const [isCreatingFrequency, setIsCreatingFrequency] = useState(false);
   const [publishingDate, setPublishingDate] = useState<string | null>(null);
   const [refreshPlan, setRefreshPlan] = useState(0);
@@ -216,6 +214,64 @@ export function CooperativeRoutesPage() {
     };
   }, [selectedGroupId, serviceDate, refreshPlan, planKey, serviceDates]);
 
+  const selectedRoute = useMemo(
+    () =>
+      routes.find(
+        (route) =>
+          String(route.id) === selectedRouteId && route.isActive && route.durationMinutes !== null,
+      ) ?? null,
+    [routes, selectedRouteId],
+  );
+
+  const fareSegments = useMemo(() => {
+    if (!selectedRoute) return [];
+
+    const cityIds = [
+      selectedRoute.originCityId,
+      ...selectedRoute.stops.map((stop) => stop.cityId),
+      selectedRoute.destinationCityId,
+    ];
+    const cityName = (cityId: number) =>
+      cities.find((city) => city.id === cityId)?.name ?? `Ciudad ${cityId}`;
+    const segments: Array<{ originCityId: number; destinationCityId: number; label: string }> = [];
+
+    for (let origin = 0; origin < cityIds.length; origin += 1) {
+      for (let destination = origin + 1; destination < cityIds.length; destination += 1) {
+        segments.push({
+          originCityId: cityIds[origin],
+          destinationCityId: cityIds[destination],
+          label: `${cityName(cityIds[origin])} → ${cityName(cityIds[destination])}`,
+        });
+      }
+    }
+
+    return segments;
+  }, [selectedRoute, cities]);
+
+  const fareValue = (
+    segment: { originCityId: number; destinationCityId: number },
+    seatType: 'normal' | 'vip',
+  ): string => {
+    if (!selectedRoute) return '';
+
+    const key = farePriceKey(
+      selectedRoute.id,
+      segment.originCityId,
+      segment.destinationCityId,
+      seatType,
+    );
+    const edited = farePrices[key];
+    if (edited !== undefined) return edited;
+
+    const saved = selectedRoute.fares.find(
+      (fare) =>
+        fare.originCityId === segment.originCityId &&
+        fare.destinationCityId === segment.destinationCityId &&
+        fare.seatType === seatType,
+    );
+    return saved === undefined ? '' : String(saved.price);
+  };
+
   const activeRoutes = routes.filter((route) => route.isActive && route.durationMinutes !== null);
   const originCity = cities.find((city) => String(city.id) === selectedCityId);
   const destinationCity = cities.find((city) => String(city.id) === selectedDestinationCityId);
@@ -312,10 +368,6 @@ export function CooperativeRoutesPage() {
           cityId: Number(stop.cityId),
           minutesFromOrigin: Number(stop.minutes),
         })),
-        fares: [
-          { seatType: 'normal', price: Number(normalFare) },
-          { seatType: 'vip', price: Number(vipFare) },
-        ],
       });
       const updated = await getCooperativeRoutes();
       setRoutes(updated);
@@ -323,11 +375,6 @@ export function CooperativeRoutesPage() {
       setSelectedDestinationCityId('');
       setRouteDuration('240');
       setStops([]);
-      setNormalFare('');
-      setVipFare('');
-      setFareRouteId(String(created.id));
-      setEditNormalFare(normalFare);
-      setEditVipFare(vipFare);
       setSuccess(`Ruta ${created.originCity} - ${created.destinationCity} creada.`);
     } catch (createError) {
       setError(
@@ -335,35 +382,6 @@ export function CooperativeRoutesPage() {
       );
     } finally {
       setIsCreatingRoute(false);
-    }
-  };
-
-  const handleFareRouteChange = (routeId: string) => {
-    setFareRouteId(routeId);
-    const route = routes.find((item) => String(item.id) === routeId);
-    setEditNormalFare(String(route?.fares.find((fare) => fare.seatType === 'normal')?.price ?? ''));
-    setEditVipFare(String(route?.fares.find((fare) => fare.seatType === 'vip')?.price ?? ''));
-  };
-
-  const handleSaveFares = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!fareRouteId) return;
-    setIsSavingFares(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const updated = await updateCooperativeRouteFares(Number(fareRouteId), [
-        { seatType: 'normal', price: Number(editNormalFare) },
-        { seatType: 'vip', price: Number(editVipFare) },
-      ]);
-      setRoutes((current) => current.map((route) => (route.id === updated.id ? updated : route)));
-      setSuccess(`Tarifas de ${updated.originCity} - ${updated.destinationCity} actualizadas.`);
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error ? saveError.message : 'No fue posible guardar las tarifas.',
-      );
-    } finally {
-      setIsSavingFares(false);
     }
   };
 
@@ -393,6 +411,61 @@ export function CooperativeRoutesPage() {
       );
     } finally {
       setIsCreatingFrequency(false);
+    }
+  };
+
+  const handleSaveFares = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedRoute) return;
+
+    const fares: Array<{
+      originCityId: number;
+      destinationCityId: number;
+      seatType: 'normal' | 'vip';
+      price: number;
+    }> = [];
+
+    for (const segment of fareSegments) {
+      for (const seatType of ['normal', 'vip'] as const) {
+        const rawValue = fareValue(segment, seatType).trim();
+        const price = Number(rawValue);
+
+        if (!rawValue || !Number.isFinite(price) || price <= 0) {
+          setError(
+            `Completa la tarifa ${seatType === 'vip' ? 'VIP' : 'normal'} del tramo ${segment.label}.`,
+          );
+          return;
+        }
+
+        fares.push({
+          originCityId: segment.originCityId,
+          destinationCityId: segment.destinationCityId,
+          seatType,
+          price: Math.round(price * 100) / 100,
+        });
+      }
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsSavingFares(true);
+    try {
+      const updated = await saveCooperativeRouteFares(selectedRoute.id, fares);
+      setRoutes((current) => current.map((route) => (route.id === updated.id ? updated : route)));
+      setFarePrices((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([key]) => !key.startsWith(`${selectedRoute.id}:`)),
+        ),
+      );
+      setSuccess(`Tarifas de ${updated.originCity} – ${updated.destinationCity} guardadas.`);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'No fue posible guardar las tarifas de la ruta.',
+      );
+    } finally {
+      setIsSavingFares(false);
     }
   };
 
@@ -607,29 +680,6 @@ export function CooperativeRoutesPage() {
                   onChange={(event) => setRouteDuration(event.target.value)}
                 />
               </label>
-              <label>
-                Tarifa Normal (USD)
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  value={normalFare}
-                  onChange={(event) => setNormalFare(event.target.value)}
-                />
-              </label>
-              <label>
-                Tarifa VIP (USD)
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  value={vipFare}
-                  onChange={(event) => setVipFare(event.target.value)}
-                />
-              </label>
-
               {originCity && destinationCity && (
                 <div
                   className="cooperative-routes__preview"
@@ -768,84 +818,62 @@ export function CooperativeRoutesPage() {
                 </p>
               ) : (
                 <ul>
-                  {routes.map((route) => (
-                    <li key={route.id}>
-                      <div>
-                        <strong>
-                          {route.originCity} → {route.destinationCity}
-                        </strong>
-                        <small>
-                          {route.durationMinutes === null
-                            ? 'Duración no configurada'
-                            : `${Math.floor(route.durationMinutes / 60)} h ${route.durationMinutes % 60} min`}
-                        </small>
-                      </div>
-                      <p>
-                        {[
-                          route.originCity,
-                          ...route.stops.map((stop) => stop.cityName),
-                          route.destinationCity,
-                        ].join(' → ')}
-                      </p>
-                      <p>
-                        {route.fares.length < 2
-                          ? 'Sin tarifas: configúralas para mostrar y vender viajes al pasajero'
-                          : `Tarifas: Normal ${formatFare(
-                              route.fares.find((fare) => fare.seatType === 'normal')?.price ?? 0,
-                            )} · VIP ${formatFare(
-                              route.fares.find((fare) => fare.seatType === 'vip')?.price ?? 0,
-                            )}`}
-                      </p>
-                    </li>
-                  ))}
+                  {routes.map((route) => {
+                    const hasFares = route.fares.length > 0;
+                    const isSelected = selectedRouteId === String(route.id);
+                    return (
+                      <li key={route.id}>
+                        <div className="cooperative-routes__registered-header">
+                          <div>
+                            <strong>
+                              {route.originCity} → {route.destinationCity}
+                            </strong>
+                            <small style={{ marginLeft: '0.5rem' }}>
+                              {route.durationMinutes === null
+                                ? 'Duración no configurada'
+                                : `${Math.floor(route.durationMinutes / 60)} h ${route.durationMinutes % 60} min`}
+                            </small>
+                          </div>
+                          <div className="cooperative-routes__registered-actions">
+                            <span
+                              className={`cooperative-routes__badge ${
+                                hasFares
+                                  ? 'cooperative-routes__badge--success'
+                                  : 'cooperative-routes__badge--warning'
+                              }`}
+                            >
+                              {hasFares ? `${route.fares.length} tarifas` : 'Sin tarifas'}
+                            </span>
+                            <button
+                              type="button"
+                              className={`cooperative-routes__button cooperative-routes__button--small ${
+                                isSelected ? '' : 'cooperative-routes__button--secondary'
+                              }`}
+                              onClick={() => {
+                                setSelectedRouteId(String(route.id));
+                                const fareForm = document.querySelector(
+                                  '.cooperative-routes__fares',
+                                );
+                                if (fareForm) {
+                                  fareForm.scrollIntoView({ behavior: 'smooth' });
+                                }
+                              }}
+                            >
+                              {isSelected ? 'Tarifando...' : 'Tarifar ruta'}
+                            </button>
+                          </div>
+                        </div>
+                        <p>
+                          {[
+                            route.originCity,
+                            ...route.stops.map((stop) => stop.cityName),
+                            route.destinationCity,
+                          ].join(' → ')}
+                        </p>
+                      </li>
+                    );
+                  })}
                 </ul>
-              )}
-              {routes.length > 0 && (
-                <form
-                  className="cooperative-routes__form"
-                  onSubmit={(event) => void handleSaveFares(event)}
-                >
-                  <label>
-                    Actualizar tarifas de una ruta
-                    <select
-                      value={fareRouteId}
-                      onChange={(event) => handleFareRouteChange(event.target.value)}
-                      required
-                    >
-                      <option value="">Selecciona una ruta</option>
-                      {routes.map((route) => (
-                        <option value={route.id} key={route.id}>
-                          {route.originCity} – {route.destinationCity}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Tarifa Normal (USD)
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={editNormalFare}
-                      onChange={(event) => setEditNormalFare(event.target.value)}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Tarifa VIP (USD)
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={editVipFare}
-                      onChange={(event) => setEditVipFare(event.target.value)}
-                      required
-                    />
-                  </label>
-                  <button type="submit" disabled={isSavingFares || !fareRouteId}>
-                    {isSavingFares ? 'Guardando...' : 'Guardar tarifas'}
-                  </button>
-                </form>
               )}
             </div>
           </section>
@@ -929,6 +957,63 @@ export function CooperativeRoutesPage() {
                 <div className="cooperative-routes__form-actions">
                   <button type="submit" disabled={isCreatingFrequency}>
                     {isCreatingFrequency ? 'Guardando...' : 'Agregar frecuencia'}
+                  </button>
+                </div>
+              </form>
+            )}
+            {selectedRoute && (
+              <form
+                className="cooperative-routes__fares"
+                onSubmit={(event) => void handleSaveFares(event)}
+              >
+                <div className="cooperative-routes__fares-heading">
+                  <h4>Tarifas de la ruta</h4>
+                  <p>
+                    Precio por tramo y tipo de asiento de {selectedRoute.originCity} –{' '}
+                    {selectedRoute.destinationCity}. Se usan al reservar asientos.
+                  </p>
+                </div>
+                <div className="cooperative-routes__fare-grid">
+                  <div className="cooperative-routes__fare-row cooperative-routes__fare-row--head">
+                    <span>Tramo</span>
+                    <span>Normal</span>
+                    <span>VIP</span>
+                  </div>
+                  {fareSegments.map((segment) => (
+                    <div
+                      className="cooperative-routes__fare-row"
+                      key={`${segment.originCityId}-${segment.destinationCityId}`}
+                    >
+                      <span>{segment.label}</span>
+                      {(['normal', 'vip'] as const).map((seatType) => (
+                        <input
+                          key={seatType}
+                          type="number"
+                          inputMode="decimal"
+                          min={0.01}
+                          step={0.01}
+                          placeholder="0.00"
+                          aria-label={`Tarifa ${seatType === 'vip' ? 'VIP' : 'normal'} del tramo ${segment.label}`}
+                          value={fareValue(segment, seatType)}
+                          onChange={(event) =>
+                            setFarePrices((current) => ({
+                              ...current,
+                              [farePriceKey(
+                                selectedRoute.id,
+                                segment.originCityId,
+                                segment.destinationCityId,
+                                seatType,
+                              )]: event.target.value,
+                            }))
+                          }
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div className="cooperative-routes__form-actions">
+                  <button type="submit" disabled={isSavingFares}>
+                    {isSavingFares ? 'Guardando...' : 'Guardar tarifas'}
                   </button>
                 </div>
               </form>
