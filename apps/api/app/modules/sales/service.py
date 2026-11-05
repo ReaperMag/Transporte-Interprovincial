@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.storage import InvalidUploadError, save_upload
+from app.modules.accounts.models import Account
 from app.modules.cooperatives.models import Cooperative
 from app.modules.notifications.models import NotificationEvent
 from app.modules.notifications.service import notify
@@ -135,6 +136,53 @@ def pay_in_cash(db: Session, reservation_id: int, staff: Staff) -> Payment:
 
     reservation.status = ReservationStatus.CONFIRMED
     reservation.expires_at = None
+    issue_tickets(db, reservation)
+
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
+def confirm_passenger_payment(
+    db: Session,
+    reservation_id: int,
+    account: Account,
+    method: PaymentMethod = PaymentMethod.TRANSFER,
+) -> Payment:
+    """
+    El pasajero confirma el pago directo de su reserva para emitir sus boletos.
+    El pago queda aprobado, la reserva confirmada y los boletos emitidos
+    con su notificación y envío automático al correo electrónico.
+    """
+    reservation = load_reservation(db, reservation_id)
+
+    if reservation.buyer_account_id != account.id:
+        raise PaymentNotFoundError("Reserva no encontrada.")
+
+    ensure_payable(reservation)
+
+    current_time = now_local()
+    payment = Payment(
+        reservation_id=reservation.id,
+        method=method,
+        amount=reservation.total,
+        status=PaymentStatus.APPROVED,
+        receipt_reference=f"ONLINE-{reservation.id}",
+        reviewed_at=current_time,
+    )
+    db.add(payment)
+
+    reservation.status = ReservationStatus.CONFIRMED
+    reservation.expires_at = None
+
+    notify(
+        db,
+        account_id=account.id,
+        event=NotificationEvent.PAYMENT_APPROVED,
+        title="Pago confirmado",
+        message="Tu pago fue confirmado y tus boletos han sido emitidos.",
+        reservation_id=reservation.id,
+    )
     issue_tickets(db, reservation)
 
     db.commit()

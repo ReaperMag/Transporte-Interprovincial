@@ -364,3 +364,108 @@ def test_published_route_sheet_allows_replacement_only_without_reservations(test
         headers={"Origin": settings.frontend_origin},
     )
     assert blocked_replacement.status_code == 409
+
+def test_cooperative_sets_route_fares_per_segment_and_seat_type(test_environment):
+    from decimal import Decimal
+
+    client, engine = test_environment
+    create_cooperative_account(engine)
+    assert login(client).status_code == 200
+
+    ambato_id = create_city(client, "Ambato", "Tungurahua")
+    latacunga_id = create_city(client, "Latacunga", "Cotopaxi")
+    quito_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client,
+        ambato_id,
+        quito_id,
+        duration=180,
+        stops=[{"cityId": latacunga_id, "minutesFromOrigin": 65}],
+    )
+
+    response = client.put(
+        f"{PLANNING_URL}/routes/{route['id']}/fares",
+        json={
+            "fares": [
+                {
+                    "originCityId": ambato_id,
+                    "destinationCityId": latacunga_id,
+                    "seatType": "normal",
+                    "price": 2.5,
+                },
+                {
+                    "originCityId": ambato_id,
+                    "destinationCityId": latacunga_id,
+                    "seatType": "vip",
+                    "price": 3.5,
+                },
+                {
+                    "originCityId": latacunga_id,
+                    "destinationCityId": quito_id,
+                    "seatType": "normal",
+                    "price": 3,
+                },
+                {
+                    "originCityId": ambato_id,
+                    "destinationCityId": quito_id,
+                    "seatType": "normal",
+                    "price": 5,
+                },
+            ]
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert response.status_code == 200
+    fares = {
+        (fare["originCityId"], fare["destinationCityId"], fare["seatType"]): Decimal(
+            fare["price"]
+        )
+        for fare in response.json()["fares"]
+    }
+    assert fares[(ambato_id, latacunga_id, "normal")] == Decimal("2.50")
+    assert fares[(ambato_id, latacunga_id, "vip")] == Decimal("3.50")
+    assert fares[(ambato_id, quito_id, "normal")] == Decimal("5.00")
+
+    updated = client.put(
+        f"{PLANNING_URL}/routes/{route['id']}/fares",
+        json={
+            "fares": [
+                {
+                    "originCityId": ambato_id,
+                    "destinationCityId": quito_id,
+                    "seatType": "normal",
+                    "price": 6.25,
+                }
+            ]
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert updated.status_code == 200
+    updated_fares = {
+        (fare["originCityId"], fare["destinationCityId"], fare["seatType"]): Decimal(
+            fare["price"]
+        )
+        for fare in updated.json()["fares"]
+    }
+    assert updated_fares[(ambato_id, quito_id, "normal")] == Decimal("6.25")
+    assert updated_fares[(ambato_id, latacunga_id, "normal")] == Decimal("2.50")
+
+    routes = client.get(f"{PLANNING_URL}/routes").json()
+    route_read = next(item for item in routes if item["id"] == route["id"])
+    assert len(route_read["fares"]) == 4
+
+    invalid_segment = client.put(
+        f"{PLANNING_URL}/routes/{route['id']}/fares",
+        json={
+            "fares": [
+                {
+                    "originCityId": quito_id,
+                    "destinationCityId": ambato_id,
+                    "seatType": "normal",
+                    "price": 5,
+                }
+            ]
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert invalid_segment.status_code == 422

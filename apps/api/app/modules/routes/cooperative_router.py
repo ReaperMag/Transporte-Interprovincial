@@ -11,6 +11,7 @@ from app.modules.routes.cooperative_schemas import (
     CityRead,
     CooperativeRouteCreate,
     CooperativeRouteRead,
+    RouteFareSave,
 )
 
 
@@ -76,4 +77,34 @@ def add_route(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Una de las ciudades seleccionadas ya no existe.",
+        ) from exc
+
+
+@router.put(
+    "/routes/{route_id}/fares",
+    response_model=CooperativeRouteRead,
+)
+def set_route_fares(
+    route_id: int,
+    payload: RouteFareSave,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> CooperativeRouteRead:
+    try:
+        return cooperative_service.save_route_fares(
+            db,
+            _cooperative_id(account),
+            route_id,
+            payload,
+        )
+    except cooperative_service.RouteNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La ruta no existe o está inactiva.",
+        ) from exc
+    except cooperative_service.FareSegmentError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
         ) from exc

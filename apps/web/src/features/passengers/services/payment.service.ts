@@ -145,3 +145,27 @@ export async function uploadPassengerPayment(input: UploadPaymentInput): Promise
 
   return (await response.json()) as PaymentRead;
 }
+
+// Confirmar compra / pago directo de una reserva para emitir boletos inmediatamente
+export async function confirmPassengerPayment(
+  reservationId: number,
+  method: OnlinePaymentMethod = 'transfer',
+): Promise<PaymentRead> {
+  const formData = new FormData();
+  formData.append('method', method);
+
+  const response = await fetch(`/api/v1/payments/reservations/${reservationId}/confirm`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw await readPaymentError(
+      response,
+      'No se pudo confirmar el pago de la reserva.',
+    );
+  }
+
+  return (await response.json()) as PaymentRead;
+}

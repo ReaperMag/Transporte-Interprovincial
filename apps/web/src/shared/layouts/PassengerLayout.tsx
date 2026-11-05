@@ -31,7 +31,7 @@ export function PassengerLayout() {
         </Link>
 
         <nav className="passenger-layout__nav" aria-label="Navegación del pasajero">
-          <NavLink to="/pasajero/viajes" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/pasajero" className={({ isActive }) => (isActive ? 'active' : '')}>
             Buscar viajes
           </NavLink>
 

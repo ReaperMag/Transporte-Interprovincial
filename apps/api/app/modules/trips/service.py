@@ -1,17 +1,23 @@
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
-from app.modules.buses.models import Bus
+from app.modules.buses.models import Bus, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
+from app.modules.reservations.models import (
+    Reservation,
+    ReservationSeat,
+    ReservationStatus,
+)
 from app.modules.routes.models import City, Fare, Route
 from app.modules.schedules.models import (
     Frequency,
     RouteSheet,
     RouteSheetStatus,
 )
+from app.modules.tickets.models import Ticket, TicketStatus
 from app.modules.trips.models import Trip, TripStatus
 from app.modules.trips.schemas import (
     CityOption,
@@ -21,6 +27,13 @@ from app.modules.trips.schemas import (
 
 
 ECUADOR_TIMEZONE = ZoneInfo("America/Guayaquil")
+
+
+def as_local(value: datetime) -> datetime:
+    """Convierte o asegura que una fecha esté en la zona horaria de Ecuador."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=ECUADOR_TIMEZONE)
+    return value.astimezone(ECUADOR_TIMEZONE)
 
 
 def get_cities(db: Session) -> list[CityOption]:
@@ -50,19 +63,22 @@ def search_trips(
     origin_city_id: int | None = None,
     destination_city_id: int | None = None,
     travel_date: date | None = None,
+    end_date: date | None = None,
+    include_past: bool = False,
 ) -> list[TripSearchResult]:
     """
-    Busca los viajes programados que todavía no salen.
+    Busca los viajes programados.
 
     Sin filtros devuelve todos los viajes disponibles. El origen, el destino
-    y la fecha son opcionales y cada uno reduce los resultados.
+    y el rango de fechas son opcionales y sirven para acotar la búsqueda.
+    Si include_past es True, incluye también viajes que ya salieron marcando isPast=True.
 
     Solo devuelve viajes con tarifas registradas.
     No calcula todavía disponibilidad de asientos.
     """
 
     current_time = datetime.now(ECUADOR_TIMEZONE)
-    search_start = current_time
+    search_start = None if include_past else current_time
     search_end = None
 
     if travel_date is not None:
@@ -71,13 +87,28 @@ def search_trips(
             time.min,
             tzinfo=ECUADOR_TIMEZONE,
         )
-        search_end = start_of_day + timedelta(days=1)
+        if end_date is not None:
+            search_end = datetime.combine(
+                end_date + timedelta(days=1),
+                time.min,
+                tzinfo=ECUADOR_TIMEZONE,
+            )
+        else:
+            search_end = start_of_day + timedelta(days=1)
 
-        # No consultar viajes de fechas que ya terminaron.
-        if search_end <= current_time:
-            return []
-
-        search_start = max(start_of_day, current_time)
+        if not include_past:
+            # No consultar viajes de fechas que ya terminaron si no se incluyen pasados.
+            if search_end <= current_time:
+                return []
+            search_start = max(start_of_day, current_time)
+        else:
+            search_start = start_of_day
+    elif end_date is not None:
+        search_end = datetime.combine(
+            end_date + timedelta(days=1),
+            time.min,
+            tzinfo=ECUADOR_TIMEZONE,
+        )
 
     origin_city = aliased(City)
     destination_city = aliased(City)
@@ -117,7 +148,7 @@ def search_trips(
             destination_city,
             Route.destination_city_id == destination_city.id,
         )
-        .join(
+        .outerjoin(
             Fare,
             # Tarifas del recorrido completo de la ruta.
             and_(
@@ -135,7 +166,6 @@ def search_trips(
         )
         .where(
             Trip.status == TripStatus.SCHEDULED,
-            Trip.departure_at >= search_start,
 
             Frequency.is_active.is_(True),
             Route.is_active.is_(True),
@@ -161,6 +191,8 @@ def search_trips(
         )
     )
 
+    if search_start is not None:
+        statement = statement.where(Trip.departure_at >= search_start)
     if search_end is not None:
         statement = statement.where(Trip.departure_at < search_end)
     if origin_city_id is not None:
@@ -169,6 +201,51 @@ def search_trips(
         statement = statement.where(Route.destination_city_id == destination_city_id)
 
     rows = db.execute(statement).all()
+
+    trip_ids = [trip.id for trip, *_ in rows]
+    occupied_by_trip: dict[int, set[int]] = {}
+    capacities_by_trip: dict[int, int] = {}
+
+    if trip_ids:
+        # Calcular capacidad total de cada viaje
+        cap_statement = (
+            select(Trip.id, func.count(TemplateSeat.id))
+            .join(Bus, Trip.bus_id == Bus.id)
+            .join(TemplateSeat, TemplateSeat.template_id == Bus.template_id)
+            .where(Trip.id.in_(trip_ids))
+            .group_by(Trip.id)
+        )
+        capacities_by_trip = dict(db.execute(cap_statement).all())
+
+        # Calcular asientos ocupados por reservas activas
+        res_statement = (
+            select(Reservation.trip_id, ReservationSeat.seat_id)
+            .join(ReservationSeat, ReservationSeat.reservation_id == Reservation.id)
+            .where(
+                Reservation.trip_id.in_(trip_ids),
+                Reservation.status.in_(
+                    (
+                        ReservationStatus.PENDING_PAYMENT,
+                        ReservationStatus.PAYMENT_REVIEW,
+                        ReservationStatus.CONFIRMED,
+                    )
+                ),
+            )
+        )
+        for r_trip_id, seat_id in db.execute(res_statement).all():
+            occupied_by_trip.setdefault(r_trip_id, set()).add(seat_id)
+
+        # Asientos ocupados por boletos directos
+        ticket_statement = (
+            select(Ticket.trip_id, Ticket.seat_id)
+            .where(
+                Ticket.trip_id.in_(trip_ids),
+                Ticket.reservation_seat_id.is_(None),
+                Ticket.status != TicketStatus.CANCELLED,
+            )
+        )
+        for t_trip_id, seat_id in db.execute(ticket_statement).all():
+            occupied_by_trip.setdefault(t_trip_id, set()).add(seat_id)
 
     results: dict[int, TripSearchResult] = {}
 
@@ -183,6 +260,11 @@ def search_trips(
     ) in rows:
 
         if trip.id not in results:
+            departure_local = as_local(trip.departure_at)
+            total_seats = capacities_by_trip.get(trip.id, 0)
+            occupied_count = len(occupied_by_trip.get(trip.id, set()))
+            available_seats = max(0, total_seats - occupied_count)
+
             results[trip.id] = TripSearchResult(
                 tripId=trip.id,
                 routeId=route.id,
@@ -203,14 +285,19 @@ def search_trips(
                 busNumber=bus.number,
                 busTemplateId=bus.template_id,
 
+                isPast=departure_local <= current_time,
+                totalSeats=total_seats,
+                availableSeats=available_seats,
+
                 fares=[],
             )
 
-        results[trip.id].fares.append(
-            TripFareOption(
-                seatType=fare.seat_type,
-                price=fare.price,
+        if fare is not None:
+            results[trip.id].fares.append(
+                TripFareOption(
+                    seatType=fare.seat_type,
+                    price=fare.price,
+                )
             )
-        )
 
     return list(results.values())
