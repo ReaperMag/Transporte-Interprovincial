@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -62,6 +63,7 @@ class ReservationCreate(BaseModel):
     tripId: int = Field(gt=0)
     originCityId: int = Field(gt=0)
     destinationCityId: int = Field(gt=0)
+    paymentMethod: Literal["deposit", "transfer"] | None = None
     seats: list[ReservationSeatInput] = Field(min_length=1, max_length=10)
 
     @model_validator(mode="after")

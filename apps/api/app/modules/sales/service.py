@@ -66,10 +66,13 @@ def get_payment_info() -> PaymentInfo:
         accountType=settings.payment_account_type,
         accountNumber=settings.payment_account_number,
         accountHolder=settings.payment_account_holder,
+        accountEmail=settings.payment_account_email,
+        accountIdNumber=settings.payment_account_id_number,
         deunaQr=settings.payment_deuna_qr,
         isDemo=True,
         maxFileSizeMb=settings.max_upload_size_mb,
         acceptedFileTypes=["application/pdf", "image/jpeg", "image/png"],
+        acceptedReceiptFileTypes=["image/jpeg", "image/png"],
         receiptTimeLimitNote=(
             "Sube el comprobante antes de que termine el tiempo de tu reserva."
         ),
@@ -105,6 +108,46 @@ def ensure_payable(reservation: Reservation) -> None:
         raise PaymentConflictError("La reserva no está pendiente de pago.")
 
 
+def select_payment_method(
+    db: Session,
+    reservation_id: int,
+    account_id: int,
+    method: PaymentMethod,
+) -> Payment:
+    """Registra el método elegido sin declarar recibido el pago."""
+    reservation = load_reservation(db, reservation_id)
+
+    if reservation.buyer_account_id != account_id:
+        raise PaymentNotFoundError("Reserva no encontrada.")
+
+    ensure_payable(reservation)
+
+    payment = db.scalar(
+        select(Payment)
+        .where(
+            Payment.reservation_id == reservation.id,
+            Payment.status == PaymentStatus.PENDING,
+            Payment.receipt_url.is_(None),
+        )
+        .order_by(Payment.created_at.desc(), Payment.id.desc())
+    )
+    if payment is None:
+        payment = Payment(
+            reservation_id=reservation.id,
+            method=method,
+            amount=reservation.total,
+            status=PaymentStatus.PENDING,
+        )
+        db.add(payment)
+    else:
+        payment.method = method
+        payment.amount = reservation.total
+
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
 def pay_in_cash(db: Session, reservation_id: int, staff: Staff) -> Payment:
     """
     El oficinista cobra en efectivo una reserva hecha en la oficina.
@@ -136,53 +179,6 @@ def pay_in_cash(db: Session, reservation_id: int, staff: Staff) -> Payment:
 
     reservation.status = ReservationStatus.CONFIRMED
     reservation.expires_at = None
-    issue_tickets(db, reservation)
-
-    db.commit()
-    db.refresh(payment)
-    return payment
-
-
-def confirm_passenger_payment(
-    db: Session,
-    reservation_id: int,
-    account: Account,
-    method: PaymentMethod = PaymentMethod.TRANSFER,
-) -> Payment:
-    """
-    El pasajero confirma el pago directo de su reserva para emitir sus boletos.
-    El pago queda aprobado, la reserva confirmada y los boletos emitidos
-    con su notificación y envío automático al correo electrónico.
-    """
-    reservation = load_reservation(db, reservation_id)
-
-    if reservation.buyer_account_id != account.id:
-        raise PaymentNotFoundError("Reserva no encontrada.")
-
-    ensure_payable(reservation)
-
-    current_time = now_local()
-    payment = Payment(
-        reservation_id=reservation.id,
-        method=method,
-        amount=reservation.total,
-        status=PaymentStatus.APPROVED,
-        receipt_reference=f"ONLINE-{reservation.id}",
-        reviewed_at=current_time,
-    )
-    db.add(payment)
-
-    reservation.status = ReservationStatus.CONFIRMED
-    reservation.expires_at = None
-
-    notify(
-        db,
-        account_id=account.id,
-        event=NotificationEvent.PAYMENT_APPROVED,
-        title="Pago confirmado",
-        message="Tu pago fue confirmado y tus boletos han sido emitidos.",
-        reservation_id=reservation.id,
-    )
     issue_tickets(db, reservation)
 
     db.commit()
@@ -261,7 +257,11 @@ def submit_receipt(
         )
 
     try:
-        receipt_path = save_upload(receipt, "receipts")
+        receipt_path = save_upload(
+            receipt,
+            "receipts",
+            allowed_types={"image/jpeg", "image/png"},
+        )
         document_paths = {
             reservation_seat_id: save_upload(document, "documents")
             for reservation_seat_id, document in documents_by_seat.items()
@@ -277,8 +277,26 @@ def submit_receipt(
         receipt_url=receipt_path,
         receipt_reference=receipt_reference.strip() if receipt_reference else None,
     )
-    db.add(payment)
-    db.flush()
+    existing_payment = db.scalar(
+        select(Payment)
+        .where(
+            Payment.reservation_id == reservation.id,
+            Payment.status == PaymentStatus.PENDING,
+            Payment.receipt_url.is_(None),
+        )
+        .order_by(Payment.created_at.desc(), Payment.id.desc())
+    )
+    if existing_payment is not None:
+        existing_payment.method = method
+        existing_payment.amount = reservation.total
+        existing_payment.receipt_url = receipt_path
+        existing_payment.receipt_reference = (
+            receipt_reference.strip() if receipt_reference else None
+        )
+        payment = existing_payment
+    else:
+        db.add(payment)
+        db.flush()
 
     for reservation_seat_id, path in document_paths.items():
         db.add(
@@ -314,6 +332,7 @@ def list_pending_payments(db: Session, staff: Staff) -> list[Payment]:
             .join(Trip, Reservation.trip_id == Trip.id)
             .where(
                 Payment.status == PaymentStatus.PENDING,
+                Payment.receipt_url.is_not(None),
                 Trip.cooperative_id == staff.cooperative_id,
             )
             .order_by(Payment.created_at, Payment.id)
