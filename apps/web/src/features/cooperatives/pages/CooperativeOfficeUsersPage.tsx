@@ -7,10 +7,7 @@ import {
   OfficeUserApiError,
   updateOfficeUser,
 } from '../services/officeUsers.service';
-import type {
-  OfficeUser,
-  OfficeUserUpdate,
-} from '../services/officeUsers.service';
+import type { OfficeUser, OfficeUserUpdate } from '../services/officeUsers.service';
 import {
   cedulaError,
   cleanName,
@@ -290,6 +287,8 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
   const [values, setValues] = useState(() => formValuesFromUser(user));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isEdit = mode === 'edit';
   const dialogRef = useRef<HTMLElement | null>(null);
   const initialValuesRef = useRef(values);
@@ -450,10 +449,51 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
         </header>
         <form onSubmit={handleSubmit}>
           <div className="office-users-dialog__fields">
-            <label>Nombres<input autoFocus maxLength={100} onChange={(event) => updateValue('firstName', cleanName(event.target.value))} required value={values.firstName} disabled={isSaving} /></label>
-            <label>Apellidos<input maxLength={100} onChange={(event) => updateValue('lastName', cleanName(event.target.value))} required value={values.lastName} disabled={isSaving} /></label>
-            <label>Cédula ecuatoriana<input inputMode="numeric" maxLength={10} minLength={10} onChange={(event) => updateValue('idNumber', onlyDigits(event.target.value, 10))} required value={values.idNumber} disabled={isSaving} /></label>
-            <label>Correo electrónico<input autoComplete="email" maxLength={150} onChange={(event) => updateValue('email', event.target.value)} required type="email" value={values.email} disabled={isSaving} /></label>
+            <label>
+              Nombres
+              <input
+                autoFocus
+                maxLength={100}
+                onChange={(event) => updateValue('firstName', cleanName(event.target.value))}
+                required
+                value={values.firstName}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Apellidos
+              <input
+                maxLength={100}
+                onChange={(event) => updateValue('lastName', cleanName(event.target.value))}
+                required
+                value={values.lastName}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Cédula ecuatoriana
+              <input
+                inputMode="numeric"
+                maxLength={10}
+                minLength={10}
+                onChange={(event) => updateValue('idNumber', onlyDigits(event.target.value, 10))}
+                required
+                value={values.idNumber}
+                disabled={isSaving}
+              />
+            </label>
+            <label>
+              Correo electrónico
+              <input
+                autoComplete="email"
+                maxLength={150}
+                onChange={(event) => updateValue('email', event.target.value)}
+                required
+                type="email"
+                value={values.email}
+                disabled={isSaving}
+              />
+            </label>
             <label>
               Teléfono
               <input
@@ -467,33 +507,57 @@ function OfficeUserDialog({ mode, user, onClose, onSaved }: OfficeUserDialogProp
               />
             </label>
             {!isEdit && (
-              <label>
+              <label className="office-users-dialog__password-field">
                 Contraseña inicial
-                <input
-                  autoComplete="new-password"
-                  minLength={8}
-                  maxLength={128}
-                  onChange={(event) => updateValue('password', event.target.value)}
-                  required
-                  type="password"
-                  value={values.password}
-                  disabled={isSaving}
-                />
+                <span className="office-users-dialog__password-control">
+                  <input
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    onChange={(event) => updateValue('password', event.target.value)}
+                    required
+                    type={showPassword ? 'text' : 'password'}
+                    value={values.password}
+                    disabled={isSaving}
+                  />
+                  <button
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    disabled={isSaving}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    type="button"
+                  >
+                    {showPassword ? 'Ocultar' : 'Ver'}
+                  </button>
+                </span>
               </label>
             )}
             {!isEdit && (
-              <label>
+              <label className="office-users-dialog__password-field">
                 Confirmar contraseña
-                <input
-                  autoComplete="new-password"
-                  minLength={8}
-                  maxLength={128}
-                  onChange={(event) => updateValue('confirmPassword', event.target.value)}
-                  required
-                  type="password"
-                  value={values.confirmPassword}
-                  disabled={isSaving}
-                />
+                <span className="office-users-dialog__password-control">
+                  <input
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    onChange={(event) => updateValue('confirmPassword', event.target.value)}
+                    required
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={values.confirmPassword}
+                    disabled={isSaving}
+                  />
+                  <button
+                    aria-label={
+                      showConfirmPassword
+                        ? 'Ocultar confirmación de contraseña'
+                        : 'Mostrar confirmación de contraseña'
+                    }
+                    disabled={isSaving}
+                    onClick={() => setShowConfirmPassword((visible) => !visible)}
+                    type="button"
+                  >
+                    {showConfirmPassword ? 'Ocultar' : 'Ver'}
+                  </button>
+                </span>
               </label>
             )}
           </div>
