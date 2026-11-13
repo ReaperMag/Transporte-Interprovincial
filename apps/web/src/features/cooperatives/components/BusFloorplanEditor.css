@@ -61,9 +61,9 @@
 }
 
 .bus-floorplan-editor__layout-settings button {
-  border-color: #1d4ed8;
-  background: #1d4ed8;
-  color: #fff;
+  border-color: var(--coop-primary, #0e5a6b);
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
 }
 
 .bus-floorplan-editor__toolbar {
@@ -75,7 +75,7 @@
   flex-wrap: wrap;
   align-items: end;
   gap: 0.75rem;
-  color: #1e3a8a;
+  color: var(--coop-primary, #0e5a6b);
   font-weight: 700;
 }
 
@@ -105,7 +105,7 @@
 }
 
 .bus-floorplan-editor__seat--selected {
-  outline: 3px solid #1d4ed8;
+  outline: 3px solid var(--coop-primary, #0e5a6b);
   outline-offset: 2px;
 }
 
@@ -127,9 +127,9 @@
 
 .bus-floorplan-editor__empty-seat:hover,
 .bus-floorplan-editor__empty-seat:focus-visible {
-  border-color: #2563eb;
+  border-color: var(--coop-primary, #0e5a6b);
   background: #eff6ff;
-  color: #1d4ed8;
+  color: var(--coop-primary, #0e5a6b);
 }
 
 .bus-floorplan-editor__hint {

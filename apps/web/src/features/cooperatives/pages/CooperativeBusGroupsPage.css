@@ -93,7 +93,7 @@
 
 .cooperative-groups input:focus {
   border-color: var(--coop-primary);
-  outline: 2px solid rgb(37 99 235 / 20%);
+  outline: 2px solid var(--coop-primary, #0e5a6b);
 }
 
 .cooperative-groups button {
@@ -136,8 +136,8 @@
   min-height: 1.8rem;
   place-items: center;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
   font-size: 0.8rem;
   font-weight: 700;
 }
