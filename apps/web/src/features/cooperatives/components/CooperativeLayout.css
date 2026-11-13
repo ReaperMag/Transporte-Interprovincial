@@ -2,8 +2,10 @@
 body:has(.cooperative-layout) { margin: 0; }
 .cooperative-layout { min-height: 100dvh; display: flex; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
 .cooperative-sidebar { width: 248px; flex: 0 0 248px; display: flex; flex-direction: column; padding: 28px 18px 20px; box-sizing: border-box; background: #14212b; color: #f5f4f0; }
-.cooperative-sidebar__brand { display: flex; align-items: flex-start; gap: 11px; padding: 0 12px 38px; color: #fff; font-size: .76rem; letter-spacing: .08em; }
-.cooperative-sidebar__brand > span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #d99a1e; color: #14212b; font-size: 1.1rem; }
+.cooperative-sidebar__brand { display: flex; align-items: center; gap: 11px; padding: 0 12px 38px; color: #fff; font-size: .76rem; letter-spacing: .04em; }
+.cooperative-sidebar__brand-icon { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; overflow: hidden; border-radius: 10px; background: #d99a1e; color: #14212b; font-size: 1.1rem; }
+.cooperative-sidebar__brand-icon img { display: block; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.cooperative-sidebar__brand > strong { min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
 .cooperative-sidebar__brand strong, .cooperative-sidebar__brand small, .cooperative-sidebar__account strong, .cooperative-sidebar__account small { display: block; }
 .cooperative-sidebar__brand small { margin-top: 5px; color: #aeb9bd; font-size: .66rem; letter-spacing: .01em; }
 .cooperative-sidebar__label { margin: 0 12px 10px; color: #84959c; font-size: .68rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }

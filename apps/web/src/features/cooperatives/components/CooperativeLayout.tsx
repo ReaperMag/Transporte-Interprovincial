@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/context/useAuth';
+import { getAuthenticatedCooperativeProfile, type CooperativeProfile } from '../services/cooperative.service';
 import './CooperativeLayout.css';
 import './CooperativeTheme.css';
 
@@ -17,6 +18,23 @@ export function CooperativeLayout() {
   const navigate = useNavigate();
   const { account, logout } = useAuth();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [cooperativeProfile, setCooperativeProfile] = useState<CooperativeProfile | null>(null);
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getAuthenticatedCooperativeProfile()
+      .then((profile) => {
+        if (active) setCooperativeProfile(profile);
+      })
+      .catch(() => {
+        // If the profile is unavailable, preserve the original sidebar appearance.
+      });
+    return () => { active = false; };
+  }, [account?.accountId]);
+
+  const logoUrl = cooperativeProfile?.logoUrl;
+  const showLogo = Boolean(logoUrl && logoUrl !== failedLogoUrl);
 
   const handleLogout = async () => {
     setLogoutError(null);
@@ -31,7 +49,21 @@ export function CooperativeLayout() {
   return (
     <div className="cooperative-layout">
       <aside className="cooperative-sidebar">
-        <div className="cooperative-sidebar__brand"><span aria-hidden="true">▰</span><strong>TRANSPORTE<small>Panel de cooperativa</small></strong></div>
+        <div className="cooperative-sidebar__brand">
+          <span className="cooperative-sidebar__brand-icon" aria-hidden="true">
+            {showLogo ? (
+              <img
+                src={logoUrl ?? undefined}
+                alt=""
+                onError={() => setFailedLogoUrl(logoUrl ?? null)}
+              />
+            ) : '▰'}
+          </span>
+          <strong>
+            {cooperativeProfile?.name ?? 'TRANSPORTE'}
+            <small>Panel de cooperativa</small>
+          </strong>
+        </div>
         <p className="cooperative-sidebar__label">Área de trabajo</p>
         <nav className="cooperative-sidebar__nav" aria-label="Secciones de la cooperativa">
           {sections.map(([to, label]) => (
@@ -48,7 +80,7 @@ export function CooperativeLayout() {
           <button className="cooperative-header__logout" onClick={() => void handleLogout()} type="button">Cerrar sesión</button>
         </header>
         {logoutError && <p className="cooperative-layout__error" role="alert">{logoutError}</p>}
-        <main className="cooperative-layout__content"><Outlet /></main>
+        <main className="cooperative-layout__content"><Outlet context={{ onCooperativeProfileSaved: setCooperativeProfile }} /></main>
       </div>
     </div>
   );

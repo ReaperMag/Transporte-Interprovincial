@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   getAuthenticatedCooperativeProfile,
   updateAuthenticatedCooperativeProfile,
@@ -58,7 +59,12 @@ function toNullableProfile(profile: EditableProfile): NullableEditableProfile {
   } satisfies NullableEditableProfile;
 }
 
+type CooperativeLayoutContext = {
+  onCooperativeProfileSaved: (profile: CooperativeProfile) => void;
+};
+
 export function CooperativeConfigurationPage() {
+  const { onCooperativeProfileSaved } = useOutletContext<CooperativeLayoutContext>();
   const [identity, setIdentity] = useState<Pick<CooperativeProfile, 'name' | 'ruc'> | null>(null);
   const [profile, setProfile] = useState<EditableProfile>(emptyProfile);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,6 +134,7 @@ export function CooperativeConfigurationPage() {
       }
       const saved = await updateAuthenticatedCooperativeProfile(toNullableProfile(profile));
       setProfile(toEditableProfile(saved));
+      onCooperativeProfileSaved(saved);
       setLogoFailed(false);
       setSuccess('La configuración se guardó correctamente.');
     } catch (saveError) {
