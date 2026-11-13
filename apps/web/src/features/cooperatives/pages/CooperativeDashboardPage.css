@@ -9,7 +9,7 @@
 
 .cooperative-dashboard__eyebrow {
   margin: 0 0 0.35rem;
-  color: #2563eb;
+  color: var(--coop-primary, #0e5a6b);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -62,7 +62,7 @@
 }
 
 .cooperative-dashboard__identity a {
-  color: #2563eb;
+  color: var(--coop-primary, #0e5a6b);
   overflow-wrap: anywhere;
 }
 

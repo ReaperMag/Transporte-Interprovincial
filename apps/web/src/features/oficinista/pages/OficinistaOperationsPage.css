@@ -8,7 +8,7 @@
 }
 .oficinista-operations__eyebrow {
   margin: 0 0 6px;
-  color: #0e5a6b;
+  color: var(--coop-primary, #0e5a6b);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -115,8 +115,8 @@
 }
 .oficinista-operations__form button,
 .oficinista-operations__button {
-  background: #0e5a6b;
-  color: #fff;
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
 }
 .oficinista-operations__button--secondary {
   border: 1px solid #cbd5e1;
@@ -129,13 +129,13 @@
 }
 .oficinista-operations__form button:hover:not(:disabled),
 .oficinista-operations__button:hover:not(:disabled) {
-  background: #0a4250;
+  filter: brightness(.92);
 }
 .oficinista-operations__button--danger:hover:not(:disabled) {
   background: #ffe4e6;
 }
 .oficinista-operations__button--secondary:hover:not(:disabled) {
-  border-color: #0e5a6b;
+  border-color: var(--coop-primary, #0e5a6b);
 }
 .oficinista-operations button:disabled {
   cursor: not-allowed;
@@ -194,7 +194,7 @@
   margin-top: 16px;
 }
 .oficinista-operations__links a {
-  color: #0e5a6b;
+  color: var(--coop-primary, #0e5a6b);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -222,7 +222,7 @@
   gap: 14px;
 }
 .oficinista-operations__fare-list span {
-  color: #0e5a6b;
+  color: var(--coop-primary, #0e5a6b);
   font-weight: 650;
 }
 .oficinista-operations__seat-grid {
@@ -249,9 +249,9 @@
   font-weight: 500;
 }
 .oficinista-operations__seat--selected {
-  border: 2px solid #0e5a6b;
-  background: #e3eef0;
-  color: #0e5a6b;
+  border: 2px solid var(--coop-primary, #0e5a6b);
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
 }
 .oficinista-operations__seat:disabled:not(.oficinista-operations__seat--selected) {
   background: #e2e8f0;
