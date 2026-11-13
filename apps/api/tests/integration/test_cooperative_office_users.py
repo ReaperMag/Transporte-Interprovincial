@@ -43,6 +43,8 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         cooperative = db.get(Cooperative, cooperative_id)
         assert cooperative is not None
         cooperative.logo_url = "https://example.com/cooperativa.png"
+        cooperative.primary_color = "#186890"
+        cooperative.secondary_color = "#19342A"
         db.commit()
     assert login(client, "admin-office@example.com").status_code == 200
     assert client.get("/api/v1/staff/me").status_code == 403
@@ -79,6 +81,8 @@ def test_cooperative_admin_creates_clerk_in_own_cooperative(test_environment):
         assert profile.json()["cooperativeId"] == cooperative_id
         assert profile.json()["cooperativeRuc"]
         assert profile.json()["cooperativeLogoUrl"] == "https://example.com/cooperativa.png"
+        assert profile.json()["cooperativePrimaryColor"] == "#186890"
+        assert profile.json()["cooperativeSecondaryColor"] == "#19342A"
         assert "cooperativeAddress" in profile.json()
         assert "cooperativeSupportEmail" in profile.json()
 

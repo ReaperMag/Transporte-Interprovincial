@@ -1,0 +1,180 @@
+.institutional-sidebar {
+  width: 266px;
+  flex: 0 0 266px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: 22px 14px 18px;
+  background: var(--coop-secondary);
+  color: var(--coop-on-secondary);
+}
+.institutional-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 12px;
+  margin: 0 0 29px;
+  border: 1px solid color-mix(in srgb, var(--coop-on-secondary) 28%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--coop-on-secondary) 9%, transparent);
+  box-shadow: 0 9px 25px rgb(0 0 0 / 8%);
+}
+.institutional-sidebar__brand-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border: 2px solid var(--coop-primary);
+  border-radius: 14px;
+  background: var(--coop-brand-icon);
+  color: var(--coop-brand-icon-text);
+  font-size: 1.15rem;
+}
+.institutional-sidebar__brand-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #fff;
+}
+.institutional-sidebar__brand-copy { min-width: 0; }
+.institutional-sidebar__brand-copy strong {
+  display: block;
+  font-size: .83rem;
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: .025em;
+  overflow-wrap: anywhere;
+}
+.institutional-sidebar__brand-copy small {
+  display: block;
+  margin-top: 4px;
+  color: var(--coop-on-secondary);
+  opacity: .75;
+  font-size: .67rem;
+  line-height: 1.35;
+}
+.institutional-sidebar__label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 8px 14px;
+  color: var(--coop-on-secondary);
+  opacity: .78;
+  font-size: .65rem;
+  font-weight: 750;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.institutional-sidebar__label::before {
+  content: '';
+  width: 3px;
+  height: 16px;
+  border-radius: 99px;
+  background: var(--coop-primary);
+}
+.institutional-sidebar__nav { display: grid; gap: 8px; }
+.institutional-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 45px;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--coop-on-secondary) 19%, transparent);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--coop-on-secondary) 6%, transparent);
+  color: var(--coop-on-secondary);
+  font-size: .77rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-decoration: none;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+.institutional-sidebar__link:hover {
+  background: color-mix(in srgb, var(--coop-on-secondary) 14%, transparent);
+  transform: translateX(2px);
+}
+.institutional-sidebar__link:focus-visible {
+  outline: 2px solid var(--coop-primary);
+  outline-offset: 3px;
+}
+.institutional-sidebar__link-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--coop-on-secondary) 11%, transparent);
+}
+.institutional-sidebar__link-icon svg { display: block; }
+.institutional-sidebar__link-text { flex: 1; min-width: 0; }
+.institutional-sidebar__link-chevron { font-size: 1.3rem; opacity: .58; line-height: 1; }
+.institutional-sidebar__link--active,
+.institutional-sidebar__link--active:hover {
+  border-color: var(--coop-primary);
+  background: var(--coop-primary);
+  color: var(--coop-on-primary);
+  font-weight: 750;
+  transform: none;
+  box-shadow: 0 5px 14px rgb(0 0 0 / 10%);
+}
+.institutional-sidebar__link--active .institutional-sidebar__link-icon {
+  background: color-mix(in srgb, var(--coop-on-primary) 15%, transparent);
+}
+.institutional-sidebar__account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-top: auto;
+  padding: 16px 8px 7px;
+  border-top: 1px solid color-mix(in srgb, var(--coop-on-secondary) 27%, transparent);
+  font-size: .72rem;
+}
+.institutional-sidebar__account-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--coop-primary);
+  color: var(--coop-on-primary);
+  font-size: .7rem;
+  font-weight: 800;
+}
+.institutional-sidebar__account-copy { min-width: 0; }
+.institutional-sidebar__account-copy strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.institutional-sidebar__account-copy small {
+  display: block;
+  margin-top: 3px;
+  color: var(--coop-on-secondary);
+  opacity: .74;
+  font-size: .66rem;
+}
+
+@media (max-width: 760px) {
+  .institutional-sidebar { width: 100%; min-height: auto; padding: 16px; }
+  .institutional-sidebar__brand { margin-bottom: 17px; }
+  .institutional-sidebar__account { display: none; }
+  .institutional-sidebar__nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .institutional-sidebar__link { min-width: 0; padding: 7px 8px; }
+  .institutional-sidebar__link-chevron { display: none; }
+}
+@media (max-width: 380px) {
+  .institutional-sidebar__nav { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .institutional-sidebar__link { transition: none; }
+}

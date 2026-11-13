@@ -8,7 +8,7 @@
 }
 .oficinista-dashboard__eyebrow {
   margin: 0 0 6px;
-  color: #0e5a6b;
+  color: var(--coop-primary, #0e5a6b);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -72,7 +72,7 @@
   object-fit: contain;
 }
 .oficinista-dashboard__cooperative-placeholder {
-  color: #0e5a6b;
+  color: var(--coop-primary, #0e5a6b);
   font-size: 0.8rem;
   font-weight: 700;
 }

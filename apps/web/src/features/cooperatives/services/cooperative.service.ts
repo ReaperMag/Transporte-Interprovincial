@@ -74,7 +74,7 @@ export async function getCooperativeRouteFrequencySummary(): Promise<Cooperative
 }
 
 export async function updateAuthenticatedCooperativeProfile(
-  profile: Omit<CooperativeProfile, 'id' | 'name' | 'ruc'>,
+  profile: Omit<CooperativeProfile, 'id' | 'name' | 'ruc' | 'logoUrl'>,
 ): Promise<CooperativeProfile> {
   const response = await fetch('/api/v1/cooperatives/me/profile', {
     method: 'PATCH',
@@ -101,5 +101,23 @@ export async function updateAuthenticatedCooperativeProfile(
     throw new Error(message || 'No fue posible guardar la configuración.');
   }
 
+  return (await response.json()) as CooperativeProfile;
+}
+
+
+export async function uploadAuthenticatedCooperativeLogo(logo: File): Promise<CooperativeProfile> {
+  const formData = new FormData();
+  formData.append('logo', logo);
+  const response = await fetch('/api/v1/cooperatives/me/profile/logo', {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body: unknown = await response.json();
+    const detail = typeof body === 'object' && body !== null && 'detail' in body ? body.detail : null;
+    throw new Error(typeof detail === 'string' ? detail : 'No fue posible subir el logotipo.');
+  }
   return (await response.json()) as CooperativeProfile;
 }

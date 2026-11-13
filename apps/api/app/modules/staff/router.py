@@ -44,6 +44,8 @@ def read_my_staff_profile(
         position=staff.position.value,
         cooperative_name=cooperative.name,
         cooperative_logo_url=cooperative.logo_url,
+        cooperative_primary_color=cooperative.primary_color,
+        cooperative_secondary_color=cooperative.secondary_color,
         cooperative_ruc=cooperative.ruc,
         cooperative_address=cooperative.address,
         cooperative_phone=cooperative.phone,

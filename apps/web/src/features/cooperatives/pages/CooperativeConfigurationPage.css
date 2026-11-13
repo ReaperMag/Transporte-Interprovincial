@@ -9,7 +9,7 @@
 
 .cooperative-configuration__eyebrow {
   margin: 0 0 0.35rem;
-  color: #2563eb;
+  color: var(--coop-primary);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -105,7 +105,7 @@
 
 .cooperative-configuration__form input:focus,
 .cooperative-configuration__form textarea:focus {
-  border-color: #2563eb;
+  border-color: var(--coop-primary);
   outline: 2px solid rgb(37 99 235 / 20%);
 }
 
@@ -152,15 +152,15 @@
   border: 0;
   border-radius: 0.5rem;
   padding: 0.65rem 1.1rem;
-  background: #2563eb;
-  color: #fff;
+  background: var(--coop-primary);
+  color: var(--coop-on-primary);
   cursor: pointer;
   font: inherit;
   font-weight: 650;
 }
 
 .cooperative-configuration__save:hover:not(:disabled) {
-  background: #1d4ed8;
+  filter: brightness(.92);
 }
 
 .cooperative-configuration__save:disabled {
