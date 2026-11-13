@@ -122,6 +122,8 @@ class StaffSelfRead(StaffSchema):
     position: str
     cooperative_name: str
     cooperative_logo_url: str | None
+    cooperative_primary_color: str | None
+    cooperative_secondary_color: str | None
     cooperative_ruc: str
     cooperative_address: str | None
     cooperative_phone: str | None

@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/context/useAuth';
+import { cooperativeThemeStyle } from '../../cooperatives/utils/branding';
+import { getOficinistaInfo } from '../services/oficinista.service';
+import type { OficinistaInfo } from '../types/oficinista.types';
 import './OficinistaLayout.css';
 
 const sections = [
@@ -13,6 +16,23 @@ export function OficinistaLayout() {
   const navigate = useNavigate();
   const { account, logout } = useAuth();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<OficinistaInfo | null>(null);
+  const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getOficinistaInfo()
+      .then((result) => { if (active) setProfile(result); })
+      .catch(() => { /* Preserve the default theme if the profile cannot be loaded. */ });
+    return () => { active = false; };
+  }, [account?.accountId]);
+
+  const themeStyle = cooperativeThemeStyle(
+    profile?.cooperativePrimaryColor,
+    profile?.cooperativeSecondaryColor,
+  );
+  const logoUrl = profile?.cooperativeLogoUrl;
+  const showLogo = Boolean(logoUrl && logoUrl !== failedLogoUrl);
 
   const handleLogout = async () => {
     setLogoutError(null);
@@ -25,12 +45,20 @@ export function OficinistaLayout() {
   };
 
   return (
-    <div className="oficinista-layout">
+    <div className="oficinista-layout" style={themeStyle}>
       <aside className="oficinista-sidebar">
         <div className="oficinista-sidebar__brand">
-          <span aria-hidden="true">▰</span>
+          <span className="oficinista-sidebar__brand-icon" aria-hidden="true">
+            {showLogo ? (
+              <img
+                src={logoUrl ?? undefined}
+                alt=""
+                onError={() => setFailedLogoUrl(logoUrl ?? null)}
+              />
+            ) : '▰'}
+          </span>
           <strong>
-            TRANSPORTE<small>Panel de oficinista</small>
+            {profile?.cooperativeName ?? 'TRANSPORTE'}<small>Panel de oficinista</small>
           </strong>
         </div>
         <p className="oficinista-sidebar__label">Área de trabajo</p>
