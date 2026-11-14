@@ -59,8 +59,8 @@ export function CooperativesPage() {
         </div>
       </header>
 
-      <CooperativesTable onDataChanged={() => void refreshSummary()} />
       <DataSummary summary={summary} error={summaryError} />
+      <CooperativesTable onDataChanged={() => void refreshSummary()} />
     </div>
   );
 }
