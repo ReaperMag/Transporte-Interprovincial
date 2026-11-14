@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.modules.buses.models import Bus, BusGroup
+from app.modules.routes.models import Route
 from app.modules.schedules.models import Frequency, RouteSheet
 from app.modules.staff.models import Staff
 from app.modules.trips.models import Trip
@@ -49,6 +50,10 @@ def has_group_route_sheets(db: Session, group_id: int) -> bool:
         is not None
         or db.scalar(
             select(Frequency.id).where(Frequency.bus_group_id == group_id).limit(1)
+        )
+        is not None
+        or db.scalar(
+            select(Route.id).where(Route.bus_group_id == group_id).limit(1)
         )
         is not None
     )
