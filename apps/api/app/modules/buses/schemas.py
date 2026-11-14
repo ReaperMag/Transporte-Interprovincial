@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -79,6 +80,71 @@ class BusGroupRead(BusGroupSchema):
 BusText = Annotated[str, StringConstraints(min_length=1, max_length=50)]
 BusPlate = Annotated[str, StringConstraints(min_length=3, max_length=10)]
 BusNumber = Annotated[str, StringConstraints(min_length=1, max_length=10)]
+
+
+# =====================================================
+# CATÁLOGO DE TIPOS DE ASIENTO POR COOPERATIVA
+# Issue #54 - Integrante 3
+# =====================================================
+
+SeatTypeName = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=100),
+]
+
+
+class CooperativeSeatTypeCreate(BusGroupSchema):
+    name: SeatTypeName
+    percentage: Decimal = Field(
+        ge=0,
+        max_digits=7,
+        decimal_places=2,
+    )
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+
+        if not normalized:
+            raise ValueError(
+                "El nombre del tipo de asiento es obligatorio."
+            )
+
+        return normalized
+
+
+class CooperativeSeatTypeUpdate(BusGroupSchema):
+    name: SeatTypeName | None = None
+    percentage: Decimal | None = Field(
+        default=None,
+        ge=0,
+        max_digits=7,
+        decimal_places=2,
+    )
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError(
+                "El nombre no puede ser nulo."
+            )
+
+        normalized = " ".join(value.split())
+
+        if not normalized:
+            raise ValueError(
+                "El nombre del tipo de asiento es obligatorio."
+            )
+
+        return normalized
+
+
+class CooperativeSeatTypeRead(BusGroupSchema):
+    id: int
+    name: str
+    percentage: Decimal
 
 
 class BusTemplateSeatCreate(BusGroupSchema):

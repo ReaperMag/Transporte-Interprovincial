@@ -5,6 +5,9 @@ from app.modules.buses.router import (
     cooperative_buses_router,
     cooperative_bus_groups_router,
 )
+from app.modules.buses.seat_type_router import (
+    router as cooperative_seat_types_router,
+)
 from app.modules.cooperatives.router import (
     cooperative_router,
     router as cooperatives_router,
@@ -25,6 +28,7 @@ router = APIRouter(prefix="/api/v1")
 router.include_router(auth_router)
 router.include_router(cooperative_bus_groups_router)
 router.include_router(cooperative_buses_router)
+router.include_router(cooperative_seat_types_router)
 router.include_router(cooperative_routes_router)
 router.include_router(cooperative_schedules_router)
 router.include_router(staff_router)
