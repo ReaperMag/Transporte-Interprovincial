@@ -14,6 +14,7 @@ export interface SidebarSection {
 interface InstitutionalSidebarProps {
   cooperativeName: string;
   logoUrl?: string | null;
+  brandLabel?: string;
   panelLabel: string;
   navigationLabel: string;
   sections: readonly SidebarSection[];
@@ -42,7 +43,7 @@ function SidebarIcon({ name }: { name: SidebarIconName }) {
 }
 
 export function InstitutionalSidebar({
-  cooperativeName, logoUrl, panelLabel, navigationLabel, sections,
+  cooperativeName, logoUrl, brandLabel = 'Identidad de la cooperativa', panelLabel, navigationLabel, sections,
   accountEmail, accountRole, fallbackInitials,
 }: InstitutionalSidebarProps) {
   const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function InstitutionalSidebar({
 
   return (
     <aside className="institutional-sidebar">
-      <div className="institutional-sidebar__brand" aria-label="Identidad de la cooperativa">
+      <div className="institutional-sidebar__brand" aria-label={brandLabel}>
         <span className="institutional-sidebar__brand-icon" aria-hidden="true">
           {showLogo ? <img src={logoUrl ?? undefined} alt="" onError={() => setFailedLogoUrl(logoUrl ?? null)} /> : '▰'}
         </span>
