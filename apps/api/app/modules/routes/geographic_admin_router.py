@@ -5,8 +5,7 @@ from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.permissions import require_admin_access
 from app.modules.routes import geographic_service
-from app.modules.routes.ecuador_geography import ECUADOR_PROVINCES
-from app.modules.routes.geographic_schemas import CantonCreate, GeographicCatalogRead
+from app.modules.routes.geographic_schemas import CantonCreate
 from app.modules.routes.cooperative_schemas import CityRead
 
 
@@ -15,16 +14,6 @@ router = APIRouter(
     tags=["Admin - Geographic catalog"],
     dependencies=[Depends(require_admin_access)],
 )
-
-
-@router.get("", response_model=GeographicCatalogRead)
-def read_geographic_catalog(
-    db: Session = Depends(get_db),
-) -> GeographicCatalogRead:
-    return {
-        "provinces": ECUADOR_PROVINCES,
-        "cantons": geographic_service.list_catalog_cantons(db),
-    }
 
 
 @router.post(

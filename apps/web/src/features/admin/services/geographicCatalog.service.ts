@@ -16,7 +16,8 @@ export interface CantonCreate {
   province: string;
 }
 
-const catalogUrl = '/api/v1/admin/geographic-catalog';
+const catalogUrl = '/api/v1/geographic-catalog';
+const adminCatalogUrl = '/api/v1/admin/geographic-catalog';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   let response: Response;
@@ -51,7 +52,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     }
 
     if (response.status === 401) {
-      message = 'Inicia sesión con una cuenta administradora para continuar.';
+      message = 'Inicia sesión para continuar.';
     } else if (response.status === 403) {
       message = 'No tienes permisos para administrar el catálogo geográfico.';
     }
@@ -67,7 +68,7 @@ export function getGeographicCatalog(signal?: AbortSignal): Promise<GeographicCa
 }
 
 export function createCanton(values: CantonCreate): Promise<Canton> {
-  return request(`${catalogUrl}/cantons`, {
+  return request(`${adminCatalogUrl}/cantons`, {
     method: 'POST',
     body: JSON.stringify(values),
   });
