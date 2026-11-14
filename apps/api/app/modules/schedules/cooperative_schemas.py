@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.modules.buses.models import BusStatus
-from app.modules.schedules.models import RouteSheetStatus
+from app.modules.schedules.models import RouteSheetMode, RouteSheetStatus
 
 
 def to_camel(value: str) -> str:
@@ -67,6 +67,8 @@ class RouteSheetSave(ScheduleSchema):
     service_date: date
     assignments: list[SheetAssignmentInput] = Field(max_length=100)
     starting_locations: list[BusStartingLocationInput] = Field(default_factory=list, max_length=100)
+    standby_bus_ids: list[int] = Field(default_factory=list, max_length=100)
+    mode: RouteSheetMode = RouteSheetMode.MANUAL
 
 
 class RouteSheetFrequencyRead(ScheduleSchema):
@@ -90,7 +92,12 @@ class RouteSheetRead(ScheduleSchema):
     bus_group_id: int
     service_date: date
     status: RouteSheetStatus | None
+    mode: RouteSheetMode
+    auto_generated: bool = False
+    rest_buses_count: int = 0
     can_reassign: bool
     frequencies: list[RouteSheetFrequencyRead]
     buses: list[ScheduleBusRead]
+    standby_buses: list[ScheduleBusRead] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     starting_locations: list[RouteSheetStartingLocationRead]
