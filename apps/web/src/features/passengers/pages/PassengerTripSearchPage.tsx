@@ -205,15 +205,15 @@ export function PassengerTripSearchPage() {
         <p className="passenger-trip-search__eyebrow">PLANIFICA TU VIAJE</p>
         <h1>Buscar viajes</h1>
         <p>
-          Estas son todas las salidas disponibles. Usa los filtros de origen, destino o fecha para
-          encontrar solo las que necesitas.
+          Estas son todas las salidas disponibles. Filtra por localidad de origen, destino o fecha
+          para encontrar solo las que necesitas.
         </p>
       </header>
 
       <form className="passenger-trip-search__form" onSubmit={(event) => void handleSearch(event)}>
         <div className="passenger-trip-search__fields">
           <label className="passenger-trip-search__field">
-            <span>Ciudad de origen</span>
+            <span>Localidad de origen</span>
             <select
               value={originCityId}
               onChange={(event) => {
@@ -229,14 +229,15 @@ export function PassengerTripSearchPage() {
               <option value="">Todos los orígenes</option>
               {cities.map((city) => (
                 <option key={city.id} value={city.id}>
-                  {city.name} - {city.province}
+                  {city.name} — {city.canton ? `${city.canton}, ` : ''}
+                  {city.province}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="passenger-trip-search__field">
-            <span>Ciudad de destino</span>
+            <span>Localidad de destino</span>
             <select
               value={destinationCityId}
               onChange={(event) => setDestinationCityId(event.target.value)}
@@ -247,7 +248,8 @@ export function PassengerTripSearchPage() {
                 .filter((city) => String(city.id) !== originCityId)
                 .map((city) => (
                   <option key={city.id} value={city.id}>
-                    {city.name} - {city.province}
+                    {city.name} — {city.canton ? `${city.canton}, ` : ''}
+                    {city.province}
                   </option>
                 ))}
             </select>

@@ -2,6 +2,7 @@ export interface TripCity {
   id: number;
   name: string;
   province: string;
+  canton: string | null;
 }
 
 export interface TripFare {
