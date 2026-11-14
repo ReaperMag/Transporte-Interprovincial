@@ -29,6 +29,7 @@ def create_bus_group(
     *,
     name: str,
     description: str | None,
+    rest_buses_count: int = 1,
 ) -> BusGroup:
     normalized = normalize_group_name(name)
     if bus_group_name_exists(db, cooperative_id, normalized):
@@ -38,6 +39,7 @@ def create_bus_group(
         cooperative_id=cooperative_id,
         name=name,
         description=description,
+        rest_buses_count=rest_buses_count,
     )
     db.add(group)
     try:

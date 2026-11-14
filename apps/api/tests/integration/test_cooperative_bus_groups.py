@@ -10,6 +10,7 @@ from app.modules.buses.models import Bus, BusGroup, BusTemplate
 from app.modules.cooperatives.models import Cooperative
 from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE, ensure_default_roles
 from app.modules.schedules.models import RouteSheet
+from app.modules.routes.models import City, Route, RouteType
 
 
 PASSWORD = "ClaveCooperativa123!"
@@ -71,6 +72,7 @@ def test_cooperative_can_create_and_list_its_bus_groups(test_environment):
         "name": "Rutas largas",
         "description": "Servicios interprovinciales",
         "busCount": 0,
+        "restBusesCount": 1,
     }
 
     listed = client.get(GROUPS_URL)
@@ -229,6 +231,7 @@ def test_cooperative_can_edit_group_name_and_description(test_environment):
         "name": "Buses importados",
         "description": "Nueva descripción",
         "busCount": 0,
+        "restBusesCount": 1,
     }
     with Session(engine) as db:
         group = db.get(BusGroup, group_id)
@@ -414,6 +417,107 @@ def test_group_with_buses_cannot_be_deleted(test_environment):
     assert deleted.status_code == 409
     assert client.get(GROUPS_URL).json()[0]["id"] == group_id
     assert client.get(GROUPS_URL).json()[0]["busCount"] == 1
+
+
+def test_group_rest_buses_count_can_be_created_and_updated(test_environment):
+    client, _engine = test_environment
+    create_cooperative_account(
+        _engine,
+        name="Cooperativa Descanso",
+        email="descanso@example.com",
+    )
+    assert login(client, "descanso@example.com").status_code == 200
+
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Interprovincial", "restBusesCount": 2},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert created.status_code == 201
+    assert created.json()["restBusesCount"] == 2
+
+    updated = client.patch(
+        f"{GROUPS_URL}/{created.json()['id']}",
+        json={"restBusesCount": 1},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["restBusesCount"] == 1
+    assert client.get(GROUPS_URL).json()[0]["restBusesCount"] == 1
+
+
+def test_group_rest_buses_count_validation(test_environment):
+    client, _engine = test_environment
+    create_cooperative_account(
+        _engine,
+        name="Cooperativa Rango",
+        email="rango@example.com",
+    )
+    assert login(client, "rango@example.com").status_code == 200
+
+    negative = client.post(
+        GROUPS_URL,
+        json={"name": "Negativo", "restBusesCount": -1},
+        headers={"Origin": settings.frontend_origin},
+    )
+    too_high = client.post(
+        GROUPS_URL,
+        json={"name": "Excesivo", "restBusesCount": 51},
+        headers={"Origin": settings.frontend_origin},
+    )
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Válido"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    invalid_update = client.patch(
+        f"{GROUPS_URL}/{created.json()['id']}",
+        json={"restBusesCount": -2},
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert negative.status_code == 422
+    assert too_high.status_code == 422
+    assert invalid_update.status_code == 422
+
+
+def test_group_with_route_cannot_be_deleted(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(
+        engine,
+        name="Cooperativa Protege rutas",
+        email="protege-rutas@example.com",
+    )
+    assert login(client, "protege-rutas@example.com").status_code == 200
+    created = client.post(
+        GROUPS_URL,
+        json={"name": "Con rutas"},
+        headers={"Origin": settings.frontend_origin},
+    )
+    group_id = created.json()["id"]
+    with Session(engine) as db:
+        origin = City(name="Origen", province="Pichincha", canton="Quito")
+        destination = City(name="Destino", province="Tungurahua", canton="Ambato")
+        db.add_all([origin, destination])
+        db.flush()
+        db.add(
+            Route(
+                cooperative_id=cooperative.id,
+                origin_city_id=origin.id,
+                destination_city_id=destination.id,
+                route_type=RouteType.DIRECT,
+                duration_minutes=120,
+                bus_group_id=group_id,
+            )
+        )
+        db.commit()
+
+    deleted = client.delete(
+        f"{GROUPS_URL}/{group_id}",
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert deleted.status_code == 409
 
 
 def test_group_with_route_sheet_cannot_be_deleted(test_environment):
