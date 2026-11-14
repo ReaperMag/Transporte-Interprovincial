@@ -7,14 +7,19 @@ import {
   type CooperativeBusGroup,
 } from '../services/busGroup.service';
 import './CooperativeBusGroupsPage.css';
+import { preventNonNumericKeys } from '../../../shared/utils/validation';
+
+const DEFAULT_REST_BUSES = '1';
 
 export function CooperativeBusGroupsPage() {
   const [groups, setGroups] = useState<CooperativeBusGroup[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [restBusesCount, setRestBusesCount] = useState(DEFAULT_REST_BUSES);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingDescription, setEditingDescription] = useState('');
+  const [editingRestBusesCount, setEditingRestBusesCount] = useState(DEFAULT_REST_BUSES);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -59,12 +64,14 @@ export function CooperativeBusGroupsPage() {
       const created = await createCooperativeBusGroup({
         name,
         description: description.trim() || null,
+        restBusesCount: Number(restBusesCount),
       });
       setGroups((current) =>
         [...current, created].sort((first, second) => first.name.localeCompare(second.name)),
       );
       setName('');
       setDescription('');
+      setRestBusesCount(DEFAULT_REST_BUSES);
       setSuccess('El grupo se creó correctamente.');
     } catch (createError) {
       setError(
@@ -79,6 +86,7 @@ export function CooperativeBusGroupsPage() {
     setEditingId(group.id);
     setEditingName(group.name);
     setEditingDescription(group.description ?? '');
+    setEditingRestBusesCount(String(group.restBusesCount));
     setError(null);
     setSuccess(null);
   };
@@ -87,6 +95,7 @@ export function CooperativeBusGroupsPage() {
     setEditingId(null);
     setEditingName('');
     setEditingDescription('');
+    setEditingRestBusesCount(DEFAULT_REST_BUSES);
   };
 
   const handleUpdate = async (event: FormEvent<HTMLFormElement>, groupId: number) => {
@@ -98,6 +107,7 @@ export function CooperativeBusGroupsPage() {
       const updated = await updateCooperativeBusGroup(groupId, {
         name: editingName,
         description: editingDescription.trim() || null,
+        restBusesCount: Number(editingRestBusesCount),
       });
       setGroups((current) =>
         current
@@ -188,6 +198,23 @@ export function CooperativeBusGroupsPage() {
               disabled={isCreating}
             />
           </label>
+          <label>
+            Buses en descanso por hoja <span aria-hidden="true">*</span>
+            <input
+              type="number"
+              min={0}
+              max={50}
+              step={1}
+              required
+              onKeyDown={preventNonNumericKeys}
+              value={restBusesCount}
+              onChange={(event) => setRestBusesCount(event.target.value)}
+              disabled={isCreating}
+            />
+            <small className="cooperative-groups__field-help">
+              Se descuentan de la flota operativa de cada hoja de ruta del grupo.
+            </small>
+          </label>
           <button type="submit" disabled={isCreating}>
             {isCreating ? 'Creando...' : 'Crear grupo'}
           </button>
@@ -236,6 +263,23 @@ export function CooperativeBusGroupsPage() {
                         disabled={savingId === group.id}
                       />
                     </label>
+                    <label>
+                      Buses en descanso por hoja
+                      <input
+                        type="number"
+                        min={0}
+                        max={50}
+                        step={1}
+                        required
+                        onKeyDown={preventNonNumericKeys}
+                        value={editingRestBusesCount}
+                        onChange={(event) => setEditingRestBusesCount(event.target.value)}
+                        disabled={savingId === group.id}
+                      />
+                      <small className="cooperative-groups__field-help">
+                        Se descuentan de la flota operativa de cada hoja de ruta del grupo.
+                      </small>
+                    </label>
                     <div className="cooperative-groups__actions">
                       <button type="submit" disabled={savingId === group.id}>
                         {savingId === group.id ? 'Guardando...' : 'Guardar'}
@@ -257,6 +301,12 @@ export function CooperativeBusGroupsPage() {
                       <p>{group.description || 'Sin descripción'}</p>
                       <span>
                         {group.busCount} {group.busCount === 1 ? 'bus asociado' : 'buses asociados'}
+                      </span>
+                      <span>
+                        {group.restBusesCount}{' '}
+                        {group.restBusesCount === 1
+                          ? 'bus en descanso por hoja'
+                          : 'buses en descanso por hoja'}
                       </span>
                     </div>
                     <div className="cooperative-groups__actions">

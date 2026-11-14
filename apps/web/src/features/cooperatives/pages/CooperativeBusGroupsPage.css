@@ -63,7 +63,9 @@
 
 .cooperative-groups__form-grid {
   display: grid;
-  grid-template-columns: minmax(12rem, 0.8fr) minmax(15rem, 1fr) auto;
+  grid-template-columns:
+    minmax(10rem, 0.8fr) minmax(14rem, 1fr)
+    minmax(8rem, 0.5fr) auto;
   align-items: end;
   gap: 1rem;
   margin-top: 1rem;
@@ -185,8 +187,16 @@
 }
 
 .cooperative-groups__item-details > span {
+  display: block;
   color: #64748b;
   font-size: 0.8rem;
+}
+
+.cooperative-groups__field-help {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.35;
 }
 
 .cooperative-groups__actions {
@@ -208,7 +218,9 @@
 .cooperative-groups__edit-form {
   display: grid;
   width: 100%;
-  grid-template-columns: minmax(10rem, 0.8fr) minmax(12rem, 1fr) auto;
+  grid-template-columns:
+    minmax(9rem, 0.8fr) minmax(11rem, 1fr)
+    minmax(8rem, 0.5fr) auto;
   align-items: end;
   gap: 0.85rem;
 }
