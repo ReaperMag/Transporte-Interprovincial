@@ -124,6 +124,7 @@ def read_route_sheet_auto_plan(
     group_id: int = Query(gt=0, alias="groupId"),
     start_date: date = Query(alias="startDate"),
     days: int = Query(default=6, ge=1, le=31),
+    force: bool = Query(default=False),
     db: Session = Depends(get_db),
     account: Account = Depends(require_cooperative_access),
 ) -> list[RouteSheetRead]:
@@ -134,6 +135,7 @@ def read_route_sheet_auto_plan(
             group_id,
             start_date,
             days,
+            force=force,
         )
     except cooperative_service.BusGroupNotFoundError as exc:
         raise _schedule_error(exc) from exc

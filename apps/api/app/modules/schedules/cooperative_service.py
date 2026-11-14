@@ -432,6 +432,7 @@ def get_route_sheet_auto_plan(
     bus_group_id: int,
     start_date: date,
     days: int,
+    force: bool = False,
 ) -> list[dict]:
     group = db.scalar(
         select(BusGroup).where(
@@ -473,11 +474,28 @@ def get_route_sheet_auto_plan(
     results: list[dict] = []
     for service_date in service_dates:
         sheet = sheets_by_date.get(service_date)
+        has_reservations = False
         if sheet is not None:
+            trip_ids = [trip.id for trip in sheet.trips]
+            if trip_ids:
+                has_reservations = bool(
+                    db.scalar(
+                        select(Reservation.id)
+                        .where(Reservation.trip_id.in_(trip_ids))
+                        .limit(1)
+                    )
+                )
+
+        if sheet is not None and (not force or has_reservations):
             results.append(
                 get_route_sheet(db, cooperative_id, bus_group_id, service_date)
             )
             continue
+
+        if sheet is not None and force and not has_reservations:
+            db.delete(sheet)
+            db.commit()
+            sheet = None
 
         plan = rotation.build_daily_plan(
             buses,

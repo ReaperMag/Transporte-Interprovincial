@@ -79,11 +79,12 @@ export function CooperativeRoutesPage() {
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [startingCities, setStartingCities] = useState<Record<string, Record<number, string>>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [isAutoAssigning, setIsAutoAssigning] = useState(false);
   const [loadedPlanKey, setLoadedPlanKey] = useState('');
-  const [refreshPlan, setRefreshPlan] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const planKey = `${selectedGroupId}:${serviceDate}:${refreshPlan}`;
+  const planKey = `${selectedGroupId}:${serviceDate}`;
   const serviceDates = useMemo(
     () => Array.from({ length: 6 }, (_, index) => dateOffset(serviceDate, index)),
     [serviceDate],
@@ -141,69 +142,82 @@ export function CooperativeRoutesPage() {
     };
   }, [selectedGroupId]);
 
+  /** Solo actualiza el estado visual; NO guarda ni publica nada en el servidor. */
+  const displayPlanResults = (results: RouteSheet[]) => {
+    setPlans(Object.fromEntries(results.map((plan) => [plan.serviceDate, plan])));
+    setAssignedBuses(
+      Object.fromEntries(
+        results.map((plan) => [
+          plan.serviceDate,
+          Object.fromEntries(
+            plan.frequencies.map((frequency) => [
+              frequency.frequencyId,
+              frequency.busId ? String(frequency.busId) : '',
+            ]),
+          ),
+        ]),
+      ),
+    );
+    setStartingCities(
+      Object.fromEntries(
+        results.map((plan) => [
+          plan.serviceDate,
+          Object.fromEntries(
+            plan.startingLocations.map((item) => [item.busId, String(item.cityId)]),
+          ),
+        ]),
+      ),
+    );
+  };
+
+  /**
+   * Actualiza el estado visual Y guarda/publica automáticamente las hojas
+   * que tienen todos los buses asignados.
+   */
+  const applyPlanResults = async (results: RouteSheet[], active = true) => {
+    displayPlanResults(results);
+
+    // Publicación automática de hojas generadas completas
+    for (const plan of results) {
+      if (
+        plan.status !== 'published' &&
+        plan.frequencies.length > 0 &&
+        plan.frequencies.every((f) => Boolean(f.busId))
+      ) {
+        try {
+          const saved = await saveRouteSheet({
+            busGroupId: plan.busGroupId,
+            serviceDate: plan.serviceDate,
+            assignments: plan.frequencies.map((f) => ({
+              frequencyId: f.frequencyId,
+              busId: f.busId,
+            })),
+            startingLocations: plan.startingLocations,
+            standbyBusIds: plan.standbyBuses.map((b) => b.id),
+            mode: plan.mode,
+          });
+          if (saved.id && saved.status !== 'published') {
+            const published = await publishRouteSheet(saved.id);
+            if (active) {
+              setPlans((current) => ({ ...current, [plan.serviceDate]: published }));
+            }
+          }
+        } catch {
+          // Ignorado si faltan tarifas
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     let active = true;
     if (!selectedGroupId || !serviceDate) return;
 
     void getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6)
-      .then(async (results) => {
+      .then((results) => {
         if (!active) return;
-        setPlans(Object.fromEntries(results.map((plan) => [plan.serviceDate, plan])));
-        setAssignedBuses(
-          Object.fromEntries(
-            results.map((plan) => [
-              plan.serviceDate,
-              Object.fromEntries(
-                plan.frequencies.map((frequency) => [
-                  frequency.frequencyId,
-                  frequency.busId ? String(frequency.busId) : '',
-                ]),
-              ),
-            ]),
-          ),
-        );
-        setStartingCities(
-          Object.fromEntries(
-            results.map((plan) => [
-              plan.serviceDate,
-              Object.fromEntries(
-                plan.startingLocations.map((item) => [item.busId, String(item.cityId)]),
-              ),
-            ]),
-          ),
-        );
+        displayPlanResults(results);
         setLoadedPlanKey(planKey);
-
-        // Publicación automática de hojas generadas completas
-        for (const plan of results) {
-          if (
-            plan.status !== 'published' &&
-            plan.frequencies.length > 0 &&
-            plan.frequencies.every((f) => Boolean(f.busId))
-          ) {
-            try {
-              const saved = await saveRouteSheet({
-                busGroupId: plan.busGroupId,
-                serviceDate: plan.serviceDate,
-                assignments: plan.frequencies.map((f) => ({
-                  frequencyId: f.frequencyId,
-                  busId: f.busId,
-                })),
-                startingLocations: plan.startingLocations,
-                standbyBusIds: plan.standbyBuses.map((b) => b.id),
-                mode: plan.mode,
-              });
-              if (saved.id && saved.status !== 'published') {
-                const published = await publishRouteSheet(saved.id);
-                if (active) {
-                  setPlans((current) => ({ ...current, [plan.serviceDate]: published }));
-                }
-              }
-            } catch {
-              // Si no se puede publicar aún (p. ej. faltan tarifas), queda en borrador
-            }
-          }
-        }
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -218,7 +232,57 @@ export function CooperativeRoutesPage() {
     return () => {
       active = false;
     };
-  }, [selectedGroupId, serviceDate, refreshPlan, planKey]);
+  }, [selectedGroupId, serviceDate, planKey]);
+
+  /** Recarga los datos actuales del servidor sin forzar regeneración del plan */
+  const handleRefreshPlan = async () => {
+    if (!selectedGroupId || !serviceDate) return;
+    setIsRecalculating(true);
+    setError(null);
+    try {
+      const [freshFrequencies, results] = await Promise.all([
+        getCooperativeFrequencies(Number(selectedGroupId)),
+        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6, false),
+      ]);
+      setFrequencies(freshFrequencies);
+      displayPlanResults(results);
+      setLoadedPlanKey(planKey);
+      setSuccess('Hoja de ruta actualizada correctamente.');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No fue posible actualizar la hoja de ruta.',
+      );
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
+  /**
+   * Fuerza la regeneración del plan automático:
+   * rota buses, aplica descansos según el grupo y guarda/publica cada hoja.
+   */
+  const handleAutoAssign = async () => {
+    if (!selectedGroupId || !serviceDate) return;
+    setIsAutoAssigning(true);
+    setError(null);
+    try {
+      const [freshFrequencies, results] = await Promise.all([
+        getCooperativeFrequencies(Number(selectedGroupId)),
+        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6, true),
+      ]);
+      setFrequencies(freshFrequencies);
+      await applyPlanResults(results, true);
+      setLoadedPlanKey(planKey);
+      setSuccess('Buses auto-asignados y buses en descanso recalculados exitosamente.');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No fue posible auto-asignar los buses.',
+      );
+    } finally {
+      setIsAutoAssigning(false);
+    }
+  };
+
 
   const filteredRoutes = useMemo(() => {
     const query = normalizeLocationSearch(routeSearch);
@@ -244,18 +308,33 @@ export function CooperativeRoutesPage() {
     });
   }, [routes, routeSearch, routeGroupFilter, routeStatusFilter]);
 
-  const sheetFrequencies =
-    plans[serviceDates[0]]?.frequencies ??
-    frequencies.map((frequency) => ({
-      frequencyId: frequency.id,
-      routeId: frequency.routeId,
-      routeName: frequency.routeName,
-      departureTime: frequency.departureTime,
-      durationMinutes: frequency.durationMinutes,
-      resolutionNumber: frequency.resolutionNumber,
-      stops: frequency.stops,
-      busId: null,
-    }));
+  const sheetFrequencies = useMemo(() => {
+    const map = new Map<number, (typeof frequencies)[number] | RouteSheet['frequencies'][number]>();
+    for (const f of frequencies) {
+      map.set(f.id, f);
+    }
+    for (const day of serviceDates) {
+      const dayPlan = plans[day];
+      if (dayPlan) {
+        for (const f of dayPlan.frequencies) {
+          if (!map.has(f.frequencyId)) {
+            map.set(f.frequencyId, f);
+          }
+        }
+      }
+    }
+    return Array.from(map.values())
+      .map((f) => ({
+        frequencyId: 'frequencyId' in f ? f.frequencyId : f.id,
+        routeId: f.routeId,
+        routeName: f.routeName,
+        departureTime: f.departureTime,
+        durationMinutes: f.durationMinutes,
+        resolutionNumber: f.resolutionNumber,
+        stops: f.stops,
+      }))
+      .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
+  }, [frequencies, plans, serviceDates]);
 
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
@@ -270,8 +349,8 @@ export function CooperativeRoutesPage() {
     if (created.busGroupId) {
       setSelectedGroupId(String(created.busGroupId));
     }
-    setRefreshPlan((current) => current + 1);
     setSuccess(`Ruta ${created.originCity} – ${created.destinationCity} creada.`);
+    void handleAutoAssign();
   };
 
   const handleBusAssignmentChange = async (day: string, frequencyId: number, busId: string) => {
@@ -427,7 +506,7 @@ export function CooperativeRoutesPage() {
                             <span
                               className={`cooperative-routes__badge ${
                                 route.isActive
-                                    ? 'cooperative-routes__badge--success'
+                                  ? 'cooperative-routes__badge--success'
                                   : 'cooperative-routes__badge--muted'
                               }`}
                             >
@@ -515,6 +594,24 @@ export function CooperativeRoutesPage() {
                   }}
                 />
               </label>
+              <button
+                type="button"
+                className="cooperative-routes__button cooperative-routes__button--secondary cooperative-routes__button--refresh"
+                onClick={() => void handleRefreshPlan()}
+                disabled={isLoadingPlan || isRecalculating || isAutoAssigning || !selectedGroupId}
+                title="Recarga los datos actuales del servidor, incluyendo buses en descanso"
+              >
+                {isRecalculating ? 'Actualizando...' : '🔄 Actualizar'}
+              </button>
+              <button
+                type="button"
+                className="cooperative-routes__button cooperative-routes__button--auto-assign"
+                onClick={() => void handleAutoAssign()}
+                disabled={isLoadingPlan || isRecalculating || isAutoAssigning || !selectedGroupId}
+                title="Regenera el plan completo: rota buses automáticamente y aplica los descansos configurados en el grupo"
+              >
+                {isAutoAssigning ? 'Auto-asignando...' : '⚡ Auto-asignar buses'}
+              </button>
             </div>
             <div className="cooperative-routes__sheet-meta">
               <span>
@@ -552,7 +649,7 @@ export function CooperativeRoutesPage() {
                   No fue posible consultar todas las hojas del periodo. Revisa el aviso anterior e
                   inténtalo de nuevo.
                 </p>
-                <button type="button" onClick={() => setRefreshPlan((current) => current + 1)}>
+                <button type="button" onClick={() => void handleRefreshPlan()}>
                   Reintentar
                 </button>
               </div>
@@ -689,8 +786,8 @@ export function CooperativeRoutesPage() {
               current.map((item) => (item.id === updated.id ? updated : item)),
             );
             setConfiguringRoute(null);
-            setRefreshPlan((current) => current + 1);
             setSuccess(`Ruta ${updated.originCity} – ${updated.destinationCity} configurada.`);
+            void handleAutoAssign();
           }}
           onFrequencyCreated={(created) => {
             setFrequencies((current) =>
@@ -698,7 +795,7 @@ export function CooperativeRoutesPage() {
                 first.departureTime.localeCompare(second.departureTime),
               ),
             );
-            setRefreshPlan((current) => current + 1);
+            void handleAutoAssign();
           }}
         />
       )}

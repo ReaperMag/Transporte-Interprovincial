@@ -208,11 +208,13 @@ export function getRouteSheetAutoPlan(
   groupId: number,
   startDate: string,
   days = 6,
+  force = false,
 ): Promise<RouteSheet[]> {
   const params = new URLSearchParams({
     groupId: String(groupId),
     startDate,
     days: String(days),
+    force: String(force),
   });
   return request<RouteSheet[]>(`${routePlanningUrl}/route-sheets/auto-plan?${params}`);
 }

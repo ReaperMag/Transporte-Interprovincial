@@ -216,6 +216,12 @@
   background: #15803d;
 }
 
+.cooperative-routes .cooperative-routes__button--auto-assign {
+  border: 1px solid #a5b4fc;
+  background: #4f46e5;
+  color: #fff;
+}
+
 .cooperative-routes__city-actions,
 .cooperative-routes__examples,
 .cooperative-routes__form-actions {
