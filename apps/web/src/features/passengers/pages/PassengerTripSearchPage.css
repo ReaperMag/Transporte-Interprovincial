@@ -38,8 +38,36 @@
 
 .passenger-trip-search__fields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+}
+
+.passenger-trip-search__location-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.passenger-trip-search__location-filter {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #dbe5f0;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.passenger-trip-search__location-filter legend {
+  padding: 0 6px;
+  color: #1d4ed8;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.passenger-trip-search__location-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .passenger-trip-search__field {
@@ -66,6 +94,13 @@
 .passenger-trip-search__field input:focus {
   outline: 2px solid #93c5fd;
   outline-offset: 1px;
+}
+
+.passenger-trip-search__field select:disabled,
+.passenger-trip-search__field input:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
 }
 
 .passenger-trip-search__button {
@@ -206,6 +241,11 @@
 
 @media (max-width: 760px) {
   .passenger-trip-search__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .passenger-trip-search__location-grid,
+  .passenger-trip-search__location-fields {
     grid-template-columns: 1fr;
   }
 
