@@ -426,18 +426,6 @@ def _frequency_model_read(frequency: Frequency, bus_id: int | None) -> dict:
     }
 
 
-def _sheet_has_reservations(db: Session, sheet: RouteSheet) -> bool:
-    return (
-        db.scalar(
-            select(Reservation.id)
-            .join(Trip, Trip.id == Reservation.trip_id)
-            .where(Trip.route_sheet_id == sheet.id)
-            .limit(1)
-        )
-        is not None
-    )
-
-
 def get_route_sheet_auto_plan(
     db: Session,
     cooperative_id: int,
@@ -485,10 +473,7 @@ def get_route_sheet_auto_plan(
     results: list[dict] = []
     for service_date in service_dates:
         sheet = sheets_by_date.get(service_date)
-        if sheet is not None and (
-            sheet.status == RouteSheetStatus.PUBLISHED
-            or _sheet_has_reservations(db, sheet)
-        ):
+        if sheet is not None:
             results.append(
                 get_route_sheet(db, cooperative_id, bus_group_id, service_date)
             )
