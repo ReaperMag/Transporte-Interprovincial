@@ -10,7 +10,7 @@ import './AdminLayout.css';
 const sections: readonly SidebarSection[] = [
   { to: '/admin/panel', label: 'Panel de resumen', icon: 'home' },
   { to: '/admin/cooperativas', label: 'Cooperativas', icon: 'groups' },
-  { to: '/admin/provincias-cantones', label: 'Provincias y cantones', icon: 'map' },
+  { to: '/admin/provincias-cantones', label: 'Catálogo geográfico', icon: 'map' },
 ];
 
 export function AdminLayout() {
@@ -53,7 +53,7 @@ export function AdminLayout() {
               {isDashboard
                 ? 'Panel de resumen'
                 : isGeographicCatalog
-                  ? 'Provincias y cantones'
+                  ? 'Catálogo geográfico'
                   : 'Gestión de cooperativas'}
             </strong>
           </div>

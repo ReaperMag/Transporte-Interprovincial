@@ -1,19 +1,35 @@
-import { AdminApiError } from './cooperatives.service';
-
-export interface Canton {
+export interface GeographicPlace {
   id: number;
   name: string;
   province: string;
+  canton: string | null;
 }
 
 export interface GeographicCatalog {
   provinces: string[];
-  cantons: Canton[];
+  cantons: GeographicPlace[];
+  localities: GeographicPlace[];
 }
 
 export interface CantonCreate {
   name: string;
   province: string;
+}
+
+export interface LocalityCreate {
+  name: string;
+  province: string;
+  canton: string;
+}
+
+export class GeographicApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'GeographicApiError';
+  }
 }
 
 const catalogUrl = '/api/v1/geographic-catalog';
@@ -32,7 +48,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch {
-    throw new AdminApiError('No se pudo conectar con el servidor.', 0);
+    throw new GeographicApiError('No se pudo conectar con el servidor.', 0);
   }
 
   if (!response.ok) {
@@ -57,7 +73,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       message = 'No tienes permisos para administrar el catálogo geográfico.';
     }
 
-    throw new AdminApiError(message, response.status);
+    throw new GeographicApiError(message, response.status);
   }
 
   return (await response.json()) as T;
@@ -67,8 +83,15 @@ export function getGeographicCatalog(signal?: AbortSignal): Promise<GeographicCa
   return request(catalogUrl, { signal });
 }
 
-export function createCanton(values: CantonCreate): Promise<Canton> {
+export function createCanton(values: CantonCreate): Promise<GeographicPlace> {
   return request(`${adminCatalogUrl}/cantons`, {
+    method: 'POST',
+    body: JSON.stringify(values),
+  });
+}
+
+export function createLocality(values: LocalityCreate): Promise<GeographicPlace> {
+  return request(`${adminCatalogUrl}/localities`, {
     method: 'POST',
     body: JSON.stringify(values),
   });

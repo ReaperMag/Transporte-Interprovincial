@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   createCanton,
+  createLocality,
   getGeographicCatalog,
-  type Canton,
+  type GeographicPlace,
   type GeographicCatalog,
-} from '../services/geographicCatalog.service';
+} from '../../geography/services/geographicCatalog.service';
 import './GeographicCatalogPage.css';
+
+type CatalogView = 'cantons' | 'localities';
 
 function normalizeSearch(value: string): string {
   return value
@@ -15,7 +18,7 @@ function normalizeSearch(value: string): string {
     .toLocaleLowerCase('es');
 }
 
-function sortCantons(cantons: Canton[], provinces: string[]): Canton[] {
+function sortCantons(cantons: GeographicPlace[], provinces: string[]): GeographicPlace[] {
   const provinceOrder = new Map(provinces.map((province, index) => [province, index]));
   return [...cantons].sort(
     (left, right) =>
@@ -29,11 +32,17 @@ export function GeographicCatalogPage() {
   const [catalog, setCatalog] = useState<GeographicCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeView, setActiveView] = useState<CatalogView>('cantons');
   const [search, setSearch] = useState('');
   const [cantonName, setCantonName] = useState('');
+  const [localityName, setLocalityName] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('');
+  const [localityProvince, setLocalityProvince] = useState('');
+  const [localityCanton, setLocalityCanton] = useState('');
   const [provinceFilter, setProvinceFilter] = useState('');
+  const [cantonFilter, setCantonFilter] = useState('');
   const [isAddCantonOpen, setIsAddCantonOpen] = useState(false);
+  const [isAddLocalityOpen, setIsAddLocalityOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -69,6 +78,37 @@ export function GeographicCatalogPage() {
         (!query || normalizeSearch(canton.name).includes(query)),
     );
   }, [catalog, provinceFilter, search]);
+
+  const filterCantons = useMemo(
+    () =>
+      catalog?.cantons.filter((canton) => !provinceFilter || canton.province === provinceFilter) ??
+      [],
+    [catalog, provinceFilter],
+  );
+
+  const visibleLocalities = useMemo(() => {
+    if (!catalog) return [];
+    const query = normalizeSearch(search);
+    const selectedCanton = catalog.cantons.find((canton) => String(canton.id) === cantonFilter);
+    const provinceOrder = new Map(catalog.provinces.map((province, index) => [province, index]));
+    return [...catalog.localities]
+      .filter(
+        (locality) =>
+          (!provinceFilter || locality.province === provinceFilter) &&
+          (!cantonFilter ||
+            (selectedCanton !== undefined &&
+              locality.canton === selectedCanton.name &&
+              locality.province === selectedCanton.province)) &&
+          (!query || normalizeSearch(locality.name).includes(query)),
+      )
+      .sort(
+        (left, right) =>
+          (provinceOrder.get(left.province) ?? Number.MAX_SAFE_INTEGER) -
+            (provinceOrder.get(right.province) ?? Number.MAX_SAFE_INTEGER) ||
+          (left.canton ?? '').localeCompare(right.canton ?? '', 'es') ||
+          left.name.localeCompare(right.name, 'es'),
+      );
+  }, [catalog, cantonFilter, provinceFilter, search]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,15 +152,59 @@ export function GeographicCatalogPage() {
     setFormError(null);
   };
 
+  const handleLocalitySubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!localityProvince || !localityCanton) {
+      setFormError('Selecciona la provincia y el cantón de la localidad.');
+      return;
+    }
+
+    setSaving(true);
+    setFormError(null);
+    setSuccess(null);
+    try {
+      const locality = await createLocality({
+        name: localityName.trim(),
+        province: localityProvince,
+        canton: localityCanton,
+      });
+      setCatalog((current) =>
+        current
+          ? {
+              ...current,
+              localities: [...current.localities, locality],
+            }
+          : current,
+      );
+      setLocalityName('');
+      setIsAddLocalityOpen(false);
+      setSuccess(
+        `${locality.name} se agregó al cantón ${locality.canton} de ${locality.province}.`,
+      );
+    } catch (requestError: unknown) {
+      setFormError(
+        requestError instanceof Error ? requestError.message : 'No se pudo registrar la localidad.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const closeAddLocalityDialog = () => {
+    if (saving) return;
+    setIsAddLocalityOpen(false);
+    setLocalityName('');
+    setFormError(null);
+  };
+
   return (
     <section className="geographic-catalog" aria-labelledby="geographic-catalog-title">
       <header className="geographic-catalog__hero">
         <div>
           <p className="geographic-catalog__eyebrow">Administración del sistema</p>
-          <h1 id="geographic-catalog-title">Provincias y cantones</h1>
+          <h1 id="geographic-catalog-title">Catálogo geográfico del Ecuador</h1>
           <p>
-            Consulta la división territorial del Ecuador y agrega cantones a una provincia
-            existente.
+            Administra provincias, cantones y localidades para mantener las rutas estandarizadas.
           </p>
         </div>
         <div className="geographic-catalog__hero-art" aria-hidden="true">
@@ -167,6 +251,18 @@ export function GeographicCatalogPage() {
             <strong>{loading ? '—' : (catalog?.cantons.length ?? 0)}</strong>
           </span>
         </article>
+        <article className="geographic-catalog__stat">
+          <span className="geographic-catalog__stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z" />
+              <circle cx="12" cy="10" r="2.2" />
+            </svg>
+          </span>
+          <span>
+            <small>Localidades registradas</small>
+            <strong>{loading ? '—' : (catalog?.localities.length ?? 0)}</strong>
+          </span>
+        </article>
       </div>
 
       {error && (
@@ -182,6 +278,34 @@ export function GeographicCatalogPage() {
 
       <section className="geographic-catalog__panel" aria-labelledby="geographic-list-title">
         <header className="geographic-catalog__list-header">
+          <div
+            className="geographic-catalog__view-switch"
+            role="group"
+            aria-label="Tipo de catálogo"
+          >
+            <button
+              aria-pressed={activeView === 'cantons'}
+              className={activeView === 'cantons' ? 'is-active' : ''}
+              onClick={() => {
+                setActiveView('cantons');
+                setCantonFilter('');
+              }}
+              type="button"
+            >
+              Provincias → cantones
+            </button>
+            <button
+              aria-pressed={activeView === 'localities'}
+              className={activeView === 'localities' ? 'is-active' : ''}
+              onClick={() => {
+                setActiveView('localities');
+                setCantonFilter('');
+              }}
+              type="button"
+            >
+              Cantones → localidades
+            </button>
+          </div>
           <div className="geographic-catalog__list-heading">
             <div className="geographic-catalog__list-title">
               <span className="geographic-catalog__section-icon" aria-hidden="true">
@@ -191,8 +315,14 @@ export function GeographicCatalogPage() {
                 </svg>
               </span>
               <div>
-                <h2 id="geographic-list-title">Cantones registrados</h2>
-                <p>Filtra por provincia o busca un cantón por nombre.</p>
+                <h2 id="geographic-list-title">
+                  {activeView === 'cantons' ? 'Cantones registrados' : 'Localidades registradas'}
+                </h2>
+                <p>
+                  {activeView === 'cantons'
+                    ? 'Filtra por provincia o busca un cantón por nombre.'
+                    : 'Filtra por provincia y cantón, o busca una localidad por nombre.'}
+                </p>
               </div>
             </div>
             <button
@@ -201,25 +331,41 @@ export function GeographicCatalogPage() {
               onClick={() => {
                 setFormError(null);
                 setSuccess(null);
-                setSelectedProvince(provinceFilter || catalog?.provinces[0] || '');
-                setIsAddCantonOpen(true);
+                if (activeView === 'cantons') {
+                  setSelectedProvince(provinceFilter || catalog?.provinces[0] || '');
+                  setIsAddCantonOpen(true);
+                } else {
+                  const defaultProvince = provinceFilter || catalog?.provinces[0] || '';
+                  const filteredCanton = catalog?.cantons.find(
+                    (canton) => String(canton.id) === cantonFilter,
+                  );
+                  const defaultCanton =
+                    (filteredCanton?.province === defaultProvince ? filteredCanton.name : '') ||
+                    catalog?.cantons.find((canton) => canton.province === defaultProvince)?.name ||
+                    '';
+                  setLocalityProvince(defaultProvince);
+                  setLocalityCanton(defaultCanton);
+                  setIsAddLocalityOpen(true);
+                }
               }}
               type="button"
             >
               <span aria-hidden="true">+</span>
-              Agregar cantón
+              {activeView === 'cantons' ? 'Agregar cantón' : 'Agregar localidad'}
             </button>
           </div>
           <div
-            className="geographic-catalog__filters"
+            className={`geographic-catalog__filters${activeView === 'localities' ? ' geographic-catalog__filters--localities' : ''}`}
             role="group"
-            aria-label="Filtros de cantones"
+            aria-label={`Filtros de ${activeView === 'cantons' ? 'cantones' : 'localidades'}`}
           >
             <label className="geographic-catalog__search">
-              <span>Buscar por nombre del cantón</span>
+              <span>
+                Buscar por nombre {activeView === 'cantons' ? 'del cantón' : 'de la localidad'}
+              </span>
               <input
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Nombre del cantón"
+                placeholder={activeView === 'cantons' ? 'Nombre del cantón' : 'Nombre de localidad'}
                 type="search"
                 value={search}
               />
@@ -228,7 +374,10 @@ export function GeographicCatalogPage() {
               <span>Provincia</span>
               <select
                 disabled={loading || !catalog}
-                onChange={(event) => setProvinceFilter(event.target.value)}
+                onChange={(event) => {
+                  setProvinceFilter(event.target.value);
+                  setCantonFilter('');
+                }}
                 value={provinceFilter}
               >
                 <option value="">Todas las provincias</option>
@@ -239,6 +388,23 @@ export function GeographicCatalogPage() {
                 ))}
               </select>
             </label>
+            {activeView === 'localities' && (
+              <label>
+                <span>Cantón</span>
+                <select
+                  disabled={loading || !catalog}
+                  onChange={(event) => setCantonFilter(event.target.value)}
+                  value={cantonFilter}
+                >
+                  <option value="">Todos los cantones</option>
+                  {filterCantons.map((canton) => (
+                    <option key={canton.id} value={canton.id}>
+                      {canton.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
         </header>
 
@@ -246,18 +412,31 @@ export function GeographicCatalogPage() {
           <table className="geographic-catalog__table">
             <thead>
               <tr>
-                <th scope="col">Cantón</th>
-                <th scope="col">Provincia</th>
+                {activeView === 'cantons' ? (
+                  <>
+                    <th scope="col">Cantón</th>
+                    <th scope="col">Provincia</th>
+                  </>
+                ) : (
+                  <>
+                    <th scope="col">Localidad</th>
+                    <th scope="col">Cantón</th>
+                    <th scope="col">Provincia</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="geographic-catalog__table-message" colSpan={2}>
+                  <td
+                    className="geographic-catalog__table-message"
+                    colSpan={activeView === 'cantons' ? 2 : 3}
+                  >
                     Cargando el catálogo...
                   </td>
                 </tr>
-              ) : visibleCantons.length ? (
+              ) : activeView === 'cantons' && visibleCantons.length ? (
                 visibleCantons.map((canton) => (
                   <tr key={canton.id}>
                     <td>{canton.name}</td>
@@ -266,12 +445,25 @@ export function GeographicCatalogPage() {
                     </td>
                   </tr>
                 ))
+              ) : activeView === 'localities' && visibleLocalities.length ? (
+                visibleLocalities.map((locality) => (
+                  <tr key={locality.id}>
+                    <td>{locality.name}</td>
+                    <td>{locality.canton}</td>
+                    <td>
+                      <span className="geographic-catalog__province-tag">{locality.province}</span>
+                    </td>
+                  </tr>
+                ))
               ) : (
                 <tr>
-                  <td className="geographic-catalog__table-message" colSpan={2}>
+                  <td
+                    className="geographic-catalog__table-message"
+                    colSpan={activeView === 'cantons' ? 2 : 3}
+                  >
                     {error
                       ? 'No fue posible cargar el catálogo.'
-                      : 'No hay cantones que coincidan con la búsqueda.'}
+                      : `No hay ${activeView === 'cantons' ? 'cantones' : 'localidades'} que coincidan con la búsqueda.`}
                   </td>
                 </tr>
               )}
@@ -280,7 +472,9 @@ export function GeographicCatalogPage() {
         </div>
         {!loading && (
           <p className="geographic-catalog__result-count">
-            {visibleCantons.length} de {catalog?.cantons.length ?? 0} cantones
+            {activeView === 'cantons'
+              ? `${visibleCantons.length} de ${catalog?.cantons.length ?? 0} cantones`
+              : `${visibleLocalities.length} de ${catalog?.localities.length ?? 0} localidades`}
           </p>
         )}
       </section>
@@ -362,6 +556,111 @@ export function GeographicCatalogPage() {
                 </button>
                 <button className="geographic-catalog__dialog-save" disabled={saving} type="submit">
                   {saving ? 'Guardando...' : 'Agregar cantón'}
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {isAddLocalityOpen && (
+        <div className="geographic-catalog__backdrop">
+          <section
+            aria-labelledby="geographic-locality-dialog-title"
+            aria-modal="true"
+            className="geographic-catalog__dialog"
+            role="dialog"
+          >
+            <header className="geographic-catalog__dialog-header">
+              <div>
+                <span>Administración territorial</span>
+                <h2 id="geographic-locality-dialog-title">Agregar localidad</h2>
+              </div>
+              <button
+                aria-label="Cerrar"
+                className="geographic-catalog__dialog-close"
+                disabled={saving}
+                onClick={closeAddLocalityDialog}
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+
+            <form
+              className="geographic-catalog__dialog-form"
+              onSubmit={(event) => void handleLocalitySubmit(event)}
+            >
+              <label>
+                <span>Provincia</span>
+                <select
+                  autoFocus
+                  disabled={saving || !catalog?.provinces.length}
+                  onChange={(event) => {
+                    setLocalityProvince(event.target.value);
+                    setLocalityCanton('');
+                  }}
+                  required
+                  value={localityProvince}
+                >
+                  {catalog?.provinces.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Cantón</span>
+                <select
+                  disabled={saving || !localityProvince}
+                  onChange={(event) => setLocalityCanton(event.target.value)}
+                  required
+                  value={localityCanton}
+                >
+                  <option value="">Selecciona un cantón</option>
+                  {catalog?.cantons
+                    .filter((canton) => canton.province === localityProvince)
+                    .map((canton) => (
+                      <option key={canton.id} value={canton.name}>
+                        {canton.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label>
+                <span>Nombre de la localidad</span>
+                <input
+                  autoComplete="off"
+                  maxLength={100}
+                  onChange={(event) => {
+                    setLocalityName(event.target.value);
+                    setFormError(null);
+                  }}
+                  placeholder="Ej.: San José"
+                  required
+                  value={localityName}
+                />
+              </label>
+              <p className="geographic-catalog__dialog-hint">
+                La localidad quedará disponible para seleccionarla al planificar rutas.
+              </p>
+              {formError && (
+                <p className="geographic-catalog__dialog-error" role="alert">
+                  {formError}
+                </p>
+              )}
+              <footer className="geographic-catalog__dialog-actions">
+                <button
+                  className="geographic-catalog__dialog-cancel"
+                  disabled={saving}
+                  onClick={closeAddLocalityDialog}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+                <button className="geographic-catalog__dialog-save" disabled={saving} type="submit">
+                  {saving ? 'Guardando...' : 'Agregar localidad'}
                 </button>
               </footer>
             </form>
