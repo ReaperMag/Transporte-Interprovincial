@@ -90,6 +90,7 @@ class CooperativeCreate(CooperativeAdminWrite):
 
 
 class CooperativeAccountCreate(CooperativeCreate):
+    email: Email | None = None
     account_email: EmailWithDomain
     initial_password: str = Field(min_length=12, max_length=128)
 

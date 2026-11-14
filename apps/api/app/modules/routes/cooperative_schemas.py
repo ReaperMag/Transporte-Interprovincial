@@ -7,6 +7,7 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    field_validator,
     model_validator,
 )
 
@@ -51,6 +52,12 @@ class CityRead(RouteSchema):
     id: int
     name: str
     province: str
+    canton: str | None = None
+
+    @field_validator("canton", mode="before")
+    @classmethod
+    def empty_canton_is_none(cls, value: str | None) -> str | None:
+        return value or None
 
 
 class RouteStopCreate(RouteSchema):

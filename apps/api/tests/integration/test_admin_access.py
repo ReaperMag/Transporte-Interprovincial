@@ -1,9 +1,11 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.bootstrap import ensure_initial_admin
 from app.core.security import hash_password, verify_password
+from app.modules.cooperatives import service as cooperative_service
 from app.modules.accounts.models import Account, AccountType
 from app.modules.accounts.repository import create_account, get_account_by_email
 from app.modules.cooperatives.models import Cooperative
@@ -167,12 +169,12 @@ def test_super_admin_can_create_and_update_cooperatives(test_environment):
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("email", "contacto@cooperativa.ec"),
+        ("email", "correo-invalido"),
         ("logoUrl", "https://example.com/logo.png"),
         ("isActive", False),
     ],
 )
-def test_admin_create_rejects_contact_email_logo_and_status(
+def test_admin_create_rejects_invalid_email_and_unsupported_fields(
     test_environment,
     field,
     value,
@@ -220,6 +222,7 @@ def test_creating_cooperative_creates_linked_login_account(test_environment):
         json={
             "name": "Cooperativa con cuenta",
             "ruc": "1790011223001",
+            "email": "contacto@cooperativa.ec",
             "accountEmail": "cuenta@cooperativa.ec",
             "initialPassword": "ClaveCooperativa123!",
         },
@@ -238,7 +241,7 @@ def test_creating_cooperative_creates_linked_login_account(test_environment):
         assert account.cooperative_id == cooperative_id
         assert account.password_hash != "ClaveCooperativa123!"
         assert cooperative is not None
-        assert cooperative.email is None
+        assert cooperative.email == "contacto@cooperativa.ec"
         assert cooperative.logo_url is None
 
     cooperative_login = login(
@@ -258,6 +261,41 @@ def test_creating_cooperative_creates_linked_login_account(test_environment):
         "ruc": "1790011223001",
     }
     assert client.get("/api/v1/admin/cooperatives/summary").status_code == 403
+
+
+def test_cooperative_creation_rolls_back_if_access_account_creation_fails(
+    test_environment,
+    monkeypatch,
+):
+    client, engine = test_environment
+    admin_email = "admin@example.com"
+    create_account_for_login(
+        engine,
+        email=admin_email,
+        account_type=AccountType.SUPER_ADMIN,
+    )
+    assert login(client, admin_email).status_code == 200
+
+    def fail_account_creation(*args, **kwargs):
+        raise IntegrityError("account insert", {}, Exception("duplicate account"))
+
+    monkeypatch.setattr(cooperative_service, "create_account", fail_account_creation)
+    response = client.post(
+        "/api/v1/admin/cooperatives",
+        json={
+            "name": "No debe quedar guardada",
+            "ruc": "1790011223001",
+            "email": "contacto@cooperativa.ec",
+            "accountEmail": "registro@cooperativa.ec",
+            "initialPassword": "ClaveCooperativa123!",
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 409
+    with Session(engine) as db:
+        assert db.query(Cooperative).count() == 0
+        assert get_account_by_email(db, "registro@cooperativa.ec") is None
 
 
 def test_duplicate_account_email_does_not_create_cooperative(test_environment):

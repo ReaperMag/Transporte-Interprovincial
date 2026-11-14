@@ -3,9 +3,13 @@ from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
-from app.core.permissions import require_cooperative_access, require_cooperative_admin
+from app.core.permissions import (
+    require_admin_access,
+    require_cooperative_access,
+    require_cooperative_admin,
+)
 from app.modules.accounts.models import Account
-from app.modules.routes import cooperative_service
+from app.modules.routes import cooperative_service, geographic_service
 from app.modules.routes.cooperative_schemas import (
     CityCreate,
     CityRead,
@@ -42,10 +46,21 @@ def read_cities(
 def add_city(
     payload: CityCreate,
     db: Session = Depends(get_db),
-    _: Account = Depends(require_cooperative_access),
+    _: Account = Depends(require_admin_access),
     __: None = Depends(validate_request_origin),
 ) -> CityRead:
-    return cooperative_service.create_city(db, payload.name, payload.province)
+    try:
+        return geographic_service.create_canton(db, payload.name, payload.province)
+    except geographic_service.UnknownProvinceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Selecciona una provincia de Ecuador.",
+        ) from exc
+    except geographic_service.DuplicateCantonError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ese cantón ya está registrado en la provincia seleccionada.",
+        ) from exc
 
 
 @router.get("/routes", response_model=list[CooperativeRouteRead])
@@ -76,7 +91,7 @@ def add_route(
     except cooperative_service.CityNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Una de las ciudades seleccionadas ya no existe.",
+            detail="Una ubicación seleccionada no existe o no está habilitada en el catálogo.",
         ) from exc
 
 

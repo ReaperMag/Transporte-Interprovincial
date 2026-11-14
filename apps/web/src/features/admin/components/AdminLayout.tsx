@@ -1,12 +1,25 @@
 import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/context/useAuth';
+import {
+  InstitutionalSidebar,
+  type SidebarSection,
+} from '../../cooperatives/components/InstitutionalSidebar';
 import './AdminLayout.css';
+
+const sections: readonly SidebarSection[] = [
+  { to: '/admin/panel', label: 'Panel de resumen', icon: 'home' },
+  { to: '/admin/cooperativas', label: 'Cooperativas', icon: 'groups' },
+  { to: '/admin/provincias-cantones', label: 'Catálogo geográfico', icon: 'map' },
+];
 
 export function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { account, logout } = useAuth();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const isDashboard = location.pathname === '/admin/panel';
+  const isGeographicCatalog = location.pathname === '/admin/provincias-cantones';
 
   const handleLogout = async () => {
     setLogoutError(null);
@@ -20,35 +33,49 @@ export function AdminLayout() {
 
   return (
     <div className="admin-layout">
-      <aside className="admin-sidebar">
-        <div className="admin-sidebar__brand">
-          <span className="admin-sidebar__logo" aria-hidden="true">▰</span>
-          <span><strong>TRANSPORTE</strong><small>Interprovincial</small></span>
-        </div>
-        <div className="admin-sidebar__section-label">Sistema</div>
-        <nav className="admin-sidebar__nav" aria-label="Secciones del administrador">
-          <span className="admin-sidebar__link admin-sidebar__link--active">
-            <span aria-hidden="true">▦</span> Cooperativas
-          </span>
-        </nav>
-        <div className="admin-sidebar__account">
-          <span className="admin-sidebar__avatar" aria-hidden="true">AD</span>
-          <span><strong>Administrador</strong><small>Acceso total</small></span>
-        </div>
-      </aside>
+      <InstitutionalSidebar
+        brandLabel="Identidad del sistema"
+        cooperativeName="TRANSPORTE"
+        panelLabel="Interprovincial"
+        navigationLabel="Secciones del administrador"
+        sections={sections}
+        accountEmail={account?.email}
+        accountRole="Administrador"
+        fallbackInitials="AD"
+      />
 
       <div className="admin-main">
         <header className="admin-header">
-          <div className="admin-header__breadcrumb"><span>Inicio</span><b>/</b><strong>Gestión de Cooperativas</strong></div>
+          <div className="admin-header__breadcrumb">
+            <span>Administración</span>
+            <b>/</b>
+            <strong>
+              {isDashboard
+                ? 'Panel de resumen'
+                : isGeographicCatalog
+                  ? 'Catálogo geográfico'
+                  : 'Gestión de cooperativas'}
+            </strong>
+          </div>
           <div className="admin-header__account">
             <span className="admin-header__user">{account?.email}</span>
-            <button className="admin-header__logout" onClick={() => void handleLogout()} type="button">
+            <button
+              className="admin-header__logout"
+              onClick={() => void handleLogout()}
+              type="button"
+            >
               Cerrar sesión
             </button>
           </div>
         </header>
-        {logoutError && <p className="admin-layout__error" role="alert">{logoutError}</p>}
-        <main className="admin-layout__content"><Outlet /></main>
+        {logoutError && (
+          <p className="admin-layout__error" role="alert">
+            {logoutError}
+          </p>
+        )}
+        <main className="admin-layout__content">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ export interface CooperativeWrite {
   address: string | null;
 }
 
-export interface CooperativeAccountCreate extends Omit<CooperativeWrite, 'email'> {
+export interface CooperativeAccountCreate extends CooperativeWrite {
   accountEmail: string;
   initialPassword: string;
 }

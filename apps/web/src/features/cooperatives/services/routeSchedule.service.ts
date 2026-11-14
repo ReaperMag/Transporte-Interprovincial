@@ -2,6 +2,7 @@ export interface RouteCity {
   id: number;
   name: string;
   province: string;
+  canton: string | null;
 }
 
 export interface RouteStop {
@@ -120,13 +121,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getRouteCities(): Promise<RouteCity[]> {
   return request<RouteCity[]>(`${routePlanningUrl}/cities`);
-}
-
-export function createRouteCity(input: Omit<RouteCity, 'id'>): Promise<RouteCity> {
-  return request<RouteCity>(`${routePlanningUrl}/cities`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
 }
 
 export function getCooperativeRoutes(): Promise<CooperativeRoute[]> {

@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.cooperatives.models import Cooperative
@@ -27,25 +27,6 @@ class FareSegmentError(Exception):
 
 def list_cities(db: Session) -> list[City]:
     return list(db.scalars(select(City).order_by(City.name, City.province)).all())
-
-
-def create_city(db: Session, name: str, province: str) -> City:
-    normalized_name = " ".join(name.split())
-    normalized_province = " ".join(province.split())
-    city = db.scalar(
-        select(City).where(
-            func.lower(City.name) == normalized_name.casefold(),
-            func.lower(City.province) == normalized_province.casefold(),
-        )
-    )
-    if city is not None:
-        return city
-
-    city = City(name=normalized_name, province=normalized_province)
-    db.add(city)
-    db.commit()
-    db.refresh(city)
-    return city
 
 
 def _route_read(route: Route) -> dict:
@@ -143,7 +124,13 @@ def create_route(
         *(stop.city_id for stop in payload.stops),
     }
     found_city_ids = set(
-        db.scalars(select(City.id).where(City.id.in_(city_ids))).all()
+        db.scalars(
+            select(City.id).where(
+                City.id.in_(city_ids),
+                City.is_catalogued.is_(True),
+                City.canton != "",
+            )
+        ).all()
     )
     if found_city_ids != city_ids:
         raise CityNotFoundError

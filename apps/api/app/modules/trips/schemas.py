@@ -10,6 +10,7 @@ class CityOption(BaseModel):
     id: int
     name: str
     province: str
+    canton: str | None = None
 
 
 class TripFareOption(BaseModel):

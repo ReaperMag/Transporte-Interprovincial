@@ -9,6 +9,7 @@ from app.api.v1.router import router as api_v1_router
 from app.core.bootstrap import ensure_initial_admin, initialize_roles
 from app.core.config import settings
 from app.core.database import SessionLocal, init_db
+from app.modules.routes.geographic_service import ensure_geographic_catalog
 
 
 # Muestra en consola los mensajes de la aplicación (por ejemplo, los correos
@@ -19,11 +20,14 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s - %(
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-    if getattr(application.state, "initialize_database_on_startup", True):
+    initialize_database = getattr(application.state, "initialize_database_on_startup", True)
+    if initialize_database:
         init_db()
     session_factory = getattr(application.state, "session_factory", SessionLocal)
     with session_factory() as db:
         initialize_roles(db)
+        if initialize_database:
+            ensure_geographic_catalog(db)
         ensure_initial_admin(db)
     yield
 
