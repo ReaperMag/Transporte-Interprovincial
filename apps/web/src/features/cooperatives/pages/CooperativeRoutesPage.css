@@ -136,7 +136,7 @@
 
 .cooperative-routes__day-actions button {
   flex: 1 1 auto;
-  min-height: 2.4rem;
+  min-height: 2.75rem;
   padding: 0.45rem 0.65rem;
   font-size: 0.8rem;
 }
@@ -240,7 +240,7 @@
 }
 
 .cooperative-routes__examples button {
-  min-height: 2rem;
+  min-height: 2.75rem;
   border: 1px solid #bfdbfe;
   border-radius: 999px;
   padding: 0.25rem 0.7rem;
@@ -460,6 +460,7 @@
 
 .cooperative-routes__registered-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
@@ -776,6 +777,13 @@
   box-shadow: 0 24px 60px rgb(15 23 42 / 30%);
 }
 
+.cooperative-routes__modal .cooperative-routes__location-grid,
+.cooperative-routes__modal .cooperative-routes__examples,
+.cooperative-routes__modal .cooperative-routes__stop-list,
+.cooperative-routes__modal .cooperative-routes__message {
+  grid-column: 1 / -1;
+}
+
 .cooperative-routes__modal-header {
   display: flex;
   justify-content: space-between;
@@ -796,8 +804,8 @@
 
 .cooperative-routes__modal-close {
   flex: none;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 1px solid #cbd5e1;
   border-radius: 999px;
   background: #f8fafc;
@@ -805,6 +813,12 @@
   font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.cooperative-routes button:focus-visible,
+.cooperative-routes a:focus-visible {
+  outline: 2px solid var(--coop-primary, #0e5a6b);
+  outline-offset: 2px;
 }
 
 .cooperative-routes__modal :focus-visible,
@@ -843,6 +857,15 @@
 
 @media (max-width: 600px) {
   .cooperative-routes__step {
+    padding: 1rem;
+  }
+
+  .cooperative-routes__modal-backdrop {
+    padding: 0.5rem;
+  }
+
+  .cooperative-routes__modal {
+    border-radius: 0.75rem;
     padding: 1rem;
   }
 
