@@ -909,3 +909,109 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Modal de configuración de ruta y resumen de descansos */
+.cooperative-routes__modal--configure {
+  max-width: 44rem;
+}
+
+.cooperative-routes__config-section {
+  border-top: 1px solid #e2e8f0;
+  padding: 1.25rem 0;
+}
+
+.cooperative-routes__config-section:first-of-type {
+  border-top: none;
+  padding-top: 0.25rem;
+}
+
+.cooperative-routes__config-section h4 {
+  margin: 0 0 0.35rem;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.cooperative-routes__config-desc {
+  margin: 0 0 0.9rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.cooperative-routes__fare-preview {
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0e5a6b;
+}
+
+.cooperative-routes__mini-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.cooperative-routes__mini-form label {
+  flex: 1 1 10rem;
+}
+
+.cooperative-routes__modal-frequency-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cooperative-routes__modal-frequency-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  background: #f8fafc;
+  font-size: 0.85rem;
+}
+
+.cooperative-routes__modal-frequency-list strong {
+  color: #0e5a6b;
+}
+
+.cooperative-routes__standby-summary {
+  margin-top: 1rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  background: #f8fafc;
+}
+
+.cooperative-routes__standby-summary h5 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.cooperative-routes__standby-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.cooperative-routes__standby-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.45rem;
+  font-size: 0.85rem;
+}
+
+.cooperative-routes__standby-chip strong {
+  color: #0e5a6b;
+}

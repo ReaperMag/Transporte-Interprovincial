@@ -101,6 +101,10 @@ class CooperativeRouteCreate(RouteSchema):
         return self
 
 
+class CooperativeRouteUpdate(RouteSchema):
+    bus_group_id: int = Field(gt=0)
+
+
 class FareUpsert(RouteSchema):
     origin_city_id: int = Field(gt=0)
     destination_city_id: int = Field(gt=0)

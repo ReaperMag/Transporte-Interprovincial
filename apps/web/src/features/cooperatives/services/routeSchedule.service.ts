@@ -154,6 +154,16 @@ export function createCooperativeRoute(input: {
   });
 }
 
+export function updateCooperativeRoute(
+  routeId: number,
+  values: { busGroupId: number },
+): Promise<CooperativeRoute> {
+  return request<CooperativeRoute>(`${routePlanningUrl}/routes/${routeId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(values),
+  });
+}
+
 export function saveCooperativeRouteFares(
   routeId: number,
   fares: Array<{

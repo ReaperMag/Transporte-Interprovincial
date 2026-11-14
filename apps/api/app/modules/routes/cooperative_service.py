@@ -5,6 +5,7 @@ from app.modules.cooperatives.models import Cooperative
 from app.modules.buses.models import BusGroup
 from app.modules.routes.cooperative_schemas import (
     CooperativeRouteCreate,
+    CooperativeRouteUpdate,
     RouteFareSave,
 )
 from app.modules.routes.models import City, Fare, Route, RouteStop, RouteType
@@ -170,6 +171,43 @@ def create_route(
     db.add(route)
     db.commit()
     route = db.scalar(_route_query(route.id, cooperative_id))
+    return _route_read(route)
+
+
+def update_route(
+    db: Session,
+    cooperative_id: int,
+    route_id: int,
+    payload: CooperativeRouteUpdate,
+) -> dict:
+    route = db.scalar(_route_query(route_id, cooperative_id))
+    if route is None:
+        raise RouteNotFoundError
+
+    group = db.scalar(
+        select(BusGroup).where(
+            BusGroup.id == payload.bus_group_id,
+            BusGroup.cooperative_id == cooperative_id,
+        )
+    )
+    if group is None:
+        raise BusGroupNotFoundError
+
+    route.bus_group_id = group.id
+
+    from app.modules.schedules.models import Frequency
+
+    frequencies = db.scalars(
+        select(Frequency).where(
+            Frequency.route_id == route.id,
+            Frequency.cooperative_id == cooperative_id,
+        )
+    ).all()
+    for freq in frequencies:
+        freq.bus_group_id = group.id
+
+    db.commit()
+    route = db.scalar(_route_query(route_id, cooperative_id))
     return _route_read(route)
 
 

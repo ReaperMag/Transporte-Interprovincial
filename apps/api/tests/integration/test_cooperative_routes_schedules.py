@@ -1150,3 +1150,39 @@ def test_published_sheet_with_reservations_cannot_change_resting_buses(test_envi
     )
 
     assert blocked.status_code == 409
+
+
+def test_cooperative_can_update_route_group(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
+    with Session(engine) as db:
+        new_group = BusGroup(cooperative_id=cooperative.id, name="Grupo Ejecutivo")
+        db.add(new_group)
+        db.commit()
+        db.refresh(new_group)
+        new_group_id = new_group.id
+
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    freq = create_frequency(client, route["id"], group_id, "08:00")
+
+    response = client.patch(
+        f"{PLANNING_URL}/routes/{route['id']}",
+        json={"busGroupId": new_group_id},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["busGroupId"] == new_group_id
+    assert data["busGroupName"] == "Grupo Ejecutivo"
+
+    # Verify frequency group synced
+    with Session(engine) as db:
+        from app.modules.schedules.models import Frequency
+        synced_freq = db.scalar(select(Frequency).where(Frequency.id == freq["id"]))
+        assert synced_freq.bus_group_id == new_group_id
