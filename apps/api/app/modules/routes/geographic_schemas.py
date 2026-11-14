@@ -27,6 +27,13 @@ class CantonCreate(RouteSchema):
     province: ProvinceName
 
 
+class LocalityCreate(RouteSchema):
+    name: CantonName
+    province: ProvinceName
+    canton: CantonName
+
+
 class GeographicCatalogRead(RouteSchema):
     provinces: list[str]
     cantons: list[CityRead]
+    localities: list[CityRead]

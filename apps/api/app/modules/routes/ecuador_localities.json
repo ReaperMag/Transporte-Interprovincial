@@ -1,0 +1,1919 @@
+{
+  "Azuay": {
+    "Cuenca": [
+      "Baños",
+      "Bellavista",
+      "Cañaribamba",
+      "Chaucha",
+      "Checa (Jidcay)",
+      "Chiquintad",
+      "Cuenca",
+      "Cumbe",
+      "El Batán",
+      "El Sagrario",
+      "El Vecino",
+      "Gil Ramírez Dávalos",
+      "Hermano Miguel",
+      "Huaynacápac",
+      "Llacao",
+      "Machángara",
+      "Molleturo",
+      "Monay",
+      "Nulti",
+      "Octavio Cordero Palacios (Santa Rosa)",
+      "Paccha",
+      "Quingeo",
+      "Ricaurte",
+      "San Blas",
+      "San Joaquín",
+      "San Sebastián",
+      "Santa Ana",
+      "Sayausí",
+      "Sidcay",
+      "Sinincay",
+      "Sucre",
+      "Tarqui",
+      "Totoracocha",
+      "Turi",
+      "Valle",
+      "Victoria Del Portete (Irquis)",
+      "Yanuncay"
+    ],
+    "Girón": [
+      "Asunción",
+      "Girón",
+      "San Gerardo"
+    ],
+    "Gualaceo": [
+      "Chordeleg",
+      "Daniel Córdova Toral (El Oriente)",
+      "Gualaceo",
+      "Jadán",
+      "Luis Cordero Vega",
+      "Mariano Moreno",
+      "Principal",
+      "Remigio Crespo Toral (Gúlag)",
+      "San Juan",
+      "Simón Bolívar (Cab. En Gañanzol)",
+      "Zhidmad"
+    ],
+    "Nabón": [
+      "Cochapata",
+      "El Progreso (Cab.En Zhota)",
+      "Las Nieves (Chaya)",
+      "Nabón",
+      "Oña"
+    ],
+    "Paute": [
+      "Amaluza",
+      "Bulán (José Víctor Izquierdo)",
+      "Chicán (Guillermo Ortega)",
+      "Dug Dug",
+      "El Cabo",
+      "Guachapala",
+      "Guarainag",
+      "Palmas",
+      "Pan",
+      "Paute",
+      "San Cristóbal (Carlos Ordóñez Lazo)",
+      "Sevilla De Oro",
+      "Tomebamba"
+    ],
+    "Pucará": [
+      "Camilo Ponce Enríquez (Cab. En Río 7 De Mollepongo)",
+      "Pucará",
+      "San Rafael De Sharug"
+    ],
+    "San Fernando": [
+      "Chumblín",
+      "San Fernando"
+    ],
+    "Santa Isabel": [
+      "Abdón Calderón (La Unión)",
+      "El Carmen De Pijilí",
+      "San Salvador De Cañaribamba",
+      "Santa Isabel",
+      "Santa Isabel (Chaguarurco)",
+      "Zhaglli (Shaglli)"
+    ],
+    "Sígsig": [
+      "Cuchil (Cutchil)",
+      "Gima",
+      "Guel",
+      "Ludo",
+      "San Bartolomé",
+      "San José De Raranga",
+      "Sigsig"
+    ],
+    "Oña": [
+      "Oña",
+      "San Felipe De Oña Cabecera Cantonal",
+      "Susudel"
+    ],
+    "Chordeleg": [
+      "Chordeleg",
+      "La Unión",
+      "Luis Galarza Orellana (Cab.En Delegsol)",
+      "Principal",
+      "San Martín De Puzhio"
+    ],
+    "El Pan": [
+      "Amaluza",
+      "El Pan",
+      "Palmas",
+      "San Vicente"
+    ],
+    "Sevilla de Oro": [
+      "Amaluza",
+      "Palmas",
+      "Sevilla De Oro"
+    ],
+    "Guachapala": [
+      "Guachapala"
+    ],
+    "Camilo Ponce Enríquez": [
+      "Camilo Ponce Enríquez",
+      "El Carmen De Pijilí"
+    ]
+  },
+  "Bolívar": {
+    "Guaranda": [
+      "Facundo Vela",
+      "Gabriel Ignacio Veintimilla",
+      "Guanujo",
+      "Guaranda",
+      "Julio E. Moreno (Catanahuán Grande)",
+      "Las Naves",
+      "Salinas",
+      "San Lorenzo",
+      "San Luis De Pambil",
+      "San Simón (Yacoto)",
+      "Santa Fé (Santa Fé)",
+      "Simiátug",
+      "Ángel Polibio Cháves"
+    ],
+    "Chillanes": [
+      "Chillanes",
+      "San José Del Tambo (Tambopamba)"
+    ],
+    "Chimbo": [
+      "Asunción (Asancoto)",
+      "Caluma",
+      "Chimbo",
+      "Magdalena (Chapacoto)",
+      "San José De Chimbo",
+      "San Sebastián",
+      "Telimbela"
+    ],
+    "Echeandía": [
+      "Echeandía"
+    ],
+    "San Miguel": [
+      "Balsapamba",
+      "Bilován",
+      "Régulo De Mora",
+      "San Miguel",
+      "San Pablo (San Pablo De Atenas)",
+      "San Vicente",
+      "Santiago"
+    ],
+    "Caluma": [
+      "Caluma"
+    ],
+    "Las Naves": [
+      "Las Mercedes",
+      "Las Naves"
+    ]
+  },
+  "Cañar": {
+    "Azogues": [
+      "Aurelio Bayas Martínez",
+      "Azogues",
+      "Borrero",
+      "Cojitambo",
+      "Déleg",
+      "Guapán",
+      "Javier Loyola (Chuquipata)",
+      "Luis Cordero",
+      "Pindilig",
+      "Rivera",
+      "San Francisco",
+      "San Miguel",
+      "Solano",
+      "Taday"
+    ],
+    "Biblián": [
+      "Biblián",
+      "Jerusalén",
+      "Nazón (Cab. En Pampa De Domínguez)",
+      "San Francisco De Sageo",
+      "Turupamba"
+    ],
+    "Cañar": [
+      "Cañar",
+      "Chontamarca",
+      "Chorocopte",
+      "Ducur",
+      "General Morales (Socarte)",
+      "Gualleturo",
+      "Honorato Vásquez (Tambo Viejo)",
+      "Ingapirca",
+      "Juncal",
+      "San Antonio",
+      "Suscal",
+      "Tambo",
+      "Ventura",
+      "Zhud"
+    ],
+    "La Troncal": [
+      "La Troncal",
+      "Manuel J. Calle",
+      "Pancho Negro"
+    ],
+    "El Tambo": [
+      "El Tambo"
+    ],
+    "Déleg": [
+      "Déleg",
+      "Solano"
+    ],
+    "Suscal": [
+      "Suscal"
+    ]
+  },
+  "Carchi": {
+    "Tulcán": [
+      "El Carmelo (El Pun)",
+      "El Chical",
+      "González Suárez",
+      "Huaca",
+      "Julio Andrade (Orejuela)",
+      "Maldonado",
+      "Mariscal Sucre",
+      "Pioter",
+      "Santa Martha De Cuba",
+      "Tobar Donoso (La Bocana De Camumbí)",
+      "Tufiño",
+      "Tulcán",
+      "Urbina (Taya)"
+    ],
+    "Bolívar": [
+      "Bolívar",
+      "García Moreno",
+      "Los Andes",
+      "Monte Olivo",
+      "San Rafael",
+      "San Vicente De Pusir"
+    ],
+    "Espejo": [
+      "27 De Septiembre",
+      "El Goaltal",
+      "El Ángel",
+      "Espejo",
+      "La Libertad (Alizo)",
+      "San Isidro"
+    ],
+    "Mira": [
+      "Concepción",
+      "Jijón Y Caamaño (Cab. En Río Blanco)",
+      "Juan Montalvo (San Ignacio De Quil)",
+      "Mira",
+      "Mira (Chontahuasi)"
+    ],
+    "Montúfar": [
+      "Chitán De Navarrete",
+      "Cristóbal Colón",
+      "Fernández Salvador",
+      "González Suárez",
+      "La Paz",
+      "Montúfar",
+      "Piartal",
+      "San Gabriel",
+      "San José"
+    ],
+    "San Pedro de Huaca": [
+      "Huaca",
+      "Mariscal Sucre",
+      "San Pedro de Huaca"
+    ]
+  },
+  "Cotopaxi": {
+    "Latacunga": [
+      "11 De Noviembre (Ilinchisi)",
+      "Alaques (Aláquez)",
+      "Belisario Quevedo (Guanailín)",
+      "Eloy Alfaro (San Felipe)",
+      "Guaitacama (Guaytacama)",
+      "Ignacio Flores (Parque Flores)",
+      "Joseguango Bajo",
+      "Juan Montalvo (San Sebastián)",
+      "La Matriz",
+      "Las Pampas",
+      "Latacunga",
+      "Mulaló",
+      "Palo Quemado",
+      "Poaló",
+      "San Buenaventura",
+      "San Juan De Pastocalle",
+      "Sigchos",
+      "Tanicuchí",
+      "Toacaso"
+    ],
+    "La Maná": [
+      "El Carmen",
+      "El Triunfo",
+      "Guasaganda (Cab.En Guasaganda",
+      "La Maná",
+      "Pucayacu"
+    ],
+    "Pangua": [
+      "El Corazón",
+      "Moraspungo",
+      "Pangua",
+      "Pinllopata",
+      "Ramón Campaña"
+    ],
+    "Pujilí": [
+      "Angamarca",
+      "Chucchilán (Chugchilán)",
+      "Guangaje",
+      "Isinlibí (Isinliví)",
+      "La Victoria",
+      "Pilaló",
+      "Pujilí",
+      "Tingo",
+      "Zumbahua"
+    ],
+    "Salcedo": [
+      "Antonio José Holguín (Santa Lucía)",
+      "Cusubamba",
+      "Mulalillo",
+      "Mulliquindil (Santa Ana)",
+      "Pansaleo",
+      "Salcedo",
+      "San Miguel"
+    ],
+    "Saquisilí": [
+      "Canchagua",
+      "Chantilín",
+      "Cochapamba",
+      "Saquisilí"
+    ],
+    "Sigchos": [
+      "Chugchillán",
+      "Isinliví",
+      "Las Pampas",
+      "Palo Quemado",
+      "Sigchos"
+    ]
+  },
+  "Chimborazo": {
+    "Riobamba": [
+      "Cacha (Cab. En Machángara)",
+      "Calpi",
+      "Cubijíes",
+      "Flores",
+      "Licto",
+      "Licán",
+      "Lizarzaburu",
+      "Maldonado",
+      "Pungalá",
+      "Punín",
+      "Quimiag",
+      "Riobamba",
+      "San Juan",
+      "San Luis",
+      "Velasco",
+      "Veloz",
+      "Yaruquíes"
+    ],
+    "Alausí": [
+      "Achupallas",
+      "Alausí",
+      "Cumandá",
+      "Guasuntos",
+      "Huigra",
+      "Multitud",
+      "Pistishí (Nariz Del Diablo)",
+      "Pumallacta",
+      "Sevilla",
+      "Sibambe",
+      "Tixán"
+    ],
+    "Colta": [
+      "Cajabamba",
+      "Cañi",
+      "Colta",
+      "Columbe",
+      "Juan De Velasco (Pangor)",
+      "Santiago De Quito (Cab. En San Antonio De Quito)",
+      "Sicalpa",
+      "Villa La Unión (Cajabamba)"
+    ],
+    "Chambo": [
+      "Chambo"
+    ],
+    "Chunchi": [
+      "Capzol",
+      "Chunchi",
+      "Compud",
+      "Gonzol",
+      "Llagos"
+    ],
+    "Guamote": [
+      "Cebadas",
+      "Guamote",
+      "Palmira"
+    ],
+    "Guano": [
+      "El Rosario",
+      "Guanando",
+      "Guano",
+      "Ilapo",
+      "La Matriz",
+      "La Providencia",
+      "San Andrés",
+      "San Gerardo De Pacaicaguán",
+      "San Isidro De Patulú",
+      "San José Del Chazo",
+      "Santa Fé De Galán",
+      "Valparaíso"
+    ],
+    "Pallatanga": [
+      "Pallatanga"
+    ],
+    "Penipe": [
+      "Bilbao (Cab.En Quilluyacu)",
+      "El Altar",
+      "La Candelaria",
+      "Matus",
+      "Penipe",
+      "Puela",
+      "San Antonio De Bayushig"
+    ],
+    "Cumandá": [
+      "Cumandá"
+    ]
+  },
+  "El Oro": {
+    "Machala": [
+      "El Cambio",
+      "El Retiro",
+      "La Providencia",
+      "Machala",
+      "Nueve De Mayo",
+      "Puerto Bolívar"
+    ],
+    "Arenillas": [
+      "Arenillas",
+      "Carcabón",
+      "Chacras",
+      "La Libertad",
+      "Las Lajas (Cab. En La Victoria)",
+      "Palmales"
+    ],
+    "Atahualpa": [
+      "Atahualpa",
+      "Ayapamba",
+      "Cordoncillo",
+      "Milagro",
+      "Paccha",
+      "San José",
+      "San Juan De Cerro Azul"
+    ],
+    "Balsas": [
+      "Balsas",
+      "Bellamaría"
+    ],
+    "Chilla": [
+      "Chilla"
+    ],
+    "El Guabo": [
+      "Barbones (Sucre)",
+      "El Guabo",
+      "La Iberia",
+      "Río Bonito",
+      "Tendales (Cab.En Puerto Tendales)"
+    ],
+    "Huaquillas": [
+      "Ecuador",
+      "El Paraíso",
+      "Hualtaco",
+      "Huaquillas",
+      "Milton Reyes",
+      "Unión Lojana"
+    ],
+    "Marcabelí": [
+      "El Ingenio",
+      "Marcabelí"
+    ],
+    "Pasaje": [
+      "Bolívar",
+      "Buenavista",
+      "Casacay",
+      "Cañaquemada",
+      "La Peaña",
+      "Loma De Franco",
+      "Ochoa León (Matriz)",
+      "Pasaje",
+      "Progreso",
+      "Tres Cerritos",
+      "Uzhcurrumi"
+    ],
+    "Piñas": [
+      "Capiro (Cab. En La Capilla De Capiro)",
+      "La Bocana",
+      "La Matriz",
+      "La Susaya",
+      "Moromoro (Cab. En El Vado)",
+      "Piedras",
+      "Piñas",
+      "Piñas Grande",
+      "San Roque (Ambrosio Maldonado)",
+      "Saracay"
+    ],
+    "Portovelo": [
+      "Curtincapa",
+      "Morales",
+      "Portovelo",
+      "Salatí"
+    ],
+    "Santa Rosa": [
+      "Balneario Jambelí (Satélite)",
+      "Bellamaría",
+      "Bellavista",
+      "Jambelí",
+      "Jumón (Satélite)",
+      "La Avanzada",
+      "Nuevo Santa Rosa",
+      "Puerto Jelí",
+      "San Antonio",
+      "Santa Rosa",
+      "Torata",
+      "Victoria"
+    ],
+    "Zaruma": [
+      "Abañín",
+      "Arcapamba",
+      "Guanazán",
+      "Guizhaguiña",
+      "Huertas",
+      "Malvas",
+      "Muluncay Grande",
+      "Salvias",
+      "Sinsao",
+      "Zaruma"
+    ],
+    "Las Lajas": [
+      "El Paraíso",
+      "La Libertad",
+      "La Victoria",
+      "Las Lajas",
+      "Platanillos",
+      "San Isidro",
+      "Valle Hermoso"
+    ]
+  },
+  "Esmeraldas": {
+    "Esmeraldas": [
+      "5 De Agosto",
+      "Atacames",
+      "Bartolomé Ruiz (César Franco Carrión)",
+      "Camarones (Cab. En San Vicente)",
+      "Chinca",
+      "Chontaduro",
+      "Chumundé",
+      "Crnel. Carlos Concha Torres (Cab.En Huele)",
+      "Esmeraldas",
+      "La Unión",
+      "Lagarto",
+      "Luis Tello (Las Palmas)",
+      "Majua",
+      "Montalvo (Cab. En Horqueta)",
+      "Rocafuerte",
+      "Río Verde",
+      "San Mateo",
+      "Simón Plata Torres",
+      "Súa (Cab. En La Bocana)",
+      "Tabiazo",
+      "Tachina",
+      "Tonchigüe",
+      "Vuelta Larga"
+    ],
+    "Eloy Alfaro": [
+      "Anchayacu",
+      "Atahualpa (Cab. En Camarones)",
+      "Borbón",
+      "Colón Eloy Del María",
+      "Eloy Alfaro",
+      "La Tola",
+      "Luis Vargas Torres (Cab. En Playa De Oro)",
+      "Maldonado",
+      "Pampanal De Bolívar",
+      "San Francisco De Onzole",
+      "San José De Cayapas",
+      "Santo Domingo De Onzole",
+      "Selva Alegre",
+      "Telembí",
+      "Timbiré",
+      "Valdez (Limones)"
+    ],
+    "Muisne": [
+      "Bolívar",
+      "Daule",
+      "Galera",
+      "Muisne",
+      "Quingue (Olmedo Perdomo Franco)",
+      "Salima",
+      "San Francisco",
+      "San Gregorio",
+      "San José De Chamanga (Cab.En Chamanga)"
+    ],
+    "Quinindé": [
+      "Chura (Chancama) (Cab. En El Yerbero)",
+      "Cube",
+      "La Unión",
+      "Malimpia",
+      "Quinindé",
+      "Rosa Zárate (Quinindé)",
+      "Viche"
+    ],
+    "San Lorenzo": [
+      "5 De Junio (Cab. En Uimbi)",
+      "Alto Tambo (Cab. En Guadual)",
+      "Ancón (Pichangal) (Cab. En Palma Real)",
+      "Calderón",
+      "Carondelet",
+      "Concepción",
+      "Mataje (Cab. En Santander)",
+      "San Javier De Cachaví (Cab. En San Javier)",
+      "San Lorenzo",
+      "Santa Rita",
+      "Tambillo",
+      "Tululbí (Cab. En Ricaurte)",
+      "Urbina"
+    ],
+    "Atacames": [
+      "Atacames",
+      "La Unión",
+      "Súa (Cab. En La Bocana)",
+      "Tonchigüe",
+      "Tonsupa"
+    ],
+    "Rioverde": [
+      "Chontaduro",
+      "Chumundé",
+      "Lagarto",
+      "Montalvo (Cab. En Horqueta)",
+      "Rioverde",
+      "Rocafuerte"
+    ],
+    "Borbón": [
+      "Borbón"
+    ]
+  },
+  "Guayas": {
+    "Guayaquil": [
+      "Ayacucho",
+      "Bolívar (Sagrario)",
+      "Carbo (Concepción)",
+      "Chongón",
+      "Febres Cordero",
+      "García Moreno",
+      "Guayaquil",
+      "Juan Gómez Rendón (Progreso)",
+      "Letamendi",
+      "Morro",
+      "Nueve De Octubre",
+      "Olmedo (San Alejo)",
+      "Pascuales",
+      "Playas (Gral. Villamil)",
+      "Posorja",
+      "Puná",
+      "Roca",
+      "Rocafuerte",
+      "Sucre",
+      "Tarqui",
+      "Tenguel",
+      "Urdaneta",
+      "Ximena"
+    ],
+    "Alfredo Baquerizo Moreno (Juján)": [
+      "Alfredo Baquerizo Moreno (Juján)"
+    ],
+    "Balao": [
+      "Balao"
+    ],
+    "Balzar": [
+      "Balzar"
+    ],
+    "Colimes": [
+      "Colimes",
+      "San Jacinto"
+    ],
+    "Daule": [
+      "Banife",
+      "Daule",
+      "Emiliano Caicedo Marcos",
+      "Isidro Ayora (Soledad)",
+      "Juan Bautista Aguirre (Los Tintos)",
+      "La Aurora (Satélite)",
+      "Laurel",
+      "Limonal",
+      "Lomas De Sargentillo",
+      "Los Lojas (Enrique Baquerizo Moreno)",
+      "Magro",
+      "Padre Juan Bautista Aguirre",
+      "Piedrahita (Nobol)",
+      "Santa Clara",
+      "Vicente Piedrahita"
+    ],
+    "Durán": [
+      "Durán",
+      "El Recreo",
+      "Eloy Alfaro (Durán)"
+    ],
+    "El Empalme": [
+      "El Empalme",
+      "El Rosario",
+      "Guayas (Pueblo Nuevo)",
+      "Velasco Ibarra (El Empalme)"
+    ],
+    "El Triunfo": [
+      "El Triunfo"
+    ],
+    "Milagro": [
+      "Chobo",
+      "General Elizalde (Bucay)",
+      "Mariscal Sucre (Huaques)",
+      "Milagro",
+      "Roberto Astudillo (Cab. En Cruce De Venecia)"
+    ],
+    "Naranjal": [
+      "Jesús María",
+      "Naranjal",
+      "San Carlos",
+      "Santa Rosa De Flandes",
+      "Taura"
+    ],
+    "Naranjito": [
+      "Naranjito"
+    ],
+    "Palestina": [
+      "Palestina"
+    ],
+    "Pedro Carbo": [
+      "Pedro Carbo",
+      "Sabanilla",
+      "Valle De La Virgen"
+    ],
+    "Samborondón": [
+      "La Puntilla (Satélite)",
+      "Samborondón",
+      "Tarifa"
+    ],
+    "Santa Lucía": [
+      "Santa Lucía"
+    ],
+    "Salitre (Urbina Jado)": [
+      "Bocana",
+      "Candilejos",
+      "Central",
+      "El Salitre (Las Ramas)",
+      "Gral. Vernaza (Dos Esteros)",
+      "Junquillal",
+      "La Victoria (Ñauza)",
+      "Paraíso",
+      "Salitre (Urbina Jado)",
+      "San Mateo"
+    ],
+    "San Jacinto de Yaguachi": [
+      "Crnel. Lorenzo De Garaicoa (Pedregal)",
+      "Crnel. Marcelino Maridueña (San Carlos)",
+      "Gral. Pedro J. Montero (Boliche)",
+      "San Jacinto De Yaguachi",
+      "Simón Bolívar",
+      "Virgen De Fátima",
+      "Yaguachi Viejo (Cone)"
+    ],
+    "Playas": [
+      "General Villamil (Playas)",
+      "Playas"
+    ],
+    "Simón Bolívar": [
+      "Crnel.Lorenzo De Garaicoa (Pedregal)",
+      "Simón Bolívar"
+    ],
+    "Coronel Marcelino Maridueña": [
+      "Coronel Marcelino Maridueña",
+      "Coronel Marcelino Maridueña (San Carlos)"
+    ],
+    "Lomas de Sargentillo": [
+      "Isidro Ayora (Soledad)",
+      "Lomas De Sargentillo"
+    ],
+    "Nobol": [
+      "Narcisa De Jesús",
+      "Nobol"
+    ],
+    "General Antonio Elizalde": [
+      "General Antonio Elizalde",
+      "General Antonio Elizalde (Bucay)"
+    ],
+    "Isidro Ayora": [
+      "Isidro Ayora"
+    ]
+  },
+  "Imbabura": {
+    "Ibarra": [
+      "Ambuquí",
+      "Angochagua",
+      "Caranqui",
+      "Carolina",
+      "Guayaquil De Alpachaca",
+      "Ibarra",
+      "La Dolorosa Del Priorato",
+      "La Esperanza",
+      "Lita",
+      "Sagrario",
+      "Salinas",
+      "San Antonio",
+      "San Francisco",
+      "San Miguel De Ibarra"
+    ],
+    "Antonio Ante": [
+      "Andrade Marín (Lourdes)",
+      "Antonio Ante",
+      "Atuntaqui",
+      "Imbaya (San Luis De Cobuendo)",
+      "San Francisco De Natabuela",
+      "San José De Chaltura",
+      "San Roque"
+    ],
+    "Cotacachi": [
+      "6 De Julio De Cuellaje (Cab. En Cuellaje)",
+      "Apuela",
+      "Cotacachi",
+      "García Moreno (Llurimagua)",
+      "Imantag",
+      "Peñaherrera",
+      "Plaza Gutiérrez (Calvario)",
+      "Quiroga",
+      "Sagrario",
+      "San Francisco",
+      "Vacas Galindo (El Churo) (Cab.En San Miguel Alto"
+    ],
+    "Otavalo": [
+      "Dr. Miguel Egas Cabezas (Peguche)",
+      "Eugenio Espejo (Calpaquí)",
+      "González Suárez",
+      "Jordán",
+      "Otavalo",
+      "Pataquí",
+      "San José De Quichinche",
+      "San Juan De Ilumán",
+      "San Luis",
+      "San Pablo",
+      "San Rafael",
+      "Selva Alegre (Cab.En San Miguel De Pamplona)"
+    ],
+    "Pimampiro": [
+      "Chugá",
+      "Mariano Acosta",
+      "Pimampiro",
+      "San Francisco De Sigsipamba"
+    ],
+    "San Miguel de Urcuquí": [
+      "Cahuasquí",
+      "La Merced De Buenos Aires",
+      "Pablo Arenas",
+      "San Blas",
+      "San Miguel de Urcuquí",
+      "Tumbabiro",
+      "Urcuquí Cabecera Cantonal"
+    ]
+  },
+  "Loja": {
+    "Loja": [
+      "Chantaco",
+      "Chuquiribamba",
+      "El Cisne",
+      "El Sagrario",
+      "Gualel",
+      "Jimbilla",
+      "Loja",
+      "Malacatos (Valladolid)",
+      "Quinara",
+      "San Lucas",
+      "San Pedro De Vilcabamba",
+      "San Sebastián",
+      "Santiago",
+      "Sucre",
+      "Taquil (Miguel Riofrío)",
+      "Valle",
+      "Vilcabamba (Victoria)",
+      "Yangana (Arsenio Castillo)"
+    ],
+    "Calvas": [
+      "Calvas",
+      "Cariamanga",
+      "Chile",
+      "Colaisaca",
+      "El Lucero",
+      "San Vicente",
+      "Sanguillín",
+      "Utuana"
+    ],
+    "Catamayo": [
+      "Catamayo",
+      "Catamayo (La Toma)",
+      "El Tambo",
+      "Guayquichuma",
+      "San José",
+      "San Pedro De La Bendita",
+      "Zambi"
+    ],
+    "Celica": [
+      "12 De Diciembre (Cab. En Achiotes)",
+      "Celica",
+      "Chaquinal",
+      "Cruzpamba (Cab. En Carlos Bustamante)",
+      "Pindal (Federico Páez)",
+      "Pozul (San Juan De Pozul)",
+      "Sabanilla",
+      "Tnte. Maximiliano Rodríguez Loaiza"
+    ],
+    "Chaguarpamba": [
+      "Amarillos",
+      "Buenavista",
+      "Chaguarpamba",
+      "El Rosario",
+      "Santa Rufina"
+    ],
+    "Espíndola": [
+      "27 De Abril (Cab. En La Naranja)",
+      "Amaluza",
+      "Bellavista",
+      "El Airo",
+      "El Ingenio",
+      "Espíndola",
+      "Jimbura",
+      "Santa Teresita"
+    ],
+    "Gonzanamá": [
+      "Changaimina (La Libertad)",
+      "Fundochamba",
+      "Gonzanamá",
+      "Nambacola",
+      "Purunuma (Eguiguren)",
+      "Quilanga (La Paz)",
+      "Sacapalca",
+      "San Antonio De Las Aradas (Cab. En Las Aradas)"
+    ],
+    "Macará": [
+      "General Eloy Alfaro (San Sebastián)",
+      "La Victoria",
+      "Larama",
+      "Macará",
+      "Macará (Manuel Enrique Rengel Suquilanda)",
+      "Sabiango (La Capilla)"
+    ],
+    "Paltas": [
+      "Cangonamá",
+      "Casanga",
+      "Catacocha",
+      "Guachanamá",
+      "La Tingue",
+      "Lauro Guerrero",
+      "Lourdes",
+      "Olmedo (Santa Bárbara)",
+      "Orianga",
+      "Paltas",
+      "San Antonio",
+      "Yamana"
+    ],
+    "Puyango": [
+      "Alamor",
+      "Ciano",
+      "El Arenal",
+      "El Limo (Mariana De Jesús)",
+      "Mercadillo",
+      "Puyango",
+      "Vicentino"
+    ],
+    "Saraguro": [
+      "El Paraíso De Celén",
+      "El Tablón",
+      "Lluzhapa",
+      "Manú",
+      "San Antonio De Qumbe (Cumbe)",
+      "San Pablo De Tenta",
+      "San Sebastián De Yúluc",
+      "Saraguro",
+      "Selva Alegre",
+      "Sumaypamba",
+      "Urdaneta (Paquishapa)"
+    ],
+    "Sozoranga": [
+      "Nueva Fátima",
+      "Sozoranga",
+      "Tacamoros"
+    ],
+    "Zapotillo": [
+      "Bolaspamba",
+      "Garzareal",
+      "Limones",
+      "Mangahurco (Cazaderos)",
+      "Paletillas",
+      "Zapotillo"
+    ],
+    "Pindal": [
+      "12 De Diciembre (Cab.En Achiotes)",
+      "Chaquinal",
+      "Milagros",
+      "Pindal"
+    ],
+    "Quilanga": [
+      "Fundochamba",
+      "Quilanga",
+      "San Antonio De Las Aradas (Cab. En Las Aradas)"
+    ],
+    "Olmedo": [
+      "La Tingue",
+      "Olmedo"
+    ]
+  },
+  "Los Ríos": {
+    "Babahoyo": [
+      "Babahoyo",
+      "Barreiro",
+      "Barreiro (Santa Rita)",
+      "Caracol",
+      "Clemente Baquerizo",
+      "Dr. Camilo Ponce",
+      "El Salto",
+      "Febres Cordero (Las Juntas)",
+      "La Unión",
+      "Pimocha"
+    ],
+    "Baba": [
+      "Baba",
+      "Guare",
+      "Isla De Bejucal"
+    ],
+    "Montalvo": [
+      "Montalvo"
+    ],
+    "Puebloviejo": [
+      "Puebloviejo",
+      "Puerto Pechiche",
+      "San Juan"
+    ],
+    "Quevedo": [
+      "24 De Mayo",
+      "Buena Fé",
+      "Guayacán",
+      "La Esperanza",
+      "Mocache",
+      "Nicolás Infante Díaz",
+      "Quevedo",
+      "San Camilo",
+      "San Carlos",
+      "San Cristóbal",
+      "San José",
+      "Siete De Octubre",
+      "Valencia",
+      "Venus Del Río Quevedo",
+      "Viva Alfaro"
+    ],
+    "Urdaneta": [
+      "Catarama",
+      "Ricaurte",
+      "Urdaneta"
+    ],
+    "Ventanas": [
+      "10 De Noviembre",
+      "Chacarita",
+      "Los Ángeles",
+      "Quinsaloma",
+      "Ventanas",
+      "Zapotal"
+    ],
+    "Vinces": [
+      "Antonio Sotomayor (Cab. En Playas De Vinces)",
+      "Palenque",
+      "Vinces"
+    ],
+    "Palenque": [
+      "Palenque"
+    ],
+    "Buena Fe": [
+      "11 De Octubre",
+      "7 De Agosto",
+      "Buena Fe",
+      "Patricia Pilar",
+      "San Jacinto De Buena Fé"
+    ],
+    "Valencia": [
+      "Valencia"
+    ],
+    "Mocache": [
+      "Mocache"
+    ],
+    "Quinsaloma": [
+      "Quinsaloma"
+    ]
+  },
+  "Manabí": {
+    "Portoviejo": [
+      "12 De Marzo",
+      "18 De Octubre",
+      "Abdón Calderón (San Francisco)",
+      "Alhajuela (Bajo Grande)",
+      "Andrés De Vera",
+      "Chirijos",
+      "Colón",
+      "Crucita",
+      "Francisco Pacheco",
+      "Picoazá",
+      "Portoviejo",
+      "Pueblo Nuevo",
+      "Riochico (Río Chico)",
+      "San Pablo",
+      "San Plácido",
+      "Simón Bolívar"
+    ],
+    "Bolívar": [
+      "Bolívar",
+      "Calceta",
+      "Membrillo",
+      "Quiroga"
+    ],
+    "Chone": [
+      "Boyacá",
+      "Canuto",
+      "Chibunga",
+      "Chone",
+      "Convento",
+      "Eloy Alfaro",
+      "Ricaurte",
+      "San Antonio",
+      "Santa Rita"
+    ],
+    "El Carmen": [
+      "4 De Diciembre",
+      "El Carmen",
+      "San Pedro De Suma",
+      "Wilfrido Loor Moreira (Maicito)"
+    ],
+    "Flavio Alfaro": [
+      "Flavio Alfaro",
+      "San Francisco De Novillo (Cab. En",
+      "Zapallo"
+    ],
+    "Jipijapa": [
+      "América",
+      "Dr. Miguel Morán Lucio",
+      "El Anegado (Cab. En Eloy Alfaro)",
+      "Jipijapa",
+      "Julcuy",
+      "La Unión",
+      "Machalilla",
+      "Manuel Inocencio Parrales Y Guale",
+      "Membrillal",
+      "Pedro Pablo Gómez",
+      "Puerto De Cayo",
+      "Puerto López",
+      "San Lorenzo De Jipijapa"
+    ],
+    "Junín": [
+      "Junín"
+    ],
+    "Manta": [
+      "Eloy Alfaro",
+      "Los Esteros",
+      "Manta",
+      "San Lorenzo",
+      "San Mateo",
+      "Santa Marianita (Boca De Pacoche)",
+      "Tarqui"
+    ],
+    "Montecristi": [
+      "Anibal San Andrés",
+      "El Colorado",
+      "General Eloy Alfaro",
+      "Jaramijó",
+      "La Pila",
+      "Leonidas Proaño",
+      "Montecristi"
+    ],
+    "Paján": [
+      "Campozano (La Palma De Paján)",
+      "Cascol",
+      "Guale",
+      "Lascano",
+      "Paján"
+    ],
+    "Pichincha": [
+      "Barraganete",
+      "Pichincha",
+      "San Sebastián"
+    ],
+    "Rocafuerte": [
+      "Rocafuerte"
+    ],
+    "Santa Ana": [
+      "Ayacucho",
+      "Honorato Vásquez (Cab. En Vásquez)",
+      "La Unión",
+      "Lodana",
+      "Olmedo",
+      "San Pablo (Cab. En Pueblo Nuevo)",
+      "Santa Ana",
+      "Santa Ana De Vuelta Larga"
+    ],
+    "Sucre": [
+      "10 De Agosto",
+      "Bahía De Caráquez",
+      "Canoa",
+      "Charapotó",
+      "Cojimíes",
+      "Jama",
+      "Leonidas Plaza Gutiérrez",
+      "Pedernales",
+      "San Isidro",
+      "San Vicente",
+      "Sucre"
+    ],
+    "Tosagua": [
+      "Angel Pedro Giler (La Estancilla)",
+      "Bachillero",
+      "Tosagua"
+    ],
+    "24 de Mayo": [
+      "24 de Mayo",
+      "Arq. Sixto Durán Ballén",
+      "Bellavista",
+      "Noboa",
+      "Sucre"
+    ],
+    "Pedernales": [
+      "10 De Agosto",
+      "Atahualpa",
+      "Cojimíes",
+      "Pedernales"
+    ],
+    "Olmedo": [
+      "Olmedo"
+    ],
+    "Puerto López": [
+      "Machalilla",
+      "Puerto López",
+      "Salango"
+    ],
+    "Jama": [
+      "Jama"
+    ],
+    "Jaramijó": [
+      "Jaramijó"
+    ],
+    "San Vicente": [
+      "Canoa",
+      "San Vicente"
+    ]
+  },
+  "Morona Santiago": {
+    "Morona": [
+      "Alshi (Cab. En 9 De Octubre)",
+      "Chiguaza",
+      "Cuchaentza",
+      "General Proaño",
+      "Huasaga (Cab.En Wampuik)",
+      "Macas",
+      "Macuma",
+      "Morona",
+      "Río Blanco",
+      "San Isidro",
+      "San José De Morona",
+      "Sinaí",
+      "Taisha",
+      "Tuutinentza",
+      "Zuña (Zúñac)"
+    ],
+    "Gualaquiza": [
+      "Amazonas (Rosario De Cuyes)",
+      "Bermejos",
+      "Bomboiza",
+      "Chigüinda",
+      "El Ideal",
+      "El Rosario",
+      "Gualaquiza",
+      "Mercedes Molina",
+      "Nueva Tarqui",
+      "San Miguel De Cuyes"
+    ],
+    "Limón Indanza": [
+      "General Leonidas Plaza Gutiérrez (Limón)",
+      "Indanza",
+      "Limón Indanza",
+      "Pan De Azúcar",
+      "San Antonio (Cab. En San Antonio Centro",
+      "San Carlos De Limón (San Carlos Del",
+      "San Juan Bosco",
+      "San Miguel De Conchay",
+      "Santa Susana De Chiviaza (Cab. En Chiviaza)",
+      "Yunganza (Cab. En El Rosario)"
+    ],
+    "Palora": [
+      "Arapicos",
+      "Cumandá (Cab. En Colonia Agrícola Sevilla Del Oro)",
+      "Huamboya",
+      "Palora",
+      "Palora (Metzera)",
+      "Sangay (Cab. En Nayamanaca)"
+    ],
+    "Santiago": [
+      "Chupianza",
+      "Copal",
+      "Patuca",
+      "San Francisco De Chinimbimi",
+      "San Luis De El Acho (Cab. En El Acho)",
+      "Santiago",
+      "Santiago De Méndez",
+      "Tayuza"
+    ],
+    "Sucúa": [
+      "Asunción",
+      "Huambi",
+      "Logroño",
+      "Santa Marianita De Jesús",
+      "Sucúa",
+      "Yaupi"
+    ],
+    "Huamboya": [
+      "Chiguaza",
+      "Huamboya",
+      "Pablo Sexto"
+    ],
+    "San Juan Bosco": [
+      "Pan De Azúcar",
+      "San Carlos De Limón",
+      "San Jacinto De Wakambeis",
+      "San Juan Bosco",
+      "Santiago De Pananza"
+    ],
+    "Taisha": [
+      "Huasaga (Cab. En Wampuik)",
+      "Macuma",
+      "Pumpuentsa",
+      "Taisha",
+      "Tuutinentza"
+    ],
+    "Logroño": [
+      "Logroño",
+      "Shimpis",
+      "Yaupi"
+    ],
+    "Pablo Sexto": [
+      "Pablo Sexto"
+    ],
+    "Tiwintza": [
+      "San José De Morona",
+      "Santiago",
+      "Tiwintza"
+    ],
+    "Sevilla Don Bosco": [
+      "Sevilla Don Bosco"
+    ]
+  },
+  "Napo": {
+    "Tena": [
+      "Ahuano",
+      "Carlos Julio Arosemena Tola (Zatza-Yacu)",
+      "Chontapunta",
+      "Pano",
+      "Puerto Misahualli",
+      "Puerto Napo",
+      "San Juan De Muyuna",
+      "Tena",
+      "Tálag"
+    ],
+    "Archidona": [
+      "Archidona",
+      "Avila",
+      "Cotundo",
+      "Loreto",
+      "Puerto Murialdo",
+      "San Pablo De Ushpayacu"
+    ],
+    "El Chaco": [
+      "El Chaco",
+      "Gonzalo Díaz De Pineda (El Bombón)",
+      "Linares",
+      "Oyacachi",
+      "Santa Rosa",
+      "Sardinas"
+    ],
+    "Quijos": [
+      "Baeza",
+      "Cosanga",
+      "Cuyuja",
+      "Papallacta",
+      "Quijos",
+      "San Francisco De Borja (Virgilio Dávila)",
+      "San José Del Payamino",
+      "Sumaco"
+    ],
+    "Carlos Julio Arosemena Tola": [
+      "Carlos Julio Arosemena Tola"
+    ]
+  },
+  "Pastaza": {
+    "Pastaza": [
+      "Arajuno",
+      "Canelos",
+      "Curaray",
+      "Diez De Agosto",
+      "El Triunfo",
+      "Fátima",
+      "Montalvo (Andoas)",
+      "Pastaza",
+      "Pomona",
+      "Puyo",
+      "Río Corrientes",
+      "Río Tigre",
+      "Santa Clara",
+      "Sarayacu",
+      "Simón Bolívar (Cab. En Mushullacta)",
+      "Tarqui",
+      "Teniente Hugo Ortiz",
+      "Veracruz (Indillama) (Cab. En Indillama)"
+    ],
+    "Mera": [
+      "Madre Tierra",
+      "Mera",
+      "Shell"
+    ],
+    "Santa Clara": [
+      "San José",
+      "Santa Clara"
+    ],
+    "Arajuno": [
+      "Arajuno",
+      "Curaray"
+    ]
+  },
+  "Pichincha": {
+    "Quito": [
+      "Alangasí",
+      "Amaguaña",
+      "Atahualpa",
+      "Belisario Quevedo",
+      "Calacalí",
+      "Calderón",
+      "Carcelén",
+      "Centro Histórico",
+      "Chavezpamba",
+      "Checa",
+      "Chilibulo",
+      "Chillogallo",
+      "Chimbacalle",
+      "Cochapamba",
+      "Comité Del Pueblo",
+      "Conocoto",
+      "Cotocollao",
+      "Cumbayá",
+      "El Condado",
+      "El Quinche",
+      "Gualea",
+      "Guamaní",
+      "Guangopolo",
+      "Guayllabamba",
+      "Itchimbía",
+      "Iñaquito",
+      "Jipijapa",
+      "Kennedy",
+      "La Argelia",
+      "La Concepción",
+      "La Ecuatoriana",
+      "La Ferroviaria",
+      "La Libertad",
+      "La Magdalena",
+      "La Mena",
+      "La Merced",
+      "Llano Chico",
+      "Lloa",
+      "Mariscal Sucre",
+      "Mindo",
+      "Nanegal",
+      "Nanegalito",
+      "Nayón",
+      "Nono",
+      "Pacto",
+      "Pedro Vicente Maldonado",
+      "Perucho",
+      "Pifo",
+      "Pomasqui",
+      "Ponceano",
+      "Puembo",
+      "Puengasí",
+      "Puerto Quito",
+      "Puéllaro",
+      "Píntag",
+      "Quito",
+      "Quito Distrito Metropolitano",
+      "Quitumbe",
+      "Rumipamba",
+      "San Antonio",
+      "San Bartolo",
+      "San Isidro Del Inca",
+      "San José De Minas",
+      "San Juan",
+      "San Miguel De Los Bancos",
+      "Solanda",
+      "Tababela",
+      "Tumbaco",
+      "Turubamba",
+      "Yaruquí",
+      "Zambiza"
+    ],
+    "Cayambe": [
+      "Ascázubi",
+      "Ayora",
+      "Cangahua",
+      "Cayambe",
+      "Juan Montalvo",
+      "Olmedo (Pesillo)",
+      "Otón",
+      "Santa Rosa De Cuzubamba"
+    ],
+    "Mejía": [
+      "Aloasí",
+      "Alóag",
+      "Cutuglahua",
+      "El Chaupi",
+      "Machachi",
+      "Manuel Cornejo Astorga (Tandapi)",
+      "Mejía",
+      "Tambillo",
+      "Uyumbicho"
+    ],
+    "Pedro Moncayo": [
+      "La Esperanza",
+      "Malchinguí",
+      "Pedro Moncayo",
+      "Tabacundo",
+      "Tocachi",
+      "Tupigachi"
+    ],
+    "Rumiñahui": [
+      "Cotogchoa",
+      "Rumipamba",
+      "Rumiñahui",
+      "San Pedro De Taboada",
+      "San Rafael",
+      "Sangolquí"
+    ],
+    "San Miguel de los Bancos": [
+      "Mindo",
+      "Pedro Vicente Maldonado",
+      "Puerto Quito",
+      "San Miguel De Los Bancos"
+    ],
+    "Pedro Vicente Maldonado": [
+      "Pedro Vicente Maldonado"
+    ],
+    "Puerto Quito": [
+      "Puerto Quito"
+    ]
+  },
+  "Tungurahua": {
+    "Ambato": [
+      "Ambatillo",
+      "Ambato",
+      "Atahualpa (Chisalata)",
+      "Atocha – Ficoa",
+      "Augusto N. Martínez (Mundugleo)",
+      "Celiano Monge",
+      "Constantino Fernández (Cab. En Cullitahua)",
+      "Cunchibamba",
+      "Huachi Chico",
+      "Huachi Grande",
+      "Huachi Loreto",
+      "Izamba",
+      "Juan Benigno Vela",
+      "La Merced",
+      "La Península",
+      "Matriz",
+      "Montalvo",
+      "Pasa",
+      "Picaigua",
+      "Pilagüín (Pilahüín)",
+      "Pishilata",
+      "Quisapincha (Quizapincha)",
+      "San Bartolomé De Pinllog",
+      "San Fernando (Pasa San Fernando)",
+      "San Francisco",
+      "Santa Rosa",
+      "Totoras",
+      "Unamuncho"
+    ],
+    "Baños de Agua Santa": [
+      "Baños De Agua Santa",
+      "Lligua",
+      "Río Negro",
+      "Río Verde",
+      "Ulba"
+    ],
+    "Cevallos": [
+      "Cevallos"
+    ],
+    "Mocha": [
+      "Mocha",
+      "Pinguilí"
+    ],
+    "Patate": [
+      "El Triunfo",
+      "Los Andes (Cab. En Poatug)",
+      "Patate",
+      "Sucre (Cab. En Sucre-Patate Urcu)"
+    ],
+    "Quero": [
+      "Quero",
+      "Rumipamba",
+      "Yanayacu - Mochapata (Cab. En Yanayacu)"
+    ],
+    "San Pedro de Pelileo": [
+      "Benítez (Pachanlica)",
+      "Bolívar",
+      "Chiquicha (Cab. En Chiquicha Grande)",
+      "Cotaló",
+      "El Rosario (Rumichaca)",
+      "García Moreno (Chumaqui)",
+      "Guambaló (Huambaló)",
+      "Pelileo",
+      "Pelileo Grande",
+      "Salasaca",
+      "San Pedro de Pelileo"
+    ],
+    "Santiago de Píllaro": [
+      "Baquerizo Moreno",
+      "Ciudad Nueva",
+      "Emilio María Terán (Rumipamba)",
+      "Marcos Espinel (Chacata)",
+      "Presidente Urbina (Chagrapamba -Patzucul)",
+      "Píllaro",
+      "San Andrés",
+      "San José De Poaló",
+      "San Miguelito",
+      "Santiago de Píllaro"
+    ],
+    "Tisaleo": [
+      "Quinchicoto",
+      "Tisaleo"
+    ]
+  },
+  "Zamora Chinchipe": {
+    "Zamora": [
+      "Cumbaratza",
+      "El Limón",
+      "Guadalupe",
+      "Imbana (La Victoria De Imbana)",
+      "Paquisha",
+      "Sabanilla",
+      "San Carlos De Las Minas",
+      "Timbara",
+      "Zamora",
+      "Zumbi"
+    ],
+    "Chinchipe": [
+      "Chinchipe",
+      "Chito",
+      "El Chorro",
+      "El Porvenir Del Carmen",
+      "La Chonta",
+      "Palanda",
+      "Pucapamba",
+      "San Andrés",
+      "San Francisco Del Vergel",
+      "Valladolid",
+      "Zumba"
+    ],
+    "Nangaritza": [
+      "Guayzimi",
+      "Nangaritza",
+      "Nuevo Paraíso",
+      "Zurmi"
+    ],
+    "Yacuambi": [
+      "28 De Mayo (San José De Yacuambi)",
+      "La Paz",
+      "Tutupali",
+      "Yacuambi"
+    ],
+    "Yantzaza": [
+      "Chicaña",
+      "El Pangui",
+      "Los Encuentros",
+      "Yantzaza",
+      "Yantzaza (Yanzatza)"
+    ],
+    "El Pangui": [
+      "El Guisme",
+      "El Pangui",
+      "Pachicutza",
+      "Tundayme"
+    ],
+    "Centinela del Cóndor": [
+      "Centinela del Cóndor",
+      "Panguintza",
+      "Paquisha",
+      "Triunfo-Dorado",
+      "Zumbi"
+    ],
+    "Palanda": [
+      "El Porvenir Del Carmen",
+      "La Canela",
+      "Palanda",
+      "San Francisco Del Vergel",
+      "Valladolid"
+    ],
+    "Paquisha": [
+      "Bellavista",
+      "Nuevo Quito",
+      "Paquisha"
+    ]
+  },
+  "Galápagos": {
+    "San Cristóbal": [
+      "El Progreso",
+      "Isla Santa María (Floreana) (Cab. En Pto. Velasco Ibarra)",
+      "Puerto Baquerizo Moreno",
+      "San Cristóbal"
+    ],
+    "Isabela": [
+      "Isabela",
+      "Puerto Villamil",
+      "Tomás De Berlanga (Santo Tomás)"
+    ],
+    "Santa Cruz": [
+      "Bellavista",
+      "Puerto Ayora",
+      "Santa Cruz",
+      "Santa Rosa (Incluye La Isla Baltra)"
+    ]
+  },
+  "Sucumbíos": {
+    "Lago Agrio": [
+      "Aguas Negras",
+      "Cuyabeno",
+      "Dureno",
+      "El Eno",
+      "General Farfán",
+      "Jambelí",
+      "Lago Agrio",
+      "Nueva Loja",
+      "Pacayacu",
+      "Santa Cecilia",
+      "Tarapoa"
+    ],
+    "Gonzalo Pizarro": [
+      "El Dorado De Cascales",
+      "El Reventador",
+      "Gonzalo Pizarro",
+      "Lumbaquí",
+      "Puerto Libre",
+      "Santa Rosa De Sucumbíos"
+    ],
+    "Putumayo": [
+      "Palma Roja",
+      "Puerto Bolívar (Puerto Montúfar)",
+      "Puerto El Carmen Del Putumayo",
+      "Puerto Rodríguez",
+      "Putumayo",
+      "Santa Elena"
+    ],
+    "Shushufindi": [
+      "Limoncocha",
+      "Pañacocha",
+      "San Pedro De Los Cofanes",
+      "San Roque (Cab. En San Vicente)",
+      "Shushufindi",
+      "Siete De Julio"
+    ],
+    "Sucumbíos": [
+      "El Playón De San Francisco",
+      "La Bonita",
+      "La Sofía",
+      "Rosa Florida",
+      "Santa Bárbara",
+      "Sucumbíos"
+    ],
+    "Cascales": [
+      "Cascales",
+      "El Dorado De Cascales",
+      "Santa Rosa De Sucumbíos",
+      "Sevilla"
+    ],
+    "Cuyabeno": [
+      "Aguas Negras",
+      "Cuyabeno",
+      "Tarapoa"
+    ]
+  },
+  "Orellana": {
+    "Orellana": [
+      "Alejandro Labaka",
+      "Dayuma",
+      "El Dorado",
+      "El Edén",
+      "García Moreno",
+      "Inés Arango (Cab. En Western)",
+      "La Belleza",
+      "Nuevo Paraíso (Cab. En Unión",
+      "Orellana",
+      "Puerto Francisco De Orellana (El Coca)",
+      "San José De Guayusa",
+      "San Luis De Armenia",
+      "Taracoa (Nueva Esperanza: Yuca)"
+    ],
+    "Aguarico": [
+      "Aguarico",
+      "Capitán Augusto Rivadeneyra",
+      "Cononaco",
+      "Nuevo Rocafuerte",
+      "Santa María De Huiririma",
+      "Tipitini",
+      "Tiputini",
+      "Yasuní"
+    ],
+    "La Joya de los Sachas": [
+      "Enokanqui",
+      "La Joya De Los Sachas",
+      "Lago San Pedro",
+      "Pompeya",
+      "Rumipamba",
+      "San Carlos",
+      "San Sebastián Del Coca",
+      "Tres De Noviembre",
+      "Unión Milagreña"
+    ],
+    "Loreto": [
+      "Avila (Cab. En Huiruno)",
+      "Loreto",
+      "Puerto Murialdo",
+      "San José De Dahuano",
+      "San José De Payamino",
+      "San Vicente De Huaticocha"
+    ]
+  },
+  "Santo Domingo de los Tsáchilas": {
+    "Santo Domingo": [
+      "Abraham Calazacón",
+      "Alluriquín",
+      "Bombolí",
+      "Chiguilpe",
+      "El Esfuerzo",
+      "Luz De América",
+      "Puerto Limón",
+      "Río Toachi",
+      "Río Verde",
+      "San Jacinto Del Búa",
+      "Santa María Del Toachi",
+      "Santo Domingo",
+      "Santo Domingo De Los Colorados",
+      "Valle Hermoso",
+      "Zaracay"
+    ],
+    "La Concordia": [
+      "La Concordia",
+      "La Villegas",
+      "Monterrey",
+      "Plan Piloto"
+    ]
+  },
+  "Santa Elena": {
+    "Santa Elena": [
+      "Atahualpa",
+      "Ballenita",
+      "Chanduy",
+      "Colonche",
+      "Manglaralto",
+      "San José De Ancón",
+      "Santa Elena",
+      "Simón Bolívar (Julio Moreno)"
+    ],
+    "La Libertad": [
+      "La Libertad"
+    ],
+    "Salinas": [
+      "Anconcito",
+      "Carlos Espinoza Larrea",
+      "Gral. Alberto Enríquez Gallo",
+      "José Luis Tamayo (Muey)",
+      "Salinas",
+      "Santa Rosa",
+      "Vicente Rocafuerte"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 import enum
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.buses.models import SeatType
@@ -15,13 +15,21 @@ class RouteType(enum.StrEnum):
 
 
 class City(BaseModel):
-    """Ciudad o parada. Es compartida por todas las cooperativas."""
+    """Ubicación geográfica compartida por todas las cooperativas."""
 
     __tablename__ = "cities"
-    __table_args__ = (UniqueConstraint("name", "province"),)
+    __table_args__ = (
+        UniqueConstraint("name", "province", "canton", name="uq_cities_name_province_canton"),
+    )
 
     name: Mapped[str] = mapped_column(String(100))
     province: Mapped[str] = mapped_column(String(100))
+    canton: Mapped[str] = mapped_column(
+        String(100), default="", server_default="", nullable=False
+    )
+    is_catalogued: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
 
 
 class Route(TenantModel):

@@ -25,4 +25,5 @@ def read_geographic_catalog(
     return {
         "provinces": ECUADOR_PROVINCES,
         "cantons": geographic_service.list_catalog_cantons(db),
+        "localities": geographic_service.list_catalog_localities(db),
     }
