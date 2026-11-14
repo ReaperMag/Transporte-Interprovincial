@@ -1,34 +1,355 @@
-.cooperatives-page { max-width: 1120px; margin: 0 auto; }
-.admin-breadcrumb { margin: 0 0 28px; color: #5b6670; font-size: .72rem; }
-.cooperatives-page__intro { display: flex; justify-content: space-between; margin-bottom: 24px; }
-.cooperatives-page__kicker { margin: 0 0 7px; color: #0e5a6b; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.cooperatives-page__intro h1 { margin: 0; color: #14212b; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.04em; }
-.cooperatives-page__intro p:last-child { margin: 8px 0 0; color: #5b6670; font-size: .88rem; }
-.cooperatives-card { padding: 24px 26px 18px; border: 1px solid #dcd9d2; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px rgb(20 33 43 / 5%); }
-.cooperatives-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
-.cooperatives-card__title { margin: 0; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 1.25rem; }
-.cooperatives-card__subtitle { margin: 5px 0 0; color: #5b6670; font-size: .78rem; }
-.cooperatives-card__create { min-height: 38px; padding: 8px 16px; border: 0; border-radius: 9px; background: #0e5a6b; color: #fff; cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; }
-.cooperatives-card__create:hover { background: #0a4250; }
-.cooperatives-toolbar { display: flex; align-items: flex-end; gap: 10px; margin: 0 0 18px; }
-.cooperatives-toolbar__search { display: grid; flex: 1; max-width: 360px; gap: 7px; color: #5b6670; font-size: .72rem; font-weight: 700; }
-.cooperatives-toolbar__search input { min-height: 38px; box-sizing: border-box; padding: 8px 12px; border: 1px solid #dcd9d2; border-radius: 8px; background: #f5f4f0; color: #14212b; font: inherit; font-size: .78rem; }
-.cooperatives-toolbar__filter, .cooperatives-table__error button { min-height: 38px; padding: 8px 14px; border: 1px solid #b8c2c3; border-radius: 8px; background: #fff; color: #14212b; cursor: pointer; font: inherit; font-size: .76rem; font-weight: 700; }
-.cooperatives-toolbar__search input:focus-visible, .cooperatives-toolbar__filter:focus-visible, .cooperatives-card__create:focus-visible { outline: 2px solid #d99a1e; outline-offset: 2px; }
-.cooperatives-table-wrap { overflow-x: auto; }
-.cooperatives-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-.cooperatives-table th, .cooperatives-table td { padding: 14px 9px; border-bottom: 1px solid #eceae5; text-align: left; white-space: nowrap; }
-.cooperatives-table th { color: #5b6670; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.cooperatives-table tbody tr:hover { background: #fbfaf7; }
-.cooperatives-table tbody tr:last-child td { border-bottom: 0; }
-.cooperatives-table__logo { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #e3eef0; color: #0e5a6b; font-size: .65rem; font-weight: 800; }
-.cooperatives-table__logo--image { object-fit: cover; }
-.cooperatives-table__message { padding: 32px 10px !important; color: #5b6670; text-align: center !important; }
-.cooperatives-table__actions { display: inline-flex; align-items: center; gap: 4px; }
-.cooperatives-table__actions button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #0e5a6b; cursor: pointer; }
-.cooperatives-table__actions button:hover { background: #e3eef0; }
-.cooperatives-table__actions button:disabled { cursor: wait; opacity: .5; }
-.cooperatives-table__actions svg { width: 17px; height: 17px; }
-.cooperatives-table__action--danger { color: #b3362b !important; }
-.cooperatives-table__error { display: flex; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 11px 13px; border: 1px solid #e9b9b3; border-radius: 8px; background: #f7e3e0; color: #b3362b; font-size: .78rem; }
-@media (max-width: 640px) { .cooperatives-card__header, .cooperatives-toolbar { align-items: stretch; flex-direction: column; } .cooperatives-toolbar__search { max-width: none; } }
+.cooperatives-page {
+  display: grid;
+  max-width: 1120px;
+  gap: 18px;
+  margin: 0 auto;
+}
+
+.admin-breadcrumb {
+  margin: 0;
+  color: #647184;
+  font-size: 0.72rem;
+}
+
+.cooperatives-page__intro {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 154px;
+  align-items: center;
+  overflow: hidden;
+  padding: clamp(24px, 3vw, 36px);
+  border-radius: 22px;
+  background: linear-gradient(115deg, #14212b 0%, #14212b 48%, #0e5a6b 140%);
+  box-shadow: 0 16px 36px rgb(22 35 57 / 14%);
+  color: #fff;
+}
+
+.cooperatives-page__intro::before,
+.cooperatives-page__intro::after {
+  position: absolute;
+  z-index: -1;
+  content: '';
+  border-radius: 50%;
+  background: #0e5a6b;
+  opacity: 0.72;
+}
+
+.cooperatives-page__intro::before {
+  top: -150px;
+  right: -40px;
+  width: 380px;
+  height: 300px;
+  transform: rotate(-18deg);
+}
+
+.cooperatives-page__intro::after {
+  right: 12%;
+  bottom: -180px;
+  width: 440px;
+  height: 220px;
+  opacity: 0.55;
+}
+
+.cooperatives-page__intro > div {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+}
+
+.cooperatives-page__kicker {
+  margin: 0 0 7px;
+  color: #f0c46d;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cooperatives-page__intro h1 {
+  margin: 0;
+  color: #fff;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.55rem);
+  letter-spacing: -0.045em;
+}
+
+.cooperatives-page__intro p:last-child {
+  margin: 8px 0 0;
+  color: rgb(255 255 255 / 84%);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.cooperatives-card {
+  padding: 22px 24px 18px;
+  border: 1px solid #e3e7ed;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgb(15 23 42 / 6%);
+}
+
+.cooperatives-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cooperatives-card__title {
+  margin: 0;
+  color: #172436;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 1.25rem;
+}
+
+.cooperatives-card__subtitle {
+  margin: 5px 0 0;
+  color: #718096;
+  font-size: 0.76rem;
+}
+
+.cooperatives-card__create {
+  min-height: 40px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #0e5a6b;
+  box-shadow: 0 5px 14px rgb(14 90 107 / 18%);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.77rem;
+  font-weight: 700;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.cooperatives-card__create:hover {
+  background: #0a4755;
+  transform: translateY(-1px);
+}
+
+.cooperatives-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0 0 17px;
+}
+
+.cooperatives-toolbar__search {
+  display: grid;
+  flex: 1;
+  max-width: 420px;
+  gap: 7px;
+  color: #526077;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.cooperatives-toolbar__search input {
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #dfe5eb;
+  border-radius: 10px;
+  background: #f8fafb;
+  color: #172436;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.cooperatives-toolbar__filter,
+.cooperatives-table__error button {
+  min-height: 40px;
+  padding: 8px 15px;
+  border: 1px solid #cbd6da;
+  border-radius: 10px;
+  background: #fff;
+  color: #244252;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.cooperatives-toolbar__filter:hover {
+  border-color: #0e5a6b;
+  background: #eef6f7;
+}
+
+.cooperatives-toolbar__search input:focus-visible,
+.cooperatives-toolbar__filter:focus-visible,
+.cooperatives-card__create:focus-visible,
+.cooperatives-table__error button:focus-visible,
+.cooperatives-table__actions button:focus-visible {
+  outline: 2px solid #d99a1e;
+  outline-offset: 2px;
+}
+
+.cooperatives-table__error {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 11px 13px;
+  border: 1px solid #f2c9cf;
+  border-radius: 10px;
+  background: #fff3f3;
+  color: #ab2636;
+  font-size: 0.78rem;
+}
+
+.cooperatives-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #edf0f3;
+  border-radius: 12px;
+}
+
+.cooperatives-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.77rem;
+}
+
+.cooperatives-table th,
+.cooperatives-table td {
+  padding: 13px 10px;
+  border-bottom: 1px solid #edf0f3;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cooperatives-table th {
+  background: #f7f9fa;
+  color: #647184;
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.cooperatives-table tbody tr {
+  transition: background-color 0.16s ease;
+}
+
+.cooperatives-table tbody tr:hover {
+  background: #f5fafb;
+}
+
+.cooperatives-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.cooperatives-table__logo {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #dce8e9;
+  border-radius: 11px;
+  background: #eaf3f4;
+  color: #0e5a6b;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.cooperatives-table__logo--image {
+  object-fit: cover;
+}
+
+.cooperatives-table__message {
+  padding: 32px 10px !important;
+  color: #718096;
+  text-align: center !important;
+}
+
+.cooperatives-table__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cooperatives-table__actions button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #0e5a6b;
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+}
+
+.cooperatives-table__actions button:hover {
+  background: #eaf3f4;
+}
+
+.cooperatives-table__actions button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.cooperatives-table__actions svg {
+  width: 17px;
+  height: 17px;
+}
+
+.cooperatives-table__action--danger {
+  color: #b3362b !important;
+}
+
+.cooperatives-table__actions .cooperatives-table__action--danger:hover {
+  background: #fff0ef;
+}
+
+@media (max-width: 640px) {
+  .cooperatives-page {
+    gap: 14px;
+  }
+
+  .cooperatives-page__intro {
+    min-height: 140px;
+    padding: 22px;
+  }
+
+  .cooperatives-card {
+    padding: 18px 15px 14px;
+  }
+
+  .cooperatives-card__header,
+  .cooperatives-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cooperatives-toolbar__search {
+    max-width: none;
+  }
+
+  .cooperatives-toolbar__filter,
+  .cooperatives-card__create {
+    width: 100%;
+  }
+
+  .cooperatives-table {
+    min-width: 660px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cooperatives-card__create,
+  .cooperatives-table tbody tr,
+  .cooperatives-table__actions button,
+  .cooperatives-toolbar__filter {
+    transition: none;
+  }
+}
