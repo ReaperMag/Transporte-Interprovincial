@@ -639,7 +639,107 @@
   margin: 1rem 0;
 }
 
+.cooperative-routes__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.cooperative-routes__header-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.cooperative-routes__filters {
+  display: grid;
+  grid-template-columns: minmax(12rem, 2fr) minmax(10rem, 1fr) minmax(8rem, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.cooperative-routes__filters label {
+  display: grid;
+  gap: 0.35rem;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.cooperative-routes__badge--muted {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.cooperative-routes__badge--neutral {
+  background: #e0f2fe;
+  color: #0c4a6e;
+}
+
+.cooperative-routes__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: clamp(1rem, 4vh, 3rem) 1rem;
+  background: rgb(15 23 42 / 55%);
+}
+
+.cooperative-routes__modal {
+  width: min(100%, 52rem);
+  border-radius: 1rem;
+  padding: clamp(1rem, 2.5vw, 1.75rem);
+  background: #fff;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 30%);
+}
+
+.cooperative-routes__modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cooperative-routes__modal-header h3 {
+  margin: 0;
+}
+
+.cooperative-routes__modal-header p {
+  margin: 0.35rem 0 0;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.cooperative-routes__modal-close {
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cooperative-routes__modal :focus-visible,
+.cooperative-routes__filters :focus-visible,
+.cooperative-routes__header-actions :focus-visible {
+  outline: 2px solid #0e5a6b;
+  outline-offset: 2px;
+}
+
 @media (max-width: 850px) {
+  .cooperative-routes__filters {
+    grid-template-columns: 1fr;
+  }
   .cooperative-routes__form,
   .cooperative-routes__frequency-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));

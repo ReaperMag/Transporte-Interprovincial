@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { getCooperativeBusGroups, type CooperativeBusGroup } from '../services/busGroup.service';
 import {
   createCooperativeFrequency,
-  createCooperativeRoute,
   getCooperativeFrequencies,
   getCooperativeRoutes,
   getRouteCities,
@@ -16,11 +15,12 @@ import {
   type RouteSheet,
 } from '../services/routeSchedule.service';
 import './CooperativeRoutesPage.css';
-import { preventNonNumericKeys } from '../../../shared/utils/validation';
+import { CreateRouteModal } from '../components/CreateRouteModal';
+import { RouteFilters, type RouteStatusFilter } from '../components/RouteFilters';
+import { normalizeLocationSearch } from '../utils/normalizeLocationSearch';
 import {
   getGeographicCatalog,
   type GeographicCatalog,
-  type GeographicPlace,
 } from '../../geography/services/geographicCatalog.service';
 
 function farePriceKey(
@@ -56,129 +56,6 @@ function dayLabel(value: string): string {
   });
 }
 
-function normalizeLocationSearch(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLocaleLowerCase('es');
-}
-
-interface GeographicLocationPickerProps {
-  title: string;
-  provinces: string[];
-  cantons: GeographicPlace[];
-  localities: GeographicPlace[];
-  province: string;
-  canton: string;
-  search: string;
-  value: string;
-  excludedIds?: string[];
-  onProvinceChange: (value: string) => void;
-  onCantonChange: (value: string) => void;
-  onSearchChange: (value: string) => void;
-  onValueChange: (value: string) => void;
-}
-
-function GeographicLocationPicker({
-  title,
-  provinces,
-  cantons,
-  localities,
-  province,
-  canton,
-  search,
-  value,
-  excludedIds = [],
-  onProvinceChange,
-  onCantonChange,
-  onSearchChange,
-  onValueChange,
-}: GeographicLocationPickerProps) {
-  const filteredCantons = cantons.filter((item) => item.province === province);
-  const query = normalizeLocationSearch(search);
-  const filteredLocalities = localities.filter(
-    (item) =>
-      item.province === province &&
-      item.canton === canton &&
-      !excludedIds.includes(String(item.id)) &&
-      (!query || normalizeLocationSearch(item.name).includes(query)),
-  );
-
-  return (
-    <fieldset className="cooperative-routes__location-picker">
-      <legend>{title}</legend>
-      <div className="cooperative-routes__location-fields">
-        <label>
-          Provincia
-          <select
-            value={province}
-            onChange={(event) => onProvinceChange(event.target.value)}
-            required
-          >
-            <option value="">Selecciona provincia</option>
-            {provinces.map((item) => (
-              <option value={item} key={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Cantón
-          <select
-            value={canton}
-            onChange={(event) => onCantonChange(event.target.value)}
-            disabled={!province}
-            required
-          >
-            <option value="">Selecciona cantón</option>
-            {filteredCantons.map((item) => (
-              <option value={item.name} key={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Buscar localidad
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            disabled={!canton}
-            placeholder="Escribe el nombre"
-          />
-        </label>
-        <label>
-          Localidad
-          <select
-            value={value}
-            onChange={(event) => onValueChange(event.target.value)}
-            disabled={!canton}
-            required
-          >
-            <option value="">Selecciona localidad</option>
-            {filteredLocalities.map((item) => (
-              <option value={item.id} key={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-    </fieldset>
-  );
-}
-
-interface RouteStopDraft {
-  cityId: string;
-  minutes: string;
-  province: string;
-  canton: string;
-  search: string;
-}
-
 export function CooperativeRoutesPage() {
   const [cities, setCities] = useState<RouteCity[]>([]);
   const [geographicCatalog, setGeographicCatalog] = useState<GeographicCatalog | null>(null);
@@ -189,16 +66,11 @@ export function CooperativeRoutesPage() {
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [serviceDate, setServiceDate] = useState(localDateValue);
   const [selectedRouteId, setSelectedRouteId] = useState('');
-  const [selectedCityId, setSelectedCityId] = useState('');
-  const [selectedDestinationCityId, setSelectedDestinationCityId] = useState('');
-  const [originProvince, setOriginProvince] = useState('');
-  const [originCanton, setOriginCanton] = useState('');
-  const [originSearch, setOriginSearch] = useState('');
-  const [destinationProvince, setDestinationProvince] = useState('');
-  const [destinationCanton, setDestinationCanton] = useState('');
-  const [destinationSearch, setDestinationSearch] = useState('');
-  const [routeDuration, setRouteDuration] = useState('240');
-  const [stops, setStops] = useState<RouteStopDraft[]>([]);
+  const [routeSearch, setRouteSearch] = useState('');
+  const [routeGroupFilter, setRouteGroupFilter] = useState('all');
+  const [routeStatusFilter, setRouteStatusFilter] = useState<RouteStatusFilter>('all');
+  const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
+  const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [frequencyTime, setFrequencyTime] = useState('08:00');
   const [resolutionNumber, setResolutionNumber] = useState('');
   const [farePrices, setFarePrices] = useState<Record<string, string>>({});
@@ -208,7 +80,6 @@ export function CooperativeRoutesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadedPlanKey, setLoadedPlanKey] = useState('');
   const [savingDate, setSavingDate] = useState<string | null>(null);
-  const [isCreatingRoute, setIsCreatingRoute] = useState(false);
   const [isCreatingFrequency, setIsCreatingFrequency] = useState(false);
   const [publishingDate, setPublishingDate] = useState<string | null>(null);
   const [refreshPlan, setRefreshPlan] = useState(0);
@@ -231,24 +102,11 @@ export function CooperativeRoutesPage() {
           getCooperativeBusGroups(),
         ]);
         if (!active) return;
-        const defaultOrigin =
-          catalogResult.localities.find(
-            (city) => normalizeLocationSearch(city.name) === 'ambato',
-          ) ?? catalogResult.localities[0];
-        const defaultDestination =
-          catalogResult.localities.find((city) => normalizeLocationSearch(city.name) === 'quito') ??
-          catalogResult.localities.find((city) => city.id !== defaultOrigin?.id);
         setCities(cityResult);
         setGeographicCatalog(catalogResult);
         setRoutes(routeResult);
         setGroups(groupResult);
         setSelectedGroupId((current) => current || String(groupResult[0]?.id ?? ''));
-        setSelectedCityId((current) => current || String(defaultOrigin?.id ?? ''));
-        setSelectedDestinationCityId((current) => current || String(defaultDestination?.id ?? ''));
-        setOriginProvince(defaultOrigin?.province ?? '');
-        setOriginCanton(defaultOrigin?.canton ?? '');
-        setDestinationProvince(defaultDestination?.province ?? '');
-        setDestinationCanton(defaultDestination?.canton ?? '');
       } catch (loadError) {
         if (active) {
           setError(
@@ -410,8 +268,29 @@ export function CooperativeRoutesPage() {
   };
 
   const activeRoutes = routes.filter((route) => route.isActive && route.durationMinutes !== null);
-  const originCity = cities.find((city) => String(city.id) === selectedCityId);
-  const destinationCity = cities.find((city) => String(city.id) === selectedDestinationCityId);
+  const filteredRoutes = useMemo(() => {
+    const query = normalizeLocationSearch(routeSearch);
+    return routes.filter((route) => {
+      const haystack = normalizeLocationSearch(
+        [
+          route.originCity,
+          route.destinationCity,
+          route.busGroupName ?? '',
+          ...route.stops.map((stop) => stop.cityName),
+        ].join(' '),
+      );
+      const matchesSearch = !query || haystack.includes(query);
+      const matchesGroup =
+        routeGroupFilter === 'all' ||
+        (routeGroupFilter === 'none'
+          ? route.busGroupId === null
+          : String(route.busGroupId) === routeGroupFilter);
+      const matchesStatus =
+        routeStatusFilter === 'all' ||
+        (routeStatusFilter === 'active' ? route.isActive : !route.isActive);
+      return matchesSearch && matchesGroup && matchesStatus;
+    });
+  }, [routes, routeSearch, routeGroupFilter, routeStatusFilter]);
   const sheetFrequencies =
     plans[serviceDates[0]]?.frequencies ??
     frequencies.map((frequency) => ({
@@ -426,54 +305,20 @@ export function CooperativeRoutesPage() {
     }));
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
-  const selectExampleRoute = (destinationName: string) => {
-    const ambato = geographicCatalog?.localities.find(
-      (city) => normalizeLocationSearch(city.name) === 'ambato',
-    );
-    const destination = geographicCatalog?.localities.find(
-      (city) => normalizeLocationSearch(city.name) === normalizeLocationSearch(destinationName),
-    );
-    if (ambato && destination) {
-      setSelectedCityId(String(ambato.id));
-      setSelectedDestinationCityId(String(destination.id));
-      setOriginProvince(ambato.province);
-      setOriginCanton(ambato.canton ?? '');
-      setOriginSearch('');
-      setDestinationProvince(destination.province);
-      setDestinationCanton(destination.canton ?? '');
-      setDestinationSearch('');
-    }
+  const handleCloseRouteModal = () => {
+    setIsRouteModalOpen(false);
+    requestAnimationFrame(() => newRouteButtonRef.current?.focus());
   };
 
-  const handleCreateRoute = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsCreatingRoute(true);
+  const handleRouteCreated = (created: CooperativeRoute) => {
     setError(null);
-    setSuccess(null);
-    try {
-      const created = await createCooperativeRoute({
-        originCityId: Number(selectedCityId),
-        destinationCityId: Number(selectedDestinationCityId),
-        durationMinutes: Number(routeDuration),
-        stops: stops.map((stop) => ({
-          cityId: Number(stop.cityId),
-          minutesFromOrigin: Number(stop.minutes),
-        })),
-      });
-      const updated = await getCooperativeRoutes();
-      setRoutes(updated);
-      setSelectedRouteId(String(created.id));
-      setSelectedDestinationCityId('');
-      setRouteDuration('240');
-      setStops([]);
-      setSuccess(`Ruta ${created.originCity} - ${created.destinationCity} creada.`);
-    } catch (createError) {
-      setError(
-        createError instanceof Error ? createError.message : 'No fue posible crear la ruta.',
-      );
-    } finally {
-      setIsCreatingRoute(false);
+    setRoutes((current) => [...current, created]);
+    setSelectedRouteId(String(created.id));
+    if (created.busGroupId) {
+      setSelectedGroupId(String(created.busGroupId));
     }
+    setRefreshPlan((current) => current + 1);
+    setSuccess(`Ruta ${created.originCity} - ${created.destinationCity} creada.`);
   };
 
   const handleCreateFrequency = async (event: FormEvent<HTMLFormElement>) => {
@@ -633,6 +478,25 @@ export function CooperativeRoutesPage() {
           Define el recorrido con sus paradas, asigna frecuencias a un grupo y organiza qué bus
           cubre cada servicio en la hoja diaria.
         </p>
+        <div className="cooperative-routes__header-actions">
+          <button
+            type="button"
+            ref={newRouteButtonRef}
+            onClick={() => {
+              setError(null);
+              setIsRouteModalOpen(true);
+            }}
+            disabled={isLoading || groups.length === 0}
+            title={groups.length === 0 ? 'Crea primero un grupo de buses' : undefined}
+          >
+            Nueva ruta
+          </button>
+          {!isLoading && groups.length === 0 && (
+            <p className="cooperative-routes__header-note">
+              Crea un grupo de buses antes de registrar rutas.
+            </p>
+          )}
+        </div>
       </header>
 
       {error && (
@@ -674,281 +538,35 @@ export function CooperativeRoutesPage() {
             <div className="cooperative-routes__step-heading">
               <span>2</span>
               <div>
-                <h3 id="routes-builder-title">Recorrido principal y subrutas</h3>
-                <p>Ordena cada parada e indica en qué minuto se llega desde la ciudad de salida.</p>
+                <h3 id="routes-builder-title">Rutas registradas</h3>
+                <p>
+                  Filtra por texto, grupo o estado. Cada ruta queda asociada al grupo de buses que
+                  cubrirá sus frecuencias.
+                </p>
               </div>
             </div>
-            <div className="cooperative-routes__examples" aria-label="Ejemplos de rutas">
-              <span>Ejemplos:</span>
-              {['Quito', 'Guayaquil', 'Riobamba'].map((destination) => (
-                <button
-                  type="button"
-                  key={destination}
-                  onClick={() => selectExampleRoute(destination)}
-                  disabled={
-                    !geographicCatalog?.localities.some(
-                      (city) => normalizeLocationSearch(city.name) === 'ambato',
-                    ) ||
-                    !geographicCatalog?.localities.some(
-                      (city) =>
-                        normalizeLocationSearch(city.name) === normalizeLocationSearch(destination),
-                    )
-                  }
-                >
-                  Ambato – {destination}
-                </button>
-              ))}
-            </div>
-            <form
-              className="cooperative-routes__form"
-              onSubmit={(event) => void handleCreateRoute(event)}
-            >
-              <div className="cooperative-routes__location-grid">
-                <GeographicLocationPicker
-                  title="Origen"
-                  provinces={geographicCatalog?.provinces ?? []}
-                  cantons={geographicCatalog?.cantons ?? []}
-                  localities={geographicCatalog?.localities ?? []}
-                  province={originProvince}
-                  canton={originCanton}
-                  search={originSearch}
-                  value={selectedCityId}
-                  excludedIds={[selectedDestinationCityId, ...stops.map((stop) => stop.cityId)]}
-                  onProvinceChange={(value) => {
-                    setOriginProvince(value);
-                    setOriginCanton('');
-                    setOriginSearch('');
-                    setSelectedCityId('');
-                  }}
-                  onCantonChange={(value) => {
-                    setOriginCanton(value);
-                    setOriginSearch('');
-                    setSelectedCityId('');
-                  }}
-                  onSearchChange={(value) => {
-                    setOriginSearch(value);
-                    setSelectedCityId('');
-                  }}
-                  onValueChange={(value) => {
-                    setSelectedCityId(value);
-                    if (value && value === selectedDestinationCityId) {
-                      setSelectedDestinationCityId('');
-                    }
-                  }}
-                />
-                <GeographicLocationPicker
-                  title="Destino"
-                  provinces={geographicCatalog?.provinces ?? []}
-                  cantons={geographicCatalog?.cantons ?? []}
-                  localities={geographicCatalog?.localities ?? []}
-                  province={destinationProvince}
-                  canton={destinationCanton}
-                  search={destinationSearch}
-                  value={selectedDestinationCityId}
-                  excludedIds={[selectedCityId, ...stops.map((stop) => stop.cityId)]}
-                  onProvinceChange={(value) => {
-                    setDestinationProvince(value);
-                    setDestinationCanton('');
-                    setDestinationSearch('');
-                    setSelectedDestinationCityId('');
-                  }}
-                  onCantonChange={(value) => {
-                    setDestinationCanton(value);
-                    setDestinationSearch('');
-                    setSelectedDestinationCityId('');
-                  }}
-                  onSearchChange={(value) => {
-                    setDestinationSearch(value);
-                    setSelectedDestinationCityId('');
-                  }}
-                  onValueChange={(value) => {
-                    setSelectedDestinationCityId(value);
-                    if (value && value === selectedCityId) setSelectedCityId('');
-                  }}
-                />
-              </div>
-              <label>
-                Duración del recorrido (minutos)
-                <input
-                  type="number"
-                  onKeyDown={preventNonNumericKeys}
-                  min={10}
-                  max={1440}
-                  required
-                  value={routeDuration}
-                  onChange={(event) => setRouteDuration(event.target.value)}
-                />
-              </label>
-              {originCity && destinationCity && (
-                <div
-                  className="cooperative-routes__preview"
-                  aria-label="Vista previa del recorrido"
-                >
-                  <div className="cooperative-routes__preview-stop">
-                    <span />
-                    <strong>{originCity.name}</strong>
-                    <small>Salida</small>
-                  </div>
-                  {stops.map((stop, index) => {
-                    const city = cities.find((item) => String(item.id) === stop.cityId);
-                    return (
-                      <div
-                        className="cooperative-routes__preview-stop"
-                        key={`${index}-${stop.cityId}`}
-                      >
-                        <span />
-                        <strong>{city?.name || 'Elige ciudad'}</strong>
-                        <small>
-                          {stop.minutes ? `${stop.minutes} min` : 'Tiempo desde salida'}
-                        </small>
-                      </div>
-                    );
-                  })}
-                  <div className="cooperative-routes__preview-stop cooperative-routes__preview-stop--end">
-                    <span />
-                    <strong>{destinationCity.name}</strong>
-                    <small>{routeDuration ? `${routeDuration} min · Llegada` : 'Llegada'}</small>
-                  </div>
-                </div>
-              )}
-
-              {stops.length > 0 && (
-                <div className="cooperative-routes__stop-list">
-                  <h4>Paradas en orden</h4>
-                  {stops.map((stop, index) => (
-                    <div className="cooperative-routes__stop-row" key={index}>
-                      <span className="cooperative-routes__stop-number">{index + 1}</span>
-                      <GeographicLocationPicker
-                        title={`Ubicación de la parada ${index + 1}`}
-                        provinces={geographicCatalog?.provinces ?? []}
-                        cantons={geographicCatalog?.cantons ?? []}
-                        localities={geographicCatalog?.localities ?? []}
-                        province={stop.province}
-                        canton={stop.canton}
-                        search={stop.search}
-                        value={stop.cityId}
-                        excludedIds={[
-                          selectedCityId,
-                          selectedDestinationCityId,
-                          ...stops
-                            .filter((_, stopIndex) => stopIndex !== index)
-                            .map((otherStop) => otherStop.cityId),
-                        ]}
-                        onProvinceChange={(value) =>
-                          setStops((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? {
-                                    ...item,
-                                    province: value,
-                                    canton: '',
-                                    cityId: '',
-                                    search: '',
-                                  }
-                                : item,
-                            ),
-                          )
-                        }
-                        onCantonChange={(value) =>
-                          setStops((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, canton: value, cityId: '', search: '' }
-                                : item,
-                            ),
-                          )
-                        }
-                        onSearchChange={(value) =>
-                          setStops((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, search: value, cityId: '' } : item,
-                            ),
-                          )
-                        }
-                        onValueChange={(value) =>
-                          setStops((current) =>
-                            current.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, cityId: value } : item,
-                            ),
-                          )
-                        }
-                      />
-                      <label>
-                        Minutos desde el origen
-                        <input
-                          type="number"
-                          onKeyDown={preventNonNumericKeys}
-                          min={1}
-                          max={Number(routeDuration) - 1}
-                          required
-                          value={stop.minutes}
-                          onChange={(event) =>
-                            setStops((current) =>
-                              current.map((item, itemIndex) =>
-                                itemIndex === index
-                                  ? { ...item, minutes: event.target.value }
-                                  : item,
-                              ),
-                            )
-                          }
-                        />
-                      </label>
-                      <button
-                        className="cooperative-routes__button cooperative-routes__button--danger"
-                        type="button"
-                        onClick={() =>
-                          setStops((current) =>
-                            current.filter((_, itemIndex) => itemIndex !== index),
-                          )
-                        }
-                      >
-                        Quitar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="cooperative-routes__form-actions">
-                <button
-                  className="cooperative-routes__button cooperative-routes__button--secondary"
-                  type="button"
-                  onClick={() =>
-                    setStops((current) => [
-                      ...current,
-                      { cityId: '', minutes: '', province: '', canton: '', search: '' },
-                    ])
-                  }
-                  disabled={
-                    !selectedCityId ||
-                    !selectedDestinationCityId ||
-                    (geographicCatalog?.localities.length ?? 0) < 3 ||
-                    stops.length >= 20
-                  }
-                >
-                  Añadir subruta
-                </button>
-                <button
-                  type="submit"
-                  disabled={
-                    isCreatingRoute ||
-                    !cities.length ||
-                    !selectedCityId ||
-                    !selectedDestinationCityId
-                  }
-                >
-                  {isCreatingRoute ? 'Guardando...' : 'Guardar ruta'}
-                </button>
-              </div>
-            </form>
+            <RouteFilters
+              search={routeSearch}
+              group={routeGroupFilter}
+              status={routeStatusFilter}
+              groups={groups}
+              onSearchChange={setRouteSearch}
+              onGroupChange={setRouteGroupFilter}
+              onStatusChange={setRouteStatusFilter}
+            />
             <div className="cooperative-routes__registered">
               <h4>Rutas registradas</h4>
               {routes.length === 0 ? (
                 <p className="cooperative-routes__empty">
                   Aún no se han definido rutas para esta cooperativa.
                 </p>
+              ) : filteredRoutes.length === 0 ? (
+                <p className="cooperative-routes__empty">
+                  Ninguna ruta coincide con los filtros seleccionados.
+                </p>
               ) : (
                 <ul>
-                  {routes.map((route) => {
+                  {filteredRoutes.map((route) => {
                     const hasFares = route.fares.length > 0;
                     const isSelected = selectedRouteId === String(route.id);
                     return (
@@ -958,13 +576,25 @@ export function CooperativeRoutesPage() {
                             <strong>
                               {route.originCity} → {route.destinationCity}
                             </strong>
-                            <small style={{ marginLeft: '0.5rem' }}>
+                            <small>
                               {route.durationMinutes === null
                                 ? 'Duración no configurada'
                                 : `${Math.floor(route.durationMinutes / 60)} h ${route.durationMinutes % 60} min`}
                             </small>
                           </div>
                           <div className="cooperative-routes__registered-actions">
+                            <span
+                              className={`cooperative-routes__badge ${
+                                route.isActive
+                                  ? 'cooperative-routes__badge--success'
+                                  : 'cooperative-routes__badge--muted'
+                              }`}
+                            >
+                              {route.isActive ? 'Activa' : 'Inactiva'}
+                            </span>
+                            <span className="cooperative-routes__badge cooperative-routes__badge--neutral">
+                              {route.busGroupName ?? 'Sin grupo'}
+                            </span>
                             <span
                               className={`cooperative-routes__badge ${
                                 hasFares
@@ -1455,6 +1085,15 @@ export function CooperativeRoutesPage() {
             )}
           </section>
         </>
+      )}
+      {isRouteModalOpen && (
+        <CreateRouteModal
+          groups={groups}
+          catalog={geographicCatalog}
+          defaultGroupId={selectedGroupId || String(groups[0]?.id ?? '')}
+          onClose={handleCloseRouteModal}
+          onCreated={handleRouteCreated}
+        />
       )}
     </section>
   );
