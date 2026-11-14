@@ -1026,3 +1026,85 @@ def test_route_sheet_saves_and_returns_standby_buses(test_environment):
     )
     assert duplicate.status_code == 409
     assert "repitas un bus en descanso" in duplicate.json()["detail"]
+
+
+def test_route_rejects_group_from_another_cooperative(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    with Session(engine) as db:
+        foreign_coop = Cooperative(name="Cooperativa Externa", ruc="1791234567888")
+        db.add(foreign_coop)
+        db.flush()
+        foreign_group = BusGroup(cooperative_id=foreign_coop.id, name="Externo")
+        db.add(foreign_group)
+        db.commit()
+        db.refresh(foreign_group)
+        foreign_group_id = foreign_group.id
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+
+    response = client.post(
+        f"{PLANNING_URL}/routes",
+        json={
+            "busGroupId": foreign_group_id,
+            "originCityId": origin_id,
+            "destinationCityId": destination_id,
+            "durationMinutes": 180,
+            "stops": [],
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 404
+
+
+def test_published_sheet_with_reservations_cannot_change_resting_buses(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    set_rest_buses(client, group_id, 1)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    payload = {
+        "busGroupId": group_id,
+        "serviceDate": "2030-01-07",
+        "assignments": [{"frequencyId": frequency["id"], "busId": bus_ids[0]}],
+        "startingLocations": [{"busId": bus_ids[0], "cityId": origin_id}],
+        "standbyBusIds": [bus_ids[1]],
+        "mode": "automatic",
+    }
+    saved = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert saved.status_code == 200, saved.text
+    published = client.post(
+        f"{PLANNING_URL}/route-sheets/{saved.json()['id']}/publish",
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert published.status_code == 200, published.text
+    with Session(engine) as db:
+        trip = db.query(Trip).filter_by(route_sheet_id=published.json()["id"]).one()
+        db.add(
+            Reservation(
+                trip_id=trip.id,
+                status=ReservationStatus.PENDING_PAYMENT,
+            )
+        )
+        db.commit()
+
+    payload["standbyBusIds"] = []
+    blocked = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert blocked.status_code == 409
