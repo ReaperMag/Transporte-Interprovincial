@@ -9,7 +9,7 @@
 
 .cooperative-routes__eyebrow {
   margin: 0 0 0.35rem;
-  color: #2563eb;
+  color: var(--coop-primary, #0e5a6b);
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -66,8 +66,8 @@
   height: 2rem;
   place-items: center;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
   font-weight: 700;
 }
 
@@ -173,8 +173,9 @@
 
 .cooperative-routes input:focus,
 .cooperative-routes select:focus {
-  border-color: #2563eb;
-  outline: 2px solid rgb(37 99 235 / 20%);
+  border-color: var(--coop-primary, #0e5a6b);
+  outline: 2px solid var(--coop-primary, #0e5a6b);
+  outline-offset: 1px;
 }
 
 .cooperative-routes button {
@@ -182,8 +183,8 @@
   border: 0;
   border-radius: 0.45rem;
   padding: 0.55rem 0.9rem;
-  background: #2563eb;
-  color: #fff;
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
   cursor: pointer;
   font: inherit;
   font-weight: 650;

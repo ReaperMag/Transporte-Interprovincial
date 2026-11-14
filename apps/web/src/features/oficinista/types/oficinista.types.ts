@@ -10,6 +10,8 @@ export interface OficinistaInfo {
   cooperativeId: number;
   cooperativeName: string;
   cooperativeLogoUrl: string | null;
+  cooperativePrimaryColor: string | null;
+  cooperativeSecondaryColor: string | null;
   cooperativeRuc: string;
   cooperativeAddress: string | null;
   cooperativePhone: string | null;

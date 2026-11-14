@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   getAuthenticatedCooperativeProfile,
   updateAuthenticatedCooperativeProfile,
+  uploadAuthenticatedCooperativeLogo,
   type CooperativeProfile,
 } from '../services/cooperative.service';
 import { cleanPhone, emailError, phoneError } from '../../../shared/utils/validation';
@@ -10,7 +12,7 @@ import './CooperativeConfigurationPage.css';
 type EditableProfile = {
   [Field in keyof Omit<CooperativeProfile, 'id' | 'name' | 'ruc'>]: string;
 };
-type NullableEditableProfile = Omit<CooperativeProfile, 'id' | 'name' | 'ruc'>;
+type NullableEditableProfile = Omit<CooperativeProfile, 'id' | 'name' | 'ruc' | 'logoUrl'>;
 
 const emptyProfile: EditableProfile = {
   address: '',
@@ -47,7 +49,6 @@ function toNullableProfile(profile: EditableProfile): NullableEditableProfile {
     address: profile.address.trim() || null,
     phone: profile.phone.trim() || null,
     email: profile.email.trim() || null,
-    logoUrl: profile.logoUrl.trim() || null,
     primaryColor: profile.primaryColor,
     secondaryColor: profile.secondaryColor,
     facebookUrl: profile.facebookUrl.trim() || null,
@@ -58,7 +59,12 @@ function toNullableProfile(profile: EditableProfile): NullableEditableProfile {
   } satisfies NullableEditableProfile;
 }
 
+type CooperativeLayoutContext = {
+  onCooperativeProfileSaved: (profile: CooperativeProfile) => void;
+};
+
 export function CooperativeConfigurationPage() {
+  const { onCooperativeProfileSaved } = useOutletContext<CooperativeLayoutContext>();
   const [identity, setIdentity] = useState<Pick<CooperativeProfile, 'name' | 'ruc'> | null>(null);
   const [profile, setProfile] = useState<EditableProfile>(emptyProfile);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +72,7 @@ export function CooperativeConfigurationPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -121,8 +128,14 @@ export function CooperativeConfigurationPage() {
     setError(null);
 
     try {
+      if (selectedLogo) {
+        await uploadAuthenticatedCooperativeLogo(selectedLogo);
+        setSelectedLogo(null);
+      }
       const saved = await updateAuthenticatedCooperativeProfile(toNullableProfile(profile));
       setProfile(toEditableProfile(saved));
+      onCooperativeProfileSaved(saved);
+      setLogoFailed(false);
       setSuccess('La configuración se guardó correctamente.');
     } catch (saveError) {
       setError(
@@ -217,14 +230,30 @@ export function CooperativeConfigurationPage() {
                     />
                   </label>
                   <label className="cooperative-configuration__field--full">
-                    Logo (URL de imagen HTTPS o HTTP)
+                    Logotipo (PNG o JPG, máximo 5 MB)
                     <input
-                      type="url"
-                      maxLength={500}
-                      placeholder="https://ejemplo.com/logo.png"
-                      value={profile.logoUrl}
-                      onChange={(event) => updateField('logoUrl', event.target.value)}
+                      type="file"
+                      accept="image/png,image/jpeg"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        setError(null);
+                        setSuccess(null);
+                        if (file && !['image/png', 'image/jpeg'].includes(file.type)) {
+                          setError('Selecciona una imagen PNG o JPG.');
+                          event.target.value = '';
+                          setSelectedLogo(null);
+                          return;
+                        }
+                        if (file && file.size > 5 * 1024 * 1024) {
+                          setError('El logotipo no puede superar 5 MB.');
+                          event.target.value = '';
+                          setSelectedLogo(null);
+                          return;
+                        }
+                        setSelectedLogo(file);
+                      }}
                     />
+                    {selectedLogo && <small>Archivo seleccionado: {selectedLogo.name}</small>}
                   </label>
                   <label>
                     Facebook

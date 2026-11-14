@@ -66,13 +66,13 @@
 }
 
 .bus-create-wizard__steps .bus-create-wizard__step--active {
-  color: #1d4ed8;
+  color: var(--coop-primary, #0e5a6b);
 }
 
 .bus-create-wizard__steps .bus-create-wizard__step--active span {
-  border-color: #1d4ed8;
-  background: #1d4ed8;
-  color: #fff;
+  border-color: var(--coop-primary, #0e5a6b);
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
 }
 
 .bus-create-wizard__metadata,
@@ -133,9 +133,9 @@
 }
 
 .bus-create-wizard__actions button:last-child {
-  border-color: #1d4ed8;
-  background: #1d4ed8;
-  color: #fff;
+  border-color: var(--coop-primary, #0e5a6b);
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
 }
 
 .bus-create-wizard__actions button:disabled {

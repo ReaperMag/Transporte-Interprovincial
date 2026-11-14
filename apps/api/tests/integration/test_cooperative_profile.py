@@ -326,3 +326,48 @@ def test_cooperative_profile_rejects_unrelated_or_unauthenticated_accounts(
 
     assert login(client, "pasajero@example.com").status_code == 200
     assert client.get("/api/v1/cooperatives/me/profile").status_code == 403
+
+
+def test_cooperative_logo_upload_and_tenant_isolation(test_environment, tmp_path, monkeypatch):
+    client, engine = test_environment
+    monkeypatch.setattr(settings, "uploads_dir", str(tmp_path))
+    first = create_cooperative_account(engine, name="Cooperativa Logo Uno", email="logo1@example.com")
+    create_cooperative_account(engine, name="Cooperativa Logo Dos", email="logo2@example.com")
+
+    assert login(client, "logo1@example.com").status_code == 200
+    png = b"\x89PNG\r\n\x1a\n" + b"test-logo"
+    response = client.post(
+        "/api/v1/cooperatives/me/profile/logo",
+        files={"logo": ("logo.png", png, "image/png")},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert response.status_code == 200, response.text
+    logo_url = response.json()["logoUrl"]
+    assert logo_url.startswith(f"/api/v1/cooperatives/{first.id}/logo/")
+    assert client.get(logo_url).content == png
+    assert client.get("/api/v1/cooperatives/me/profile").json()["logoUrl"] == logo_url
+
+    assert client.post("/api/v1/auth/logout", headers={"Origin": settings.frontend_origin}).status_code == 204
+    assert client.get(logo_url).status_code == 401
+    assert login(client, "logo2@example.com").status_code == 200
+    assert client.get(logo_url).status_code == 403
+
+
+def test_cooperative_logo_rejects_invalid_files(test_environment, tmp_path, monkeypatch):
+    client, engine = test_environment
+    monkeypatch.setattr(settings, "uploads_dir", str(tmp_path))
+    create_cooperative_account(engine, name="Cooperativa Imagen", email="imagen@example.com")
+    assert login(client, "imagen@example.com").status_code == 200
+
+    for name, content, media_type in [
+        ("bad.png", b"not an actual image", "image/png"),
+        ("bad.pdf", b"%PDF-1.4", "application/pdf"),
+        ("huge.png", b"\x89PNG\r\n\x1a\n" + b"a" * (5 * 1024 * 1024), "image/png"),
+    ]:
+        response = client.post(
+            "/api/v1/cooperatives/me/profile/logo",
+            files={"logo": (name, content, media_type)},
+            headers={"Origin": settings.frontend_origin},
+        )
+        assert response.status_code == 422, response.text
+    assert client.get("/api/v1/cooperatives/me/profile").json()["logoUrl"] is None

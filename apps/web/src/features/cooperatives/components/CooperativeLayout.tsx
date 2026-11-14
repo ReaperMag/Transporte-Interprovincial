@@ -1,22 +1,43 @@
-import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/context/useAuth';
+import { getAuthenticatedCooperativeProfile, type CooperativeProfile } from '../services/cooperative.service';
+import { cooperativeThemeStyle } from '../utils/branding';
+import { InstitutionalSidebar, type SidebarSection } from './InstitutionalSidebar';
 import './CooperativeLayout.css';
 import './CooperativeTheme.css';
 
-const sections = [
-  ['/cooperativa/panel', 'Panel'],
-  ['/cooperativa/buses', 'Buses'],
-  ['/cooperativa/grupos', 'Grupos de buses'],
-  ['/cooperativa/rutas', 'Rutas y frecuencias'],
-  ['/cooperativa/oficinistas', 'Oficinistas'],
-  ['/cooperativa/configuracion', 'Configuración'],
-] as const;
+const sections: readonly SidebarSection[] = [
+  { to: '/cooperativa/panel', label: 'Panel', icon: 'home' },
+  { to: '/cooperativa/buses', label: 'Buses', icon: 'bus' },
+  { to: '/cooperativa/grupos', label: 'Grupos de buses', icon: 'groups' },
+  { to: '/cooperativa/rutas', label: 'Rutas y frecuencias', icon: 'route' },
+  { to: '/cooperativa/oficinistas', label: 'Oficinistas', icon: 'users' },
+  { to: '/cooperativa/configuracion', label: 'Configuración', icon: 'settings' },
+];
 
 export function CooperativeLayout() {
   const navigate = useNavigate();
   const { account, logout } = useAuth();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [cooperativeProfile, setCooperativeProfile] = useState<CooperativeProfile | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getAuthenticatedCooperativeProfile()
+      .then((profile) => {
+        if (active) setCooperativeProfile(profile);
+      })
+      .catch(() => {
+        // If the profile is unavailable, preserve the original sidebar appearance.
+      });
+    return () => { active = false; };
+  }, [account?.accountId]);
+
+  const themeStyle = cooperativeThemeStyle(
+    cooperativeProfile?.primaryColor,
+    cooperativeProfile?.secondaryColor,
+  );
 
   const handleLogout = async () => {
     setLogoutError(null);
@@ -29,26 +50,24 @@ export function CooperativeLayout() {
   };
 
   return (
-    <div className="cooperative-layout">
-      <aside className="cooperative-sidebar">
-        <div className="cooperative-sidebar__brand"><span aria-hidden="true">▰</span><strong>TRANSPORTE<small>Panel de cooperativa</small></strong></div>
-        <p className="cooperative-sidebar__label">Área de trabajo</p>
-        <nav className="cooperative-sidebar__nav" aria-label="Secciones de la cooperativa">
-          {sections.map(([to, label]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `cooperative-sidebar__link${isActive ? ' cooperative-sidebar__link--active' : ''}`}>
-              <span aria-hidden="true">{label === 'Panel' ? '⌂' : label === 'Configuración' ? '⚙' : label === 'Oficinistas' ? '♙' : '▦'}</span>{label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="cooperative-sidebar__account"><span>AE</span><strong>{account?.email ?? 'Cooperativa'}<small>Cooperativa</small></strong></div>
-      </aside>
+    <div className="cooperative-layout" style={themeStyle}>
+      <InstitutionalSidebar
+        cooperativeName={cooperativeProfile?.name ?? 'TRANSPORTE'}
+        logoUrl={cooperativeProfile?.logoUrl}
+        panelLabel="Panel de cooperativa"
+        navigationLabel="Secciones de la cooperativa"
+        sections={sections}
+        accountEmail={account?.email}
+        accountRole="Cooperativa"
+        fallbackInitials="CO"
+      />
       <div className="cooperative-main">
         <header className="cooperative-header">
           <div className="cooperative-header__breadcrumb"><span>Organización</span><b>/</b><strong>Panel de trabajo</strong></div>
           <button className="cooperative-header__logout" onClick={() => void handleLogout()} type="button">Cerrar sesión</button>
         </header>
         {logoutError && <p className="cooperative-layout__error" role="alert">{logoutError}</p>}
-        <main className="cooperative-layout__content"><Outlet /></main>
+        <main className="cooperative-layout__content"><Outlet context={{ onCooperativeProfileSaved: setCooperativeProfile }} /></main>
       </div>
     </div>
   );
