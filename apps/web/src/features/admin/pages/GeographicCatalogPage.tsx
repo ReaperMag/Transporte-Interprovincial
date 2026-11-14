@@ -32,7 +32,10 @@ export function GeographicCatalogPage() {
   const [search, setSearch] = useState('');
   const [cantonName, setCantonName] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('');
+  const [provinceFilter, setProvinceFilter] = useState('');
+  const [isAddCantonOpen, setIsAddCantonOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,21 +65,20 @@ export function GeographicCatalogPage() {
     const query = normalizeSearch(search);
     return sortCantons(catalog.cantons, catalog.provinces).filter(
       (canton) =>
-        !query ||
-        normalizeSearch(canton.name).includes(query) ||
-        normalizeSearch(canton.province).includes(query),
+        (!provinceFilter || canton.province === provinceFilter) &&
+        (!query || normalizeSearch(canton.name).includes(query)),
     );
-  }, [catalog, search]);
+  }, [catalog, provinceFilter, search]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedProvince) {
-      setError('Selecciona una provincia para registrar el cantón.');
+      setFormError('Selecciona una provincia para registrar el cantón.');
       return;
     }
 
     setSaving(true);
-    setError(null);
+    setFormError(null);
     setSuccess(null);
     try {
       const canton = await createCanton({
@@ -92,14 +94,22 @@ export function GeographicCatalogPage() {
           : current,
       );
       setCantonName('');
+      setIsAddCantonOpen(false);
       setSuccess(`${canton.name} se agregó a la provincia ${canton.province}.`);
     } catch (requestError: unknown) {
-      setError(
+      setFormError(
         requestError instanceof Error ? requestError.message : 'No se pudo registrar el cantón.',
       );
     } finally {
       setSaving(false);
     }
+  };
+
+  const closeAddCantonDialog = () => {
+    if (saving) return;
+    setIsAddCantonOpen(false);
+    setCantonName('');
+    setFormError(null);
   };
 
   return (
@@ -170,74 +180,66 @@ export function GeographicCatalogPage() {
         </p>
       )}
 
-      <section className="geographic-catalog__panel" aria-labelledby="geographic-create-title">
-        <div className="geographic-catalog__panel-heading">
-          <span className="geographic-catalog__panel-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 5v14m-7-7h14" />
-            </svg>
-          </span>
-          <div>
-            <h2 id="geographic-create-title">Agregar un cantón</h2>
-            <p>Selecciona una de las provincias existentes para asociarlo correctamente.</p>
-          </div>
-        </div>
-
-        <form className="geographic-catalog__form" onSubmit={(event) => void handleSubmit(event)}>
-          <label>
-            <span>Provincia</span>
-            <select
-              disabled={loading || saving || !catalog?.provinces.length}
-              onChange={(event) => setSelectedProvince(event.target.value)}
-              required
-              value={selectedProvince}
-            >
-              {catalog?.provinces.map((province) => (
-                <option key={province} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Nombre del cantón</span>
-            <input
-              autoComplete="off"
-              maxLength={100}
-              onChange={(event) => {
-                setCantonName(event.target.value);
-                setError(null);
-                setSuccess(null);
-              }}
-              placeholder="Ej.: Nuevo cantón"
-              required
-              value={cantonName}
-            />
-          </label>
-          <button disabled={loading || saving || !catalog} type="submit">
-            {saving ? 'Guardando...' : 'Agregar cantón'}
-          </button>
-        </form>
-        <p className="geographic-catalog__form-hint">
-          El cantón quedará disponible para seleccionarlo al planificar rutas.
-        </p>
-      </section>
-
       <section className="geographic-catalog__panel" aria-labelledby="geographic-list-title">
         <header className="geographic-catalog__list-header">
-          <div>
-            <h2 id="geographic-list-title">Cantones del Ecuador</h2>
-            <p>Busca por nombre de cantón o provincia.</p>
+          <div className="geographic-catalog__list-heading">
+            <div className="geographic-catalog__list-title">
+              <span className="geographic-catalog__section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+                  <circle cx="12" cy="10" r="2.5" />
+                </svg>
+              </span>
+              <div>
+                <h2 id="geographic-list-title">Cantones registrados</h2>
+                <p>Filtra por provincia o busca un cantón por nombre.</p>
+              </div>
+            </div>
+            <button
+              className="geographic-catalog__add-button"
+              disabled={loading || !catalog}
+              onClick={() => {
+                setFormError(null);
+                setSuccess(null);
+                setSelectedProvince(provinceFilter || catalog?.provinces[0] || '');
+                setIsAddCantonOpen(true);
+              }}
+              type="button"
+            >
+              <span aria-hidden="true">+</span>
+              Agregar cantón
+            </button>
           </div>
-          <label className="geographic-catalog__search">
-            <span className="geographic-catalog__visually-hidden">Buscar provincia o cantón</span>
-            <input
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar provincia o cantón"
-              type="search"
-              value={search}
-            />
-          </label>
+          <div
+            className="geographic-catalog__filters"
+            role="group"
+            aria-label="Filtros de cantones"
+          >
+            <label className="geographic-catalog__search">
+              <span>Buscar por nombre del cantón</span>
+              <input
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Nombre del cantón"
+                type="search"
+                value={search}
+              />
+            </label>
+            <label>
+              <span>Provincia</span>
+              <select
+                disabled={loading || !catalog}
+                onChange={(event) => setProvinceFilter(event.target.value)}
+                value={provinceFilter}
+              >
+                <option value="">Todas las provincias</option>
+                {catalog?.provinces.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </header>
 
         <div className="geographic-catalog__table-wrap">
@@ -282,6 +284,90 @@ export function GeographicCatalogPage() {
           </p>
         )}
       </section>
+
+      {isAddCantonOpen && (
+        <div className="geographic-catalog__backdrop">
+          <section
+            aria-labelledby="geographic-dialog-title"
+            aria-modal="true"
+            className="geographic-catalog__dialog"
+            role="dialog"
+          >
+            <header className="geographic-catalog__dialog-header">
+              <div>
+                <span>Administración territorial</span>
+                <h2 id="geographic-dialog-title">Agregar cantón</h2>
+              </div>
+              <button
+                aria-label="Cerrar"
+                className="geographic-catalog__dialog-close"
+                disabled={saving}
+                onClick={closeAddCantonDialog}
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+
+            <form
+              className="geographic-catalog__dialog-form"
+              onSubmit={(event) => void handleSubmit(event)}
+            >
+              <label>
+                <span>Provincia</span>
+                <select
+                  autoFocus
+                  disabled={saving || !catalog?.provinces.length}
+                  onChange={(event) => setSelectedProvince(event.target.value)}
+                  required
+                  value={selectedProvince}
+                >
+                  {catalog?.provinces.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Nombre del cantón</span>
+                <input
+                  autoComplete="off"
+                  maxLength={100}
+                  onChange={(event) => {
+                    setCantonName(event.target.value);
+                    setFormError(null);
+                  }}
+                  placeholder="Ej.: Nuevo cantón"
+                  required
+                  value={cantonName}
+                />
+              </label>
+              <p className="geographic-catalog__dialog-hint">
+                El cantón quedará disponible para seleccionarlo al planificar rutas.
+              </p>
+              {formError && (
+                <p className="geographic-catalog__dialog-error" role="alert">
+                  {formError}
+                </p>
+              )}
+              <footer className="geographic-catalog__dialog-actions">
+                <button
+                  className="geographic-catalog__dialog-cancel"
+                  disabled={saving}
+                  onClick={closeAddCantonDialog}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+                <button className="geographic-catalog__dialog-save" disabled={saving} type="submit">
+                  {saving ? 'Guardando...' : 'Agregar cantón'}
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
     </section>
   );
 }
