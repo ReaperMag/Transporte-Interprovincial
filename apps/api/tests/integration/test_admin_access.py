@@ -1,9 +1,11 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.bootstrap import ensure_initial_admin
 from app.core.security import hash_password, verify_password
+from app.modules.cooperatives import service as cooperative_service
 from app.modules.accounts.models import Account, AccountType
 from app.modules.accounts.repository import create_account, get_account_by_email
 from app.modules.cooperatives.models import Cooperative
@@ -167,12 +169,12 @@ def test_super_admin_can_create_and_update_cooperatives(test_environment):
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("email", "contacto@cooperativa.ec"),
+        ("email", "correo-invalido"),
         ("logoUrl", "https://example.com/logo.png"),
         ("isActive", False),
     ],
 )
-def test_admin_create_rejects_contact_email_logo_and_status(
+def test_admin_create_rejects_invalid_email_and_unsupported_fields(
     test_environment,
     field,
     value,
