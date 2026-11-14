@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, union
 from sqlalchemy.orm import Session, aliased
 
 from app.modules.buses.models import Bus, TemplateSeat
@@ -11,7 +11,7 @@ from app.modules.reservations.models import (
     ReservationSeat,
     ReservationStatus,
 )
-from app.modules.routes.models import City, Fare, Route
+from app.modules.routes.models import City, Fare, Route, RouteStop
 from app.modules.schedules.models import (
     Frequency,
     RouteSheet,
@@ -41,9 +41,22 @@ def get_cities(db: Session) -> list[CityOption]:
     Obtiene las ciudades registradas para utilizarlas
     en los filtros de búsqueda.
     """
-    statement = select(City).order_by(
-        City.name,
-        City.province,
+    route_city_ids = union(
+        select(Route.origin_city_id.label("city_id")).where(Route.is_active.is_(True)),
+        select(Route.destination_city_id.label("city_id")).where(Route.is_active.is_(True)),
+        select(RouteStop.city_id.label("city_id"))
+        .join(Route, RouteStop.route_id == Route.id)
+        .where(Route.is_active.is_(True)),
+    )
+    statement = (
+        select(City)
+        .where(
+            or_(
+                and_(City.is_catalogued.is_(True), City.canton != ""),
+                City.id.in_(route_city_ids),
+            )
+        )
+        .order_by(City.name, City.canton, City.province)
     )
 
     cities = db.scalars(statement).all()
@@ -53,6 +66,7 @@ def get_cities(db: Session) -> list[CityOption]:
             id=city.id,
             name=city.name,
             province=city.province,
+            canton=city.canton or None,
         )
         for city in cities
     ]
@@ -78,7 +92,12 @@ def get_cities_for_cooperative(db: Session, cooperative_id: int) -> list[CityOpt
     if not route_city_ids:
         return []
     return [
-        CityOption(id=city.id, name=city.name, province=city.province)
+        CityOption(
+            id=city.id,
+            name=city.name,
+            province=city.province,
+            canton=city.canton or None,
+        )
         for city in db.scalars(
             select(City)
             .where(City.id.in_(route_city_ids))

@@ -1,5 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  HISTORICAL_LOCATION_GROUP,
+  normalizeGeographicSearch,
+  PassengerLocationFilter,
+  type PassengerCanton,
+  type SearchLocation,
+} from '../components/PassengerLocationFilter';
 import {
   getTripCities,
   searchPassengerTrips,
@@ -85,6 +92,12 @@ export function PassengerTripSearchPage() {
   const [cities, setCities] = useState<TripCity[]>([]);
   const [originCityId, setOriginCityId] = useState('');
   const [destinationCityId, setDestinationCityId] = useState('');
+  const [originProvince, setOriginProvince] = useState('');
+  const [originCanton, setOriginCanton] = useState('');
+  const [originSearch, setOriginSearch] = useState('');
+  const [destinationProvince, setDestinationProvince] = useState('');
+  const [destinationCanton, setDestinationCanton] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
   const [travelDate, setTravelDate] = useState('');
 
   const [trips, setTrips] = useState<TripSearchResult[]>([]);
@@ -96,6 +109,43 @@ export function PassengerTripSearchPage() {
   const [isFiltered, setIsFiltered] = useState(false);
 
   const today = getTodayInEcuador();
+  const provinces = useMemo(
+    () =>
+      [...new Set(cities.map((city) => city.province))].sort((a, b) => a.localeCompare(b, 'es')),
+    [cities],
+  );
+  const cantons = useMemo(() => {
+    const options = new Map<string, PassengerCanton>();
+    for (const city of cities) {
+      if (!city.canton) continue;
+      const key = `${city.province}:${city.canton}`;
+      options.set(key, { id: key, name: city.canton, province: city.province });
+    }
+    return [...options.values()].sort(
+      (left, right) =>
+        left.province.localeCompare(right.province, 'es') ||
+        left.name.localeCompare(right.name, 'es'),
+    );
+  }, [cities]);
+  const selectableCities = useMemo(() => {
+    const knownCantons = new Set(
+      cantons.map(
+        (canton) =>
+          `${normalizeGeographicSearch(canton.province)}:${normalizeGeographicSearch(canton.name)}`,
+      ),
+    );
+    return cities.map((city) => ({
+      ...city,
+      parentCanton: city.canton
+        ? city.canton
+        : knownCantons.has(
+              `${normalizeGeographicSearch(city.province)}:${normalizeGeographicSearch(city.name)}`,
+            )
+          ? city.name
+          : HISTORICAL_LOCATION_GROUP,
+      isHistorical: !city.canton,
+    }));
+  }, [cantons, cities]);
 
   async function loadTrips(filters: TripSearchParams = {}) {
     setLoadingTrips(true);
@@ -195,6 +245,12 @@ export function PassengerTripSearchPage() {
   function handleClearFilters() {
     setOriginCityId('');
     setDestinationCityId('');
+    setOriginProvince('');
+    setOriginCanton('');
+    setOriginSearch('');
+    setDestinationProvince('');
+    setDestinationCanton('');
+    setDestinationSearch('');
     setTravelDate('');
     void loadTrips();
   }
@@ -205,53 +261,79 @@ export function PassengerTripSearchPage() {
         <p className="passenger-trip-search__eyebrow">PLANIFICA TU VIAJE</p>
         <h1>Buscar viajes</h1>
         <p>
-          Estas son todas las salidas disponibles. Usa los filtros de origen, destino o fecha para
-          encontrar solo las que necesitas.
+          Estas son todas las salidas disponibles. Filtra por localidad de origen, destino o fecha
+          para encontrar solo las que necesitas.
         </p>
       </header>
 
       <form className="passenger-trip-search__form" onSubmit={(event) => void handleSearch(event)}>
         <div className="passenger-trip-search__fields">
-          <label className="passenger-trip-search__field">
-            <span>Ciudad de origen</span>
-            <select
+          <div className="passenger-trip-search__location-grid">
+            <PassengerLocationFilter
+              classPrefix="passenger-trip-search"
+              label="Origen"
+              provinces={provinces}
+              cantons={cantons}
+              locations={selectableCities}
+              province={originProvince}
+              canton={originCanton}
+              search={originSearch}
               value={originCityId}
-              onChange={(event) => {
-                const value = event.target.value;
-                setOriginCityId(value);
-
-                if (value === destinationCityId) {
-                  setDestinationCityId('');
-                }
+              excludedCityId={destinationCityId}
+              disabled={loadingCities || loadingTrips}
+              onProvinceChange={(value) => {
+                setOriginProvince(value);
+                setOriginCanton('');
+                setOriginSearch('');
+                setOriginCityId('');
               }}
-              disabled={loadingCities || loadingTrips}
-            >
-              <option value="">Todos los orígenes</option>
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name} - {city.province}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="passenger-trip-search__field">
-            <span>Ciudad de destino</span>
-            <select
+              onCantonChange={(value) => {
+                setOriginCanton(value);
+                setOriginSearch('');
+                setOriginCityId('');
+              }}
+              onSearchChange={(value) => {
+                setOriginSearch(value);
+                setOriginCityId('');
+              }}
+              onValueChange={(value) => {
+                setOriginCityId(value);
+                if (value && value === destinationCityId) setDestinationCityId('');
+              }}
+            />
+            <PassengerLocationFilter
+              classPrefix="passenger-trip-search"
+              label="Destino"
+              provinces={provinces}
+              cantons={cantons}
+              locations={selectableCities}
+              province={destinationProvince}
+              canton={destinationCanton}
+              search={destinationSearch}
               value={destinationCityId}
-              onChange={(event) => setDestinationCityId(event.target.value)}
+              excludedCityId={originCityId}
               disabled={loadingCities || loadingTrips}
-            >
-              <option value="">Todos los destinos</option>
-              {cities
-                .filter((city) => String(city.id) !== originCityId)
-                .map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.name} - {city.province}
-                  </option>
-                ))}
-            </select>
-          </label>
+              onProvinceChange={(value) => {
+                setDestinationProvince(value);
+                setDestinationCanton('');
+                setDestinationSearch('');
+                setDestinationCityId('');
+              }}
+              onCantonChange={(value) => {
+                setDestinationCanton(value);
+                setDestinationSearch('');
+                setDestinationCityId('');
+              }}
+              onSearchChange={(value) => {
+                setDestinationSearch(value);
+                setDestinationCityId('');
+              }}
+              onValueChange={(value) => {
+                setDestinationCityId(value);
+                if (value && value === originCityId) setOriginCityId('');
+              }}
+            />
+          </div>
 
           <label className="passenger-trip-search__field">
             <span>Fecha de viaje</span>

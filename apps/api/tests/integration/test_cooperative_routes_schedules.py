@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -11,7 +11,8 @@ from app.modules.cooperatives import service
 from app.modules.cooperatives.models import Cooperative
 from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE, ensure_default_roles
 from app.modules.reservations.models import Reservation, ReservationStatus
-from app.modules.routes.models import Fare
+from app.modules.routes.geographic_service import ensure_geographic_catalog
+from app.modules.routes.models import City, Fare
 from app.modules.trips.models import Trip
 
 
@@ -81,13 +82,72 @@ def create_group_and_buses(engine, cooperative_id: int) -> tuple[int, list[int]]
 
 
 def create_city(client, name: str, province: str) -> int:
+    with client.app.state.session_factory() as db:
+        ensure_geographic_catalog(db)
+        city = db.scalar(
+            select(City).where(
+                City.name == name,
+                City.province == province,
+                City.canton != "",
+                City.is_catalogued.is_(True),
+            )
+        )
+        assert city is not None, f"Missing preloaded locality: {name}, {province}"
+        return city.id
+
+
+def test_cooperative_cannot_create_a_catalog_location(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(engine)
+    assert login(client).status_code == 200
+
     response = client.post(
         f"{PLANNING_URL}/cities",
-        json={"name": name, "province": province},
+        json={"name": "Localidad inventada", "province": "Pichincha"},
         headers={"Origin": settings.frontend_origin},
     )
-    assert response.status_code == 201
-    return response.json()["id"]
+
+    assert response.status_code == 403
+    locality_response = client.post(
+        "/api/v1/admin/geographic-catalog/localities",
+        json={
+            "name": "Localidad inventada",
+            "province": "Pichincha",
+            "canton": "Quito",
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert locality_response.status_code == 403
+
+
+def test_routes_can_only_use_catalogued_localities(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    destination_id = create_city(client, "Ambato", "Tungurahua")
+    with client.app.state.session_factory() as db:
+        canton = db.scalar(
+            select(City).where(
+                City.name == "Quito",
+                City.province == "Pichincha",
+                City.canton == "",
+            )
+        )
+        assert canton is not None
+        origin_id = canton.id
+
+    response = client.post(
+        f"{PLANNING_URL}/routes",
+        json={
+            "originCityId": origin_id,
+            "destinationCityId": destination_id,
+            "durationMinutes": 180,
+            "stops": [],
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 404
 
 
 def create_route(
