@@ -146,6 +146,12 @@ def create_cooperative_bus(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="La plantilla no existe o no pertenece a tu cooperativa.",
         ) from exc
+    except bus_service.BusSeatTypeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El tipo de asiento no existe o no pertenece a tu cooperativa.",
+        ) from exc
+
     return _bus_read(bus)
 
 
@@ -196,6 +202,12 @@ def create_cooperative_bus_with_photos(
             status_code=404,
             detail="La plantilla no existe o no pertenece a tu cooperativa.",
         ) from exc
+    except bus_service.BusSeatTypeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El tipo de asiento no existe o no pertenece a tu cooperativa.",
+        ) from exc
+
     finally:
         if bus is None:
             _remove_bus_photo_files(saved_paths)

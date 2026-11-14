@@ -152,7 +152,15 @@ class BusTemplateSeatCreate(BusGroupSchema):
     floor: int = Field(ge=1, le=2)
     row: int = Field(ge=1, le=50)
     column: int = Field(ge=1, le=10)
+
+    # Tipo anterior, conservado por compatibilidad.
     seat_type: SeatType = SeatType.NORMAL
+
+    # Nuevo tipo configurable del catálogo.
+    seat_type_id: int | None = Field(
+        default=None,
+        gt=0,
+    )
 
 
 class BusTemplateCreate(BusGroupSchema):
@@ -305,13 +313,20 @@ class BusUpdate(BusGroupSchema):
         return validate_digits(normalized)
 
 
+
 class BusTemplateSeatRead(BusGroupSchema):
     id: int
     number: int
     floor: int
     row: int
     column: int
+
+    # Tipo anterior, conservado por compatibilidad.
     seat_type: SeatType
+
+    # Tipo configurable asociado al catálogo.
+    seat_type_id: int | None = None
+
 
 
 class BusTemplateRead(BusGroupSchema):

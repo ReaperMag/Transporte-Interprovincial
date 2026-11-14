@@ -134,3 +134,38 @@ def update_cooperative_seat_type(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
+
+
+@router.delete(
+    "/{seat_type_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_cooperative_seat_type(
+    seat_type_id: int,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_admin),
+    _: None = Depends(validate_request_origin),
+) -> None:
+    cooperative_id = _require_cooperative_id(account)
+
+    try:
+        seat_type_service.delete_seat_type(
+            db,
+            cooperative_id,
+            seat_type_id,
+        )
+
+    except seat_type_service.SeatTypeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El tipo de asiento no existe.",
+        ) from exc
+
+    except seat_type_service.SeatTypeInUseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "No se puede eliminar el tipo de asiento "
+                "porque está siendo utilizado en una plantilla."
+            ),
+        ) from exc

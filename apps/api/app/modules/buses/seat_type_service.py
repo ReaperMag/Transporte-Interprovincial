@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.modules.buses.models import CooperativeSeatType
+from app.modules.buses.models import CooperativeSeatType, TemplateSeat
 
 
 class DuplicateSeatTypeNameError(Exception):
@@ -12,6 +12,10 @@ class DuplicateSeatTypeNameError(Exception):
 
 
 class SeatTypeNotFoundError(Exception):
+    pass
+
+
+class SeatTypeInUseError(Exception):
     pass
 
 
@@ -163,3 +167,38 @@ def update_seat_type(
 
     db.refresh(seat_type)
     return seat_type
+
+
+def delete_seat_type(
+    db: Session,
+    cooperative_id: int,
+    seat_type_id: int,
+) -> None:
+    seat_type = get_seat_type(
+        db,
+        cooperative_id,
+        seat_type_id,
+    )
+
+    if seat_type is None:
+        raise SeatTypeNotFoundError
+
+    # Comprobar si el tipo está asignado a una plantilla.
+    seat_in_use = db.scalar(
+        select(TemplateSeat.id)
+        .where(TemplateSeat.seat_type_id == seat_type_id)
+        .limit(1)
+    )
+
+    if seat_in_use is not None:
+        raise SeatTypeInUseError
+
+    db.delete(seat_type)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+
+        # La base de datos también protege la relación.
+        raise SeatTypeInUseError from None
