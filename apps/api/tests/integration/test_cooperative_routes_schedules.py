@@ -122,8 +122,9 @@ def test_cooperative_cannot_create_a_catalog_location(test_environment):
 
 def test_routes_can_only_use_catalogued_localities(test_environment):
     client, engine = test_environment
-    create_cooperative_account(engine)
+    cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
     destination_id = create_city(client, "Ambato", "Tungurahua")
     with client.app.state.session_factory() as db:
         canton = db.scalar(
@@ -139,6 +140,7 @@ def test_routes_can_only_use_catalogued_localities(test_environment):
     response = client.post(
         f"{PLANNING_URL}/routes",
         json={
+            "busGroupId": group_id,
             "originCityId": origin_id,
             "destinationCityId": destination_id,
             "durationMinutes": 180,
@@ -155,6 +157,7 @@ def create_route(
     origin_id: int,
     destination_id: int,
     *,
+    group_id: int,
     duration: int,
     stops=None,
     fares=None,
@@ -162,6 +165,7 @@ def create_route(
     response = client.post(
         f"{PLANNING_URL}/routes",
         json={
+            "busGroupId": group_id,
             "originCityId": origin_id,
             "destinationCityId": destination_id,
             "durationMinutes": duration,
@@ -225,12 +229,15 @@ def test_cooperative_can_create_route_with_ordered_stops_and_group_frequency(tes
         client,
         ambato_id,
         quito_id,
+        group_id=group_id,
         duration=180,
         stops=[{"cityId": latacunga_id, "minutesFromOrigin": 65}],
     )
     frequency = create_frequency(client, route["id"], group_id, "08:00")
 
     assert route["routeType"] == "with_stops"
+    assert route["busGroupId"] == group_id
+    assert route["busGroupName"] == "Interprovincial"
     assert route["stops"][0]["cityName"] == "Latacunga"
     assert frequency["busGroupId"] == group_id
     assert frequency["routeName"] == "Ambato - Quito"
@@ -244,7 +251,7 @@ def test_published_route_sheet_frequency_appears_in_passenger_trip_search(test_e
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
-    route = create_route(client, origin_id, destination_id, duration=180)
+    route = create_route(client, origin_id, destination_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     service_date = date.today() + timedelta(days=1)
 
@@ -342,7 +349,7 @@ def test_route_frequencies_must_share_one_bus_group(test_environment):
 
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
-    route = create_route(client, origin_id, destination_id, duration=180)
+    route = create_route(client, origin_id, destination_id, group_id=group_id, duration=180)
     create_frequency(client, route["id"], group_id, "08:00")
 
     response = client.post(
@@ -367,7 +374,7 @@ def test_route_without_full_fares_cannot_be_assigned_to_a_sheet(test_environment
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
-    route = create_route(client, origin_id, destination_id, duration=180)
+    route = create_route(client, origin_id, destination_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     with Session(engine) as db:
         db.execute(delete(Fare).where(Fare.route_id == route["id"]))
@@ -392,6 +399,7 @@ def test_cooperative_can_set_and_update_route_fares(test_environment):
     client, engine = test_environment
     cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
     fares = [
@@ -403,6 +411,7 @@ def test_cooperative_can_set_and_update_route_fares(test_environment):
         client,
         origin_id,
         destination_id,
+        group_id=group_id,
         duration=180,
         fares=fares,
     )
@@ -454,12 +463,14 @@ def test_cooperative_can_set_and_update_route_fares(test_environment):
 
 def test_route_rejects_subroutes_out_of_order(test_environment):
     client, engine = test_environment
-    create_cooperative_account(engine)
+    cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
 
     response = client.post(
         f"{PLANNING_URL}/routes",
         json={
+            "busGroupId": group_id,
             "originCityId": 1,
             "destinationCityId": 2,
             "durationMinutes": 180,
@@ -481,8 +492,12 @@ def test_route_sheet_rejects_route_conflict_and_allows_replacement_bus(test_envi
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    outbound = create_route(client, ambato_id, quito_id, duration=240)
-    return_route = create_route(client, quito_id, ambato_id, duration=240)
+    outbound = create_route(
+        client, ambato_id, quito_id, group_id=group_id, duration=240
+    )
+    return_route = create_route(
+        client, quito_id, ambato_id, group_id=group_id, duration=240
+    )
     outbound_frequency = create_frequency(client, outbound["id"], group_id, "08:00")
     return_frequency = create_frequency(client, return_route["id"], group_id, "11:00")
     service_date = "2030-01-01"
@@ -554,7 +569,7 @@ def test_route_sheet_requires_correct_starting_city_and_disallows_edit_after_pub
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    route = create_route(client, ambato_id, quito_id, duration=180)
+    route = create_route(client, ambato_id, quito_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
 
     invalid_location = client.put(
@@ -578,7 +593,7 @@ def test_draft_route_sheet_can_replace_a_bus(test_environment):
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    route = create_route(client, ambato_id, quito_id, duration=180)
+    route = create_route(client, ambato_id, quito_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     payload = {
         "busGroupId": group_id,
@@ -614,7 +629,7 @@ def test_published_route_sheet_allows_replacement_only_without_reservations(test
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    route = create_route(client, ambato_id, quito_id, duration=180)
+    route = create_route(client, ambato_id, quito_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     service_date = (date.today() + timedelta(days=365)).isoformat()
     payload = {
@@ -678,8 +693,9 @@ def test_cooperative_sets_route_fares_per_segment_and_seat_type(test_environment
     from decimal import Decimal
 
     client, engine = test_environment
-    create_cooperative_account(engine)
+    cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
 
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     latacunga_id = create_city(client, "Latacunga", "Cotopaxi")
@@ -688,6 +704,7 @@ def test_cooperative_sets_route_fares_per_segment_and_seat_type(test_environment
         client,
         ambato_id,
         quito_id,
+        group_id=group_id,
         duration=180,
         stops=[{"cityId": latacunga_id, "minutesFromOrigin": 65}],
         fares=[],

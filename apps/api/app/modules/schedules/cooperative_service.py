@@ -160,6 +160,8 @@ def create_frequency(
         raise RouteNotSchedulableError
     if not _has_full_route_fares(db, route):
         raise RouteFareMissingError
+    if route.bus_group_id is not None and route.bus_group_id != group.id:
+        raise RouteAssignedToAnotherGroupError
 
     existing_group_ids = set(
         db.scalars(

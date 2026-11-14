@@ -93,6 +93,11 @@ def add_route(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Una ubicación seleccionada no existe o no está habilitada en el catálogo.",
         ) from exc
+    except cooperative_service.BusGroupNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El grupo de buses no existe en tu cooperativa.",
+        ) from exc
 
 
 @router.put(

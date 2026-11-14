@@ -74,6 +74,7 @@ class RouteStopRead(RouteSchema):
 
 
 class CooperativeRouteCreate(RouteSchema):
+    bus_group_id: int = Field(gt=0)
     origin_city_id: int = Field(gt=0)
     destination_city_id: int = Field(gt=0)
     duration_minutes: int = Field(ge=10, le=1440)
@@ -138,6 +139,8 @@ class FareRead(RouteSchema):
 
 class CooperativeRouteRead(RouteSchema):
     id: int
+    bus_group_id: int | None
+    bus_group_name: str | None
     origin_city_id: int
     origin_city: str
     origin_province: str
