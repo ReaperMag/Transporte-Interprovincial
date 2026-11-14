@@ -1,6 +1,14 @@
 import enum
+from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.shared.base_model import BaseModel, str_enum
@@ -10,6 +18,52 @@ from app.shared.tenant_model import TenantModel
 class SeatType(enum.StrEnum):
     NORMAL = "normal"
     VIP = "vip"
+
+
+class CooperativeSeatType(TenantModel):
+    """Tipo de asiento configurable por cada cooperativa."""
+
+    __tablename__ = "cooperative_seat_types"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "cooperative_id",
+            "normalized_name",
+            name="uq_cooperative_seat_types_name",
+        ),
+        CheckConstraint(
+            "percentage >= 0",
+            name="ck_cooperative_seat_types_percentage",
+        ),
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    normalized_name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    percentage: Mapped[Decimal] = mapped_column(
+        Numeric(7, 2),
+        nullable=False,
+        default=Decimal("0.00"),
+    )
+
+    @validates("name")
+    def normalize_name(self, _key: str, value: str) -> str:
+        normalized = " ".join(value.split())
+
+        if not normalized:
+            raise ValueError(
+                "El nombre del tipo de asiento es obligatorio."
+            )
+
+        self.normalized_name = normalized.casefold()
+        return normalized
 
 
 class BusOrigin(enum.StrEnum):
@@ -51,6 +105,13 @@ class TemplateSeat(BaseModel):
     row: Mapped[int]
     column: Mapped[int]
     seat_type: Mapped[SeatType] = mapped_column(str_enum(SeatType), default=SeatType.NORMAL)
+    seat_type_id: Mapped[int | None] = mapped_column(
+    ForeignKey(
+        "cooperative_seat_types.id",
+        ondelete="RESTRICT",
+    ),
+    nullable=True,
+)
 
     template: Mapped[BusTemplate] = relationship(back_populates="seats")
 

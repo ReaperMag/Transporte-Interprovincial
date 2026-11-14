@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.modules.buses import repository
+from app.modules.buses import repository, seat_type_service
 from app.modules.buses.models import Bus, BusPhoto, BusStatus, BusTemplate, TemplateSeat
 
 
@@ -20,6 +20,8 @@ class BusNotFoundError(Exception):
 class BusGroupNotFoundError(Exception):
     pass
 class BusTemplateNotFoundError(Exception):
+    pass
+class BusSeatTypeNotFoundError(Exception):
     pass
 
 class BusInUseError(Exception):
@@ -94,10 +96,27 @@ def create_bus(
     if (template_id is None) == (template is None):
         raise ValueError("Debe proporcionarse exactamente una plantilla.")
     _validate_group(db, cooperative_id, group_id)
+
     if template_id is not None:
         _validate_template(db, cooperative_id, template_id)
+
+    if template is not None:
+        for seat in template["seats"]:
+            seat_type_id = seat.get("seat_type_id")
+
+            if seat_type_id is not None:
+                seat_type = seat_type_service.get_seat_type(
+                    db,
+                    cooperative_id,
+                    int(seat_type_id),
+                )
+
+                if seat_type is None:
+                    raise BusSeatTypeNotFoundError
+
     if _number_exists(db, cooperative_id, number):
         raise DuplicateBusNumberError
+
     if _plate_exists(db, plate):
         raise DuplicateBusPlateError
 
@@ -123,8 +142,10 @@ def create_bus(
                         row=seat["row"],
                         column=seat["column"],
                         seat_type=seat["seat_type"],
+                        seat_type_id=seat.get("seat_type_id"),
                     )
                 )
+
 
         bus = Bus(
             cooperative_id=cooperative_id,

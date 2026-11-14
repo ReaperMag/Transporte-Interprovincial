@@ -7,7 +7,9 @@ export interface TemplateSeat {
   row: number;
   column: number;
   seatType: SeatType;
+  seatTypeId?: number | null;
 }
+
 
 export interface BusTemplate {
   id: string;

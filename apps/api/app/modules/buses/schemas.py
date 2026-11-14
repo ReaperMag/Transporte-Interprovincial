@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -81,12 +82,85 @@ BusPlate = Annotated[str, StringConstraints(min_length=3, max_length=10)]
 BusNumber = Annotated[str, StringConstraints(min_length=1, max_length=10)]
 
 
+# =====================================================
+# CATÁLOGO DE TIPOS DE ASIENTO POR COOPERATIVA
+# Issue #54 - Integrante 3
+# =====================================================
+
+SeatTypeName = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=100),
+]
+
+
+class CooperativeSeatTypeCreate(BusGroupSchema):
+    name: SeatTypeName
+    percentage: Decimal = Field(
+        ge=0,
+        max_digits=7,
+        decimal_places=2,
+    )
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+
+        if not normalized:
+            raise ValueError(
+                "El nombre del tipo de asiento es obligatorio."
+            )
+
+        return normalized
+
+
+class CooperativeSeatTypeUpdate(BusGroupSchema):
+    name: SeatTypeName | None = None
+    percentage: Decimal | None = Field(
+        default=None,
+        ge=0,
+        max_digits=7,
+        decimal_places=2,
+    )
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError(
+                "El nombre no puede ser nulo."
+            )
+
+        normalized = " ".join(value.split())
+
+        if not normalized:
+            raise ValueError(
+                "El nombre del tipo de asiento es obligatorio."
+            )
+
+        return normalized
+
+
+class CooperativeSeatTypeRead(BusGroupSchema):
+    id: int
+    name: str
+    percentage: Decimal
+
+
 class BusTemplateSeatCreate(BusGroupSchema):
     number: int = Field(ge=1, le=200)
     floor: int = Field(ge=1, le=2)
     row: int = Field(ge=1, le=50)
     column: int = Field(ge=1, le=10)
+
+    # Tipo anterior, conservado por compatibilidad.
     seat_type: SeatType = SeatType.NORMAL
+
+    # Nuevo tipo configurable del catálogo.
+    seat_type_id: int | None = Field(
+        default=None,
+        gt=0,
+    )
 
 
 class BusTemplateCreate(BusGroupSchema):
@@ -239,13 +313,20 @@ class BusUpdate(BusGroupSchema):
         return validate_digits(normalized)
 
 
+
 class BusTemplateSeatRead(BusGroupSchema):
     id: int
     number: int
     floor: int
     row: int
     column: int
+
+    # Tipo anterior, conservado por compatibilidad.
     seat_type: SeatType
+
+    # Tipo configurable asociado al catálogo.
+    seat_type_id: int | None = None
+
 
 
 class BusTemplateRead(BusGroupSchema):

@@ -2,6 +2,7 @@ import { Navigate, Route } from 'react-router-dom';
 import { RequireCooperative } from '../../features/auth/components/RequireCooperative';
 import { CooperativeDashboardPage } from '../../features/cooperatives/pages/CooperativeDashboardPage';
 import { CooperativeBusGroupsPage } from '../../features/cooperatives/pages/CooperativeBusGroupsPage';
+import { CooperativeSeatTypesPage } from '../../features/cooperatives/pages/CooperativeSeatTypesPage';
 import { CooperativeConfigurationPage } from '../../features/cooperatives/pages/CooperativeConfigurationPage';
 import { CooperativeLayout } from '../../features/cooperatives/components/CooperativeLayout';
 import { CooperativeBusesPage } from '../../features/cooperatives/pages/CooperativeBusesPage';
@@ -23,6 +24,7 @@ export const cooperativeRoutes = (
     <Route path="grupos" element={<CooperativeBusGroupsPage />} />
     <Route path="rutas" element={<CooperativeRoutesPage />} />
     <Route path="buses" element={<CooperativeBusesPage />} />
+    <Route path="tipos-asiento" element={<CooperativeSeatTypesPage />} />
     <Route path="oficinistas" element={<CooperativeOfficeUsersPage />} />
   </Route>
 );

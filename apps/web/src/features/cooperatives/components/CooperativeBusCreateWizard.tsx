@@ -155,13 +155,16 @@ export function CooperativeBusCreateWizard({
             hasBathroom: template.hasBathroom,
             rows: template.rows,
             columns: template.columns,
-            seats: template.seats.map(({ number, floor, row, column, seatType }) => ({
-              number,
-              floor,
-              row,
-              column,
-              seatType,
-            })),
+            seats: template.seats.map(
+              ({ number, floor, row, column, seatType, seatTypeId }) => ({
+                number,
+                floor,
+                row,
+                column,
+                seatType,
+                ...(seatTypeId != null ? { seatTypeId } : {}),
+              }),
+            ),
           },
         };
     void onCreate(input, photos.map(({ file }) => file));

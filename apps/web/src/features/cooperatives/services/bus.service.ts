@@ -15,6 +15,7 @@ export interface CooperativeBusTemplate {
     row: number;
     column: number;
     seatType: 'normal' | 'vip';
+    seatTypeId?: number | null;
   }>;
 }
 
@@ -69,6 +70,7 @@ export interface CooperativeBusCreateInput extends Omit<BusInput, 'floors' | 'te
       row: number;
       column: number;
       seatType: 'normal' | 'vip';
+      seatTypeId?: number | null;
     }>;
   };
 }
@@ -161,13 +163,16 @@ function busCreatePayload(input: CooperativeBusCreateInput) {
               hasBathroom: input.template.hasBathroom,
               rows: input.template.rows,
               columns: input.template.columns,
-              seats: input.template.seats.map(({ number, floor, row, column, seatType }) => ({
-                number,
-                floor,
-                row,
-                column,
-                seatType,
-              })),
+              seats: input.template.seats.map(
+                ({ number, floor, row, column, seatType, seatTypeId }) => ({
+                  number,
+                  floor,
+                  row,
+                  column,
+                  seatType,
+                  ...(seatTypeId != null ? { seatTypeId } : {}),
+                }),
+              ),
             },
           }
         : {}),

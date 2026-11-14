@@ -60,6 +60,7 @@ if _is_sqlite:
         cursor.close()
 
 
+
 def import_models() -> None:
     for module in MODEL_MODULES:
         import_module(module)
@@ -69,15 +70,36 @@ def init_db() -> None:
     """Crea las tablas que aún no existen y aplica cambios aditivos de esquema."""
     import_models()
     Base.metadata.create_all(bind=engine)
+
+    # Catálogo geográfico incorporado desde develop.
     from app.modules.routes.geographic_schema import ensure_geographic_schema
 
     ensure_geographic_schema(engine)
+
+    # Issue #54: relación opcional entre asientos y catálogo.
+    seat_columns = {
+        column["name"] for column in inspect(engine).get_columns("template_seats")
+    }
+
+    if "seat_type_id" not in seat_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE template_seats "
+                    "ADD COLUMN seat_type_id INTEGER "
+                    "REFERENCES cooperative_seat_types(id) "
+                    "ON DELETE RESTRICT"
+                )
+            )
+
     from app.modules.buses.group_schema import ensure_bus_group_name_index
 
     ensure_bus_group_name_index(engine)
+
     frequency_columns = {
         column["name"] for column in inspect(engine).get_columns("frequencies")
     }
+
     if "bus_group_id" not in frequency_columns:
         with engine.begin() as connection:
             connection.execute(
