@@ -8,12 +8,13 @@ interface RouteLocationPickerProps {
   localities: GeographicPlace[];
   province: string;
   canton: string;
-  search: string;
+  search?: string;
   value: string;
+  showLocality?: boolean;
   excludedIds?: string[];
   onProvinceChange: (value: string) => void;
   onCantonChange: (value: string) => void;
-  onSearchChange: (value: string) => void;
+  onSearchChange?: (value: string) => void;
   onValueChange: (value: string) => void;
 }
 
@@ -24,8 +25,9 @@ export function RouteLocationPicker({
   localities,
   province,
   canton,
-  search,
+  search = '',
   value,
+  showLocality = true,
   excludedIds = [],
   onProvinceChange,
   onCantonChange,
@@ -42,6 +44,34 @@ export function RouteLocationPicker({
       (!query || normalizeLocationSearch(item.name).includes(query)),
   );
 
+  const handleProvinceChange = (newProvince: string) => {
+    onProvinceChange(newProvince);
+    if (!showLocality) {
+      onCantonChange('');
+      onValueChange('');
+    }
+  };
+
+  const handleCantonChange = (selectedCanton: string) => {
+    onCantonChange(selectedCanton);
+    if (!showLocality) {
+      if (!selectedCanton) {
+        onValueChange('');
+        return;
+      }
+      const match =
+        localities.find(
+          (item) =>
+            item.province === province &&
+            item.canton === selectedCanton &&
+            normalizeLocationSearch(item.name) === normalizeLocationSearch(selectedCanton),
+        ) ??
+        cantons.find((item) => item.province === province && item.name === selectedCanton) ??
+        localities.find((item) => item.province === province && item.canton === selectedCanton);
+      onValueChange(match ? String(match.id) : '');
+    }
+  };
+
   return (
     <fieldset className="cooperative-routes__location-picker">
       <legend>{title}</legend>
@@ -50,7 +80,7 @@ export function RouteLocationPicker({
           Provincia
           <select
             value={province}
-            onChange={(event) => onProvinceChange(event.target.value)}
+            onChange={(event) => handleProvinceChange(event.target.value)}
             required
           >
             <option value="">Selecciona provincia</option>
@@ -65,7 +95,7 @@ export function RouteLocationPicker({
           Cantón
           <select
             value={canton}
-            onChange={(event) => onCantonChange(event.target.value)}
+            onChange={(event) => handleCantonChange(event.target.value)}
             disabled={!province}
             required
           >
@@ -77,32 +107,36 @@ export function RouteLocationPicker({
             ))}
           </select>
         </label>
-        <label>
-          Buscar localidad
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            disabled={!canton}
-            placeholder="Escribe el nombre"
-          />
-        </label>
-        <label>
-          Localidad
-          <select
-            value={value}
-            onChange={(event) => onValueChange(event.target.value)}
-            disabled={!canton}
-            required
-          >
-            <option value="">Selecciona localidad</option>
-            {filteredLocalities.map((item) => (
-              <option value={item.id} key={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {showLocality && (
+          <>
+            <label>
+              Buscar localidad
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => onSearchChange?.(event.target.value)}
+                disabled={!canton}
+                placeholder="Escribe el nombre"
+              />
+            </label>
+            <label>
+              Localidad
+              <select
+                value={value}
+                onChange={(event) => onValueChange(event.target.value)}
+                disabled={!canton}
+                required
+              >
+                <option value="">Selecciona localidad</option>
+                {filteredLocalities.map((item) => (
+                  <option value={item.id} key={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
       </div>
     </fieldset>
   );

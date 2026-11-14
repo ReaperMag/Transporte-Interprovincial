@@ -123,8 +123,16 @@ export function CreateRouteModal({
 
   const validate = (): string | null => {
     if (!groupId) return 'Selecciona el grupo de buses de la ruta.';
-    if (!originCityId || !destinationCityId) return 'Selecciona el origen y el destino.';
-    if (originCityId === destinationCityId) {
+    if (!originProvince || !originCanton || !originCityId) {
+      return 'Selecciona la provincia y cantón de origen.';
+    }
+    if (!destinationProvince || !destinationCanton || !destinationCityId) {
+      return 'Selecciona la provincia y cantón de destino.';
+    }
+    if (
+      originCityId === destinationCityId ||
+      (originProvince === destinationProvince && originCanton === destinationCanton)
+    ) {
       return 'El origen y el destino deben ser diferentes.';
     }
     const durationMinutes = Number(duration);
@@ -135,7 +143,9 @@ export function CreateRouteModal({
     const usedCities = new Set([originCityId, destinationCityId]);
     let previousMinutes = 0;
     for (const [index, stop] of stops.entries()) {
-      if (!stop.cityId) return `Selecciona la localidad de la parada ${index + 1}.`;
+      if (!stop.province || !stop.canton || !stop.cityId) {
+        return `Selecciona la provincia y cantón de la parada ${index + 1}.`;
+      }
       if (usedCities.has(stop.cityId)) {
         return `La parada ${index + 1} repite una localidad del recorrido.`;
       }
@@ -257,6 +267,7 @@ export function CreateRouteModal({
               canton={originCanton}
               search={originSearch}
               value={originCityId}
+              showLocality={false}
               excludedIds={[destinationCityId, ...stops.map((stop) => stop.cityId)]}
               onProvinceChange={(value) => {
                 setOriginProvince(value);
@@ -267,11 +278,9 @@ export function CreateRouteModal({
               onCantonChange={(value) => {
                 setOriginCanton(value);
                 setOriginSearch('');
-                setOriginCityId('');
               }}
               onSearchChange={(value) => {
                 setOriginSearch(value);
-                setOriginCityId('');
               }}
               onValueChange={(value) => {
                 setOriginCityId(value);
@@ -287,6 +296,7 @@ export function CreateRouteModal({
               canton={destinationCanton}
               search={destinationSearch}
               value={destinationCityId}
+              showLocality={false}
               excludedIds={[originCityId, ...stops.map((stop) => stop.cityId)]}
               onProvinceChange={(value) => {
                 setDestinationProvince(value);
@@ -297,11 +307,9 @@ export function CreateRouteModal({
               onCantonChange={(value) => {
                 setDestinationCanton(value);
                 setDestinationSearch('');
-                setDestinationCityId('');
               }}
               onSearchChange={(value) => {
                 setDestinationSearch(value);
-                setDestinationCityId('');
               }}
               onValueChange={(value) => {
                 setDestinationCityId(value);
@@ -338,6 +346,7 @@ export function CreateRouteModal({
                     canton={stop.canton}
                     search={stop.search}
                     value={stop.cityId}
+                    showLocality={false}
                     excludedIds={[
                       originCityId,
                       destinationCityId,
@@ -354,9 +363,9 @@ export function CreateRouteModal({
                       })
                     }
                     onCantonChange={(value) =>
-                      updateStop(index, { canton: value, cityId: '', search: '' })
+                      updateStop(index, { canton: value, search: '' })
                     }
-                    onSearchChange={(value) => updateStop(index, { search: value, cityId: '' })}
+                    onSearchChange={(value) => updateStop(index, { search: value })}
                     onValueChange={(value) => updateStop(index, { cityId: value })}
                   />
                   <label>
