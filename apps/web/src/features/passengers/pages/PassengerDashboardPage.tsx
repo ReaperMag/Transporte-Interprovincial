@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getPassengerProfile, type PassengerProfile } from '../services/passenger.service';
 import {
+  HISTORICAL_LOCATION_GROUP,
+  normalizeGeographicSearch,
+  PassengerLocationFilter,
+  type PassengerCanton,
+  type SearchLocation,
+} from '../components/PassengerLocationFilter';
+import {
   getTripCities,
   searchPassengerTrips,
   type TripCity,
@@ -114,14 +121,60 @@ export function PassengerDashboardPage() {
   const [trips, setTrips] = useState<TripSearchResult[]>([]);
 
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isLoadingCities, setIsLoadingCities] = useState(true);
   const [isLoadingTrips, setIsLoadingTrips] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [citiesError, setCitiesError] = useState<string | null>(null);
   const [tripsError, setTripsError] = useState<string | null>(null);
 
   const nextSevenDays = useMemo(() => generateNextSevenDays(), []);
   const [selectedDay, setSelectedDay] = useState<string>(() => nextSevenDays[0]?.dateString ?? '');
   const [originCityId, setOriginCityId] = useState('');
   const [destinationCityId, setDestinationCityId] = useState('');
+  const [originProvince, setOriginProvince] = useState('');
+  const [originCanton, setOriginCanton] = useState('');
+  const [originSearch, setOriginSearch] = useState('');
+  const [destinationProvince, setDestinationProvince] = useState('');
+  const [destinationCanton, setDestinationCanton] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
+
+  const provinces = useMemo(
+    () =>
+      [...new Set(cities.map((city) => city.province))].sort((a, b) => a.localeCompare(b, 'es')),
+    [cities],
+  );
+  const cantons = useMemo(() => {
+    const options = new Map<string, PassengerCanton>();
+    for (const city of cities) {
+      if (!city.canton) continue;
+      const key = `${city.province}:${city.canton}`;
+      options.set(key, { id: key, name: city.canton, province: city.province });
+    }
+    return [...options.values()].sort(
+      (left, right) =>
+        left.province.localeCompare(right.province, 'es') ||
+        left.name.localeCompare(right.name, 'es'),
+    );
+  }, [cities]);
+  const selectableCities = useMemo(() => {
+    const knownCantons = new Set(
+      cantons.map(
+        (canton) =>
+          `${normalizeGeographicSearch(canton.province)}:${normalizeGeographicSearch(canton.name)}`,
+      ),
+    );
+    return cities.map((city) => ({
+      ...city,
+      parentCanton: city.canton
+        ? city.canton
+        : knownCantons.has(
+              `${normalizeGeographicSearch(city.province)}:${normalizeGeographicSearch(city.name)}`,
+            )
+          ? city.name
+          : HISTORICAL_LOCATION_GROUP,
+      isHistorical: !city.canton,
+    }));
+  }, [cantons, cities]);
 
   // Cargar perfil del pasajero y lista de ciudades
   useEffect(() => {
@@ -131,7 +184,14 @@ export function PassengerDashboardPage() {
       try {
         const [profileData, citiesData] = await Promise.all([
           getPassengerProfile(),
-          getTripCities().catch(() => []),
+          getTripCities().catch((err) => {
+            if (active) {
+              setCitiesError(
+                err instanceof Error ? err.message : 'Error al cargar las localidades.',
+              );
+            }
+            return [];
+          }),
         ]);
 
         if (active) {
@@ -145,6 +205,7 @@ export function PassengerDashboardPage() {
       } finally {
         if (active) {
           setIsLoadingProfile(false);
+          setIsLoadingCities(false);
         }
       }
     }
@@ -181,7 +242,9 @@ export function PassengerDashboardPage() {
       } catch (err) {
         if (active) {
           setTrips([]);
-          setTripsError(err instanceof Error ? err.message : 'Error al consultar las rutas disponibles.');
+          setTripsError(
+            err instanceof Error ? err.message : 'Error al consultar las rutas disponibles.',
+          );
         }
       } finally {
         if (active) {
@@ -212,7 +275,11 @@ export function PassengerDashboardPage() {
   }
 
   if (profileError) {
-    return <p role="alert" className="passenger-dashboard__error">{profileError}</p>;
+    return (
+      <p role="alert" className="passenger-dashboard__error">
+        {profileError}
+      </p>
+    );
   }
 
   return (
@@ -262,41 +329,76 @@ export function PassengerDashboardPage() {
             </p>
           </div>
 
-          {/* Filtro rápido opcional por ciudades */}
           <div className="passenger-dashboard__city-filters">
-            <label className="passenger-dashboard__filter-field">
-              <span>Origen</span>
-              <select
-                value={originCityId}
-                onChange={(e) => setOriginCityId(e.target.value)}
-                disabled={isLoadingTrips}
-              >
-                <option value="">Todos los orígenes</option>
-                {cities.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="passenger-dashboard__filter-field">
-              <span>Destino</span>
-              <select
-                value={destinationCityId}
-                onChange={(e) => setDestinationCityId(e.target.value)}
-                disabled={isLoadingTrips}
-              >
-                <option value="">Todos los destinos</option>
-                {cities
-                  .filter((city) => String(city.id) !== originCityId)
-                  .map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            <PassengerLocationFilter
+              classPrefix="passenger-dashboard"
+              label="Origen"
+              provinces={provinces}
+              cantons={cantons}
+              locations={selectableCities}
+              province={originProvince}
+              canton={originCanton}
+              search={originSearch}
+              value={originCityId}
+              excludedCityId={destinationCityId}
+              disabled={isLoadingCities || isLoadingTrips}
+              onProvinceChange={(value) => {
+                setOriginProvince(value);
+                setOriginCanton('');
+                setOriginSearch('');
+                setOriginCityId('');
+              }}
+              onCantonChange={(value) => {
+                setOriginCanton(value);
+                setOriginSearch('');
+                setOriginCityId('');
+              }}
+              onSearchChange={(value) => {
+                setOriginSearch(value);
+                setOriginCityId('');
+              }}
+              onValueChange={(value) => {
+                setOriginCityId(value);
+                if (value && value === destinationCityId) setDestinationCityId('');
+              }}
+            />
+            <PassengerLocationFilter
+              classPrefix="passenger-dashboard"
+              label="Destino"
+              provinces={provinces}
+              cantons={cantons}
+              locations={selectableCities}
+              province={destinationProvince}
+              canton={destinationCanton}
+              search={destinationSearch}
+              value={destinationCityId}
+              excludedCityId={originCityId}
+              disabled={isLoadingCities || isLoadingTrips}
+              onProvinceChange={(value) => {
+                setDestinationProvince(value);
+                setDestinationCanton('');
+                setDestinationSearch('');
+                setDestinationCityId('');
+              }}
+              onCantonChange={(value) => {
+                setDestinationCanton(value);
+                setDestinationSearch('');
+                setDestinationCityId('');
+              }}
+              onSearchChange={(value) => {
+                setDestinationSearch(value);
+                setDestinationCityId('');
+              }}
+              onValueChange={(value) => {
+                setDestinationCityId(value);
+                if (value && value === originCityId) setOriginCityId('');
+              }}
+            />
+            {citiesError && (
+              <p role="alert" className="passenger-dashboard__error">
+                No se pudieron cargar las localidades: {citiesError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -364,9 +466,7 @@ export function PassengerDashboardPage() {
             {displayedTrips.length === 0 ? (
               <div className="passenger-dashboard__empty">
                 <h3>No hay rutas registradas para este día</h3>
-                <p>
-                  Prueba seleccionando otro de los 7 días o quitando los filtros de ciudad.
-                </p>
+                <p>Prueba seleccionando otro de los 7 días o quitando los filtros de ciudad.</p>
               </div>
             ) : (
               displayedTrips.map((trip) => {
@@ -375,9 +475,7 @@ export function PassengerDashboardPage() {
                 return (
                   <article
                     key={trip.tripId}
-                    className={`passenger-trip-card${
-                      past ? ' passenger-trip-card--past' : ''
-                    }`}
+                    className={`passenger-trip-card${past ? ' passenger-trip-card--past' : ''}`}
                   >
                     <header className="passenger-trip-card__header">
                       <div className="passenger-trip-card__company">
@@ -404,9 +502,7 @@ export function PassengerDashboardPage() {
                       <span className="passenger-trip-card__arrow" aria-hidden="true">
                         ➔
                       </span>
-                      <span className="passenger-trip-card__city">
-                        {trip.destinationCityName}
-                      </span>
+                      <span className="passenger-trip-card__city">{trip.destinationCityName}</span>
                     </div>
 
                     <div className="passenger-trip-card__meta">

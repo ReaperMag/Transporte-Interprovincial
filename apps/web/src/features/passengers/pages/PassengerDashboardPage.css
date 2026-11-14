@@ -110,9 +110,32 @@
 }
 
 .passenger-dashboard__city-filters {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: grid;
+  flex: 1 1 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.passenger-dashboard__location-filter {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #e0ddd7;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f9f8f5;
+}
+
+.passenger-dashboard__location-filter legend {
+  padding: 0 6px;
+  color: #0e5a6b;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.passenger-dashboard__location-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .passenger-dashboard__filter-field {
@@ -122,10 +145,15 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: #4a5568;
+  min-width: 0;
 }
 
-.passenger-dashboard__filter-field select {
-  padding: 8px 12px;
+.passenger-dashboard__filter-field select,
+.passenger-dashboard__filter-field input {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 8px 10px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   background-color: #f8fafc;
@@ -135,9 +163,20 @@
   outline: none;
 }
 
-.passenger-dashboard__filter-field select:focus {
+.passenger-dashboard__filter-field select:focus,
+.passenger-dashboard__filter-field input:focus {
   border-color: #0e5a6b;
   background-color: #ffffff;
+}
+
+.passenger-dashboard__filter-field select:disabled,
+.passenger-dashboard__filter-field input:disabled {
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.passenger-dashboard__city-filters > .passenger-dashboard__error {
+  grid-column: 1 / -1;
 }
 
 /* Pestañas de días (7 días) */
@@ -444,6 +483,10 @@
   }
   .passenger-dashboard__city-filters {
     width: 100%;
+    grid-template-columns: 1fr;
+  }
+  .passenger-dashboard__location-fields {
+    grid-template-columns: 1fr;
   }
   .passenger-dashboard__filter-field {
     flex: 1;
