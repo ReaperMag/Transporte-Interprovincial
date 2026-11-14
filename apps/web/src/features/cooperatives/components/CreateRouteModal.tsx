@@ -244,19 +244,6 @@ export function CreateRouteModal({
             </select>
           </label>
 
-          <div className="cooperative-routes__examples" aria-label="Ejemplos de rutas">
-            <span>Ejemplos:</span>
-            {['Quito', 'Guayaquil', 'Riobamba'].map((destinationName) => (
-              <button
-                type="button"
-                key={destinationName}
-                onClick={() => applyExample(destinationName)}
-              >
-                Ambato – {destinationName}
-              </button>
-            ))}
-          </div>
-
           <div className="cooperative-routes__location-grid">
             <RouteLocationPicker
               title="Origen"
