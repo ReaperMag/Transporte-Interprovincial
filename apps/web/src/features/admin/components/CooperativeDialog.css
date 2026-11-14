@@ -25,3 +25,11 @@
 .cooperative-dialog__header::before { content: none; }
 .cooperative-dialog__header-copy { display: grid; gap: 6px; }
 .cooperative-dialog__eyebrow { color: #0e5a6b; font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.cooperative-dialog__steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 20px; padding: 0; list-style: none; }
+.cooperative-dialog__steps li { display: flex; align-items: center; gap: 9px; color: #66737b; font-size: .75rem; font-weight: 600; }
+.cooperative-dialog__steps li > span:first-child { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #c8d1d2; border-radius: 50%; background: #fff; }
+.cooperative-dialog__steps li[aria-current='step'] { color: #0e5a6b; }
+.cooperative-dialog__steps li[aria-current='step'] > span:first-child { border-color: #0e5a6b; background: #0e5a6b; color: #fff; }
+.cooperative-dialog__step-title { margin: 0 0 16px; color: #14212b; font-size: .88rem; font-weight: 700; }
+.cooperative-dialog__field-error { color: #b3362b; font-size: .72rem; font-weight: 500; line-height: 1.4; }
+.cooperative-dialog__fields input[aria-invalid='true'] { border-color: #b3362b; background: #fffafa; }
