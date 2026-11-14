@@ -10,6 +10,7 @@ import './AdminLayout.css';
 const sections: readonly SidebarSection[] = [
   { to: '/admin/panel', label: 'Panel de resumen', icon: 'home' },
   { to: '/admin/cooperativas', label: 'Cooperativas', icon: 'groups' },
+  { to: '/admin/provincias-cantones', label: 'Provincias y cantones', icon: 'map' },
 ];
 
 export function AdminLayout() {
@@ -18,6 +19,7 @@ export function AdminLayout() {
   const { account, logout } = useAuth();
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const isDashboard = location.pathname === '/admin/panel';
+  const isGeographicCatalog = location.pathname === '/admin/provincias-cantones';
 
   const handleLogout = async () => {
     setLogoutError(null);
@@ -47,7 +49,13 @@ export function AdminLayout() {
           <div className="admin-header__breadcrumb">
             <span>Administración</span>
             <b>/</b>
-            <strong>{isDashboard ? 'Panel de resumen' : 'Gestión de cooperativas'}</strong>
+            <strong>
+              {isDashboard
+                ? 'Panel de resumen'
+                : isGeographicCatalog
+                  ? 'Provincias y cantones'
+                  : 'Gestión de cooperativas'}
+            </strong>
           </div>
           <div className="admin-header__account">
             <span className="admin-header__user">{account?.email}</span>

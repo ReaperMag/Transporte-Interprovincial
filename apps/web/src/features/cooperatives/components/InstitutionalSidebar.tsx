@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import './InstitutionalSidebar.css';
 
-export type SidebarIconName = 'home' | 'bus' | 'groups' | 'route' | 'users' | 'settings' | 'profile' | 'receipt' | 'ticket';
+export type SidebarIconName = 'home' | 'bus' | 'groups' | 'route' | 'users' | 'settings' | 'profile' | 'receipt' | 'ticket' | 'map';
 
 export interface SidebarSection {
   to: string;
@@ -38,6 +38,7 @@ function SidebarIcon({ name }: { name: SidebarIconName }) {
     profile: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
     receipt: <><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM8 8h8M8 12h8M8 16h5" /></>,
     ticket: <><path d="M3 7h18v4a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4zM12 7v2m0 3v2m0 3v1" /></>,
+    map: <><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" /><path d="M9 3v15m6-12v15" /></>,
   };
   return <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" {...common}>{paths[name]}</svg>;
 }
