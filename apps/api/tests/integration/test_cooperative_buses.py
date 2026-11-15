@@ -846,3 +846,288 @@ def test_cooperative_cannot_list_another_tenant_bus_templates(test_environment):
 
     assert login(client, "template-other@example.com").status_code == 200
     assert client.get(f"{BUSES_URL}/templates").json() == []
+
+def test_bus_rejects_custom_template_exceeding_capacity(test_environment):
+    client, engine = test_environment
+
+    cooperative = create_cooperative(
+        engine,
+        name="Prueba de capacidad",
+        email="capacity-validation@example.com",
+    )
+
+    group_id = create_group(
+        engine,
+        cooperative.id,
+        "Interprovinciales",
+    )
+
+    assert login(
+        client,
+        "capacity-validation@example.com",
+    ).status_code == 200
+
+    template = {
+        "name": "Plantilla que supera capacidad",
+        "floors": 2,
+        "hasBathroom": False,
+        "rows": 2,
+        "columns": 2,
+        "seats": [
+            {
+                "number": 1,
+                "floor": 1,
+                "row": 1,
+                "column": 1,
+                "seatType": "normal",
+            },
+            {
+                "number": 2,
+                "floor": 1,
+                "row": 1,
+                "column": 2,
+                "seatType": "normal",
+            },
+            {
+                "number": 3,
+                "floor": 2,
+                "row": 1,
+                "column": 1,
+                "seatType": "vip",
+            },
+        ],
+    }
+
+    payload = custom_bus_payload(
+        group_id,
+        template,
+        capacity=2,
+        plate="CAP-0001",
+    )
+
+    response = client.post(
+        BUSES_URL,
+        json=payload,
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 422, response.text
+    assert "capacidad máxima" in response.text
+
+
+def test_bus_rejects_saved_template_exceeding_capacity(test_environment):
+    client, engine = test_environment
+
+    cooperative = create_cooperative(
+        engine,
+        name="Capacidad plantilla guardada",
+        email="saved-capacity@example.com",
+    )
+
+    group_id = create_group(
+        engine,
+        cooperative.id,
+        "Interprovinciales",
+    )
+
+    assert login(
+        client,
+        "saved-capacity@example.com",
+    ).status_code == 200
+
+    template = {
+        "name": "Plantilla guardada de tres asientos",
+        "floors": 2,
+        "hasBathroom": False,
+        "rows": 2,
+        "columns": 2,
+        "seats": [
+            {
+                "number": 1,
+                "floor": 1,
+                "row": 1,
+                "column": 1,
+                "seatType": "normal",
+            },
+            {
+                "number": 2,
+                "floor": 1,
+                "row": 1,
+                "column": 2,
+                "seatType": "vip",
+            },
+            {
+                "number": 3,
+                "floor": 2,
+                "row": 1,
+                "column": 1,
+                "seatType": "normal",
+            },
+        ],
+    }
+
+    # Crear primero un bus válido para guardar su plantilla.
+    created = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(
+            group_id,
+            template,
+            capacity=3,
+            number="100",
+            plate="CAP-0010",
+        ),
+        headers=HEADERS,
+    )
+
+    assert created.status_code == 201, created.text
+
+    saved_template_id = created.json()["templateId"]
+
+    # Intentar reutilizar los tres asientos en un bus de capacidad 2.
+    response = client.post(
+        BUSES_URL,
+        json=bus_payload(
+            group_id,
+            saved_template_id,
+            capacity=2,
+            number="101",
+            plate="CAP-0011",
+        ),
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 422, response.text
+    assert "capacidad máxima" in response.text
+
+
+def test_bus_update_validates_capacity_and_template(test_environment):
+    client, engine = test_environment
+
+    cooperative = create_cooperative(
+        engine,
+        name="Validación actualización",
+        email="update-capacity@example.com",
+    )
+
+    group_id = create_group(
+        engine,
+        cooperative.id,
+        "Interprovinciales",
+    )
+
+    assert login(
+        client,
+        "update-capacity@example.com",
+    ).status_code == 200
+
+    small_template = {
+        "name": "Plantilla de dos asientos",
+        "floors": 2,
+        "hasBathroom": False,
+        "rows": 2,
+        "columns": 2,
+        "seats": [
+            {
+                "number": 1,
+                "floor": 1,
+                "row": 1,
+                "column": 1,
+                "seatType": "normal",
+            },
+            {
+                "number": 2,
+                "floor": 1,
+                "row": 1,
+                "column": 2,
+                "seatType": "vip",
+            },
+        ],
+    }
+
+    large_template = {
+        **small_template,
+        "name": "Plantilla de tres asientos",
+        "seats": [
+            *small_template["seats"],
+            {
+                "number": 3,
+                "floor": 2,
+                "row": 1,
+                "column": 1,
+                "seatType": "normal",
+            },
+        ],
+    }
+
+    # Registrar un bus válido con capacidad de dos pasajeros.
+    first = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(
+            group_id,
+            small_template,
+            capacity=2,
+            number="201",
+            plate="CAP-0201",
+        ),
+        headers=HEADERS,
+    )
+
+    assert first.status_code == 201, first.text
+    bus_id = first.json()["id"]
+
+    # Registrar otra plantilla válida de tres asientos.
+    second = client.post(
+        BUSES_URL,
+        json=custom_bus_payload(
+            group_id,
+            large_template,
+            capacity=3,
+            number="202",
+            plate="CAP-0202",
+        ),
+        headers=HEADERS,
+    )
+
+    assert second.status_code == 201, second.text
+    large_template_id = second.json()["templateId"]
+
+    # Caso 1: no se permite reducir la capacidad a un asiento.
+    reduced_capacity = client.patch(
+        f"{BUSES_URL}/{bus_id}",
+        json={"capacity": 1},
+        headers=HEADERS,
+    )
+
+    assert reduced_capacity.status_code == 422
+    assert "capacidad máxima" in reduced_capacity.text
+
+    # Caso 2: no se permite asignar una plantilla de tres
+    # asientos a un bus con capacidad de dos.
+    changed_template = client.patch(
+        f"{BUSES_URL}/{bus_id}",
+        json={"templateId": large_template_id},
+        headers=HEADERS,
+    )
+
+    assert changed_template.status_code == 422
+    assert "capacidad máxima" in changed_template.text
+
+    # Caso 3: aumentar la capacidad de dos a tres sí se permite.
+    increased_capacity = client.patch(
+        f"{BUSES_URL}/{bus_id}",
+        json={"capacity": 3},
+        headers=HEADERS,
+    )
+
+    assert increased_capacity.status_code == 200, increased_capacity.text
+    assert increased_capacity.json()["capacity"] == 3
+
+    # Caso 4: ahora sí se puede asignar la plantilla de tres.
+    valid_template = client.patch(
+        f"{BUSES_URL}/{bus_id}",
+        json={"templateId": large_template_id},
+        headers=HEADERS,
+    )
+
+    assert valid_template.status_code == 200, valid_template.text
+    assert valid_template.json()["templateId"] == large_template_id

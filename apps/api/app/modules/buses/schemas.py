@@ -222,17 +222,37 @@ class BusCreate(BusGroupSchema):
     status: BusStatus = BusStatus.OPERATIONAL
     group_id: int = Field(validation_alias="groupId", serialization_alias="groupId")
 
+
     @model_validator(mode="after")
     def validate_template_choice(self) -> "BusCreate":
         if (self.template_id is None) == (self.template is None):
-            raise ValueError("Envía exactamente una plantilla: templateId o template.")
+            raise ValueError(
+                "Envía exactamente una plantilla: templateId o template."
+            )
+
         if self.template is not None:
             if self.floors is not None and self.floors != self.template.floors:
-                raise ValueError("Los pisos del bus deben coincidir con los de la plantilla.")
+                raise ValueError(
+                    "Los pisos del bus deben coincidir con los de la plantilla."
+                )
+
+            # Issue #59: controlar la capacidad máxima del bus.
+            total_asientos = len(self.template.seats)
+
+            if total_asientos > self.passenger_capacity:
+                raise ValueError(
+                    f"La plantilla contiene {total_asientos} asientos, "
+                    f"pero la capacidad máxima del bus es "
+                    f"{self.passenger_capacity} pasajeros."
+                )
+
             self.floors = self.template.floors
+
         elif self.floors is None:
             self.floors = 2
+
         return self
+
 
     @field_validator("brand", "model")
     @classmethod

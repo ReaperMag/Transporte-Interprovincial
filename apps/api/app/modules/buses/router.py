@@ -151,6 +151,12 @@ def create_cooperative_bus(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="El tipo de asiento no existe o no pertenece a tu cooperativa.",
         ) from exc
+    except bus_service.BusCapacityExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
 
     return _bus_read(bus)
 
@@ -206,6 +212,12 @@ def create_cooperative_bus_with_photos(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="El tipo de asiento no existe o no pertenece a tu cooperativa.",
+        ) from exc
+
+    except bus_service.BusCapacityExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
         ) from exc
 
     finally:
@@ -340,6 +352,12 @@ def edit_cooperative_bus(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="La plantilla no existe o no pertenece a tu cooperativa.",
         ) from exc
+    except bus_service.BusCapacityExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+
     return _bus_read(bus)
 
 

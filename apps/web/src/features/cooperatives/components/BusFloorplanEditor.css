@@ -60,10 +60,44 @@
   font-weight: 700;
 }
 
-.bus-floorplan-editor__layout-settings button {
-  border-color: var(--coop-primary, #0e5a6b);
-  background: var(--coop-primary, #0e5a6b);
-  color: var(--coop-on-primary, #fff);
+/* Issue #59: boton Aplicar distribucion visible. */
+.bus-floorplan-editor .bus-floorplan-editor__layout-settings > button {
+  display: inline-flex;
+  min-width: 11rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  border: 1px solid #0e5a6b !important;
+  border-radius: 0.5rem;
+  background: #0e5a6b !important;
+  color: #fff !important;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  white-space: normal;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.bus-floorplan-editor .bus-floorplan-editor__layout-settings > button:hover:not(:disabled) {
+  border-color: #084452 !important;
+  background: #084452 !important;
+  color: #fff !important;
+}
+
+.bus-floorplan-editor .bus-floorplan-editor__layout-settings > button:focus-visible {
+  outline: 3px solid #67c5d2;
+  outline-offset: 2px;
+}
+
+.bus-floorplan-editor .bus-floorplan-editor__layout-settings > button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .bus-floorplan-editor__toolbar {
@@ -94,6 +128,19 @@
   font-size: 0.9rem;
   font-weight: 700;
   text-align: center;
+}
+
+/* Issue #59: mensajes de exceso de capacidad. */
+.bus-floorplan-editor__capacity-error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.6rem;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .bus-floorplan-editor__grid {
@@ -150,7 +197,8 @@
     grid-column: 1 / -1;
   }
 
-  .bus-floorplan-editor__layout-settings button {
+  .bus-floorplan-editor .bus-floorplan-editor__layout-settings > button {
     grid-column: 1 / -1;
+    width: 100%;
   }
 }
