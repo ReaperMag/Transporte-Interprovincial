@@ -61,6 +61,14 @@ export function CreateRouteModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => {
+      setError(null);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstFieldRef = useRef<HTMLSelectElement>(null);
   const onCloseRef = useRef(onClose);
@@ -384,10 +392,31 @@ export function CreateRouteModal({
             </div>
           )}
 
+          {/* Notificación flotante del modal */}
           {error && (
-            <p className="cooperative-routes__message cooperative-routes__message--error" role="alert">
-              {error}
-            </p>
+            <div className="cooperative-routes__toast-container" style={{ position: 'absolute', top: '1rem', right: '1rem', maxWidth: 'calc(100% - 2rem)' }}>
+              <div className="cooperative-routes__toast cooperative-routes__toast--error" role="alert">
+                <span className="cooperative-routes__toast-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                </span>
+                <div className="cooperative-routes__toast-content">
+                  <strong className="cooperative-routes__toast-title">Atención</strong>
+                  <p className="cooperative-routes__toast-message">{error}</p>
+                </div>
+                <button
+                  type="button"
+                  className="cooperative-routes__toast-close"
+                  onClick={() => setError(null)}
+                  aria-label="Cerrar notificación"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
           )}
 
           <div className="cooperative-routes__form-actions">

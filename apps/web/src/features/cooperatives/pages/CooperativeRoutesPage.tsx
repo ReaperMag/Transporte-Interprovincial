@@ -87,6 +87,22 @@ export function CooperativeRoutesPage() {
   const [loadedPlanKey, setLoadedPlanKey] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => {
+      setSuccess(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => {
+      setError(null);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [error]);
   const planKey = `${selectedGroupId}:${serviceDate}`;
   const serviceDates = useMemo(
     () => Array.from({ length: 6 }, (_, index) => dateOffset(serviceDate, index)),
@@ -488,18 +504,54 @@ export function CooperativeRoutesPage() {
         </div>
       </header>
 
-      {error && (
-        <p className="cooperative-routes__message cooperative-routes__message--error" role="alert">
-          {error}
-        </p>
-      )}
-      {success && (
-        <p
-          className="cooperative-routes__message cooperative-routes__message--success"
-          role="status"
-        >
-          {success}
-        </p>
+      {/* Notificaciones flotantes / modales emergentes */}
+      {(error || success) && (
+        <aside className="cooperative-routes__toast-container" aria-live="polite">
+          {error && (
+            <div className="cooperative-routes__toast cooperative-routes__toast--error" role="alert">
+              <span className="cooperative-routes__toast-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </span>
+              <div className="cooperative-routes__toast-content">
+                <strong className="cooperative-routes__toast-title">Atención</strong>
+                <p className="cooperative-routes__toast-message">{error}</p>
+              </div>
+              <button
+                type="button"
+                className="cooperative-routes__toast-close"
+                onClick={() => setError(null)}
+                aria-label="Cerrar notificación"
+              >
+                ×
+              </button>
+            </div>
+          )}
+          {success && (
+            <div className="cooperative-routes__toast cooperative-routes__toast--success" role="status">
+              <span className="cooperative-routes__toast-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </span>
+              <div className="cooperative-routes__toast-content">
+                <strong className="cooperative-routes__toast-title">Éxito</strong>
+                <p className="cooperative-routes__toast-message">{success}</p>
+              </div>
+              <button
+                type="button"
+                className="cooperative-routes__toast-close"
+                onClick={() => setSuccess(null)}
+                aria-label="Cerrar notificación"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </aside>
       )}
 
       {isLoading ? (
