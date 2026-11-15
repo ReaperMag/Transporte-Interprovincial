@@ -54,21 +54,22 @@
 
 .cooperative-routes__step-heading {
   display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
 }
 
 .cooperative-routes__step-heading > span {
   display: grid;
   flex: 0 0 auto;
-  width: 2rem;
-  height: 2rem;
+  width: 1.85rem;
+  height: 1.85rem;
   place-items: center;
   border-radius: 999px;
   background: var(--coop-primary, #0e5a6b);
   color: var(--coop-on-primary, #fff);
   font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .cooperative-routes__step-heading h3,
@@ -210,6 +211,21 @@
   border: 1px solid #fecaca;
   background: #fff;
   color: #b91c1c;
+}
+
+.cooperative-routes .cooperative-routes__button--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.cooperative-routes__btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .cooperative-routes .cooperative-routes__button--publish {

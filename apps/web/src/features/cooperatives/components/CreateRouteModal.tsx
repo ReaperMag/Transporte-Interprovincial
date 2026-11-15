@@ -363,12 +363,20 @@ export function CreateRouteModal({
                     />
                   </label>
                   <button
-                    className="cooperative-routes__button cooperative-routes__button--danger"
+                    className="cooperative-routes__button cooperative-routes__button--danger cooperative-routes__button--icon"
                     type="button"
                     onClick={() =>
                       setStops((current) => current.filter((_, itemIndex) => itemIndex !== index))
                     }
+                    title="Quitar parada"
+                    aria-label={`Quitar parada ${index + 1}`}
                   >
+                    <span className="cooperative-routes__btn-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </span>
                     Quitar
                   </button>
                 </div>
@@ -384,7 +392,7 @@ export function CreateRouteModal({
 
           <div className="cooperative-routes__form-actions">
             <button
-              className="cooperative-routes__button cooperative-routes__button--secondary"
+              className="cooperative-routes__button cooperative-routes__button--secondary cooperative-routes__button--icon"
               type="button"
               onClick={() =>
                 setStops((current) => [
@@ -394,7 +402,13 @@ export function CreateRouteModal({
               }
               disabled={!originCityId || !destinationCityId || stops.length >= 20}
             >
-              Añadir subruta
+              <span className="cooperative-routes__btn-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </span>
+              Añadir parada
             </button>
             <button type="button" onClick={onClose} disabled={isSubmitting}>
               Cancelar

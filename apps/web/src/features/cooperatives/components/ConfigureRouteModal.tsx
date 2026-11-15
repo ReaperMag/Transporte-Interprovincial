@@ -298,9 +298,6 @@ export function ConfigureRouteModal({
           {/* SECCIÓN 1: ASIGNACIÓN DE GRUPO */}
           <div className="cooperative-routes__config-section">
             <h4>1. Grupo de buses asignado</h4>
-            <p className="cooperative-routes__config-desc">
-              El grupo asignado cubre las frecuencias y rota sus buses para esta ruta.
-            </p>
             <label>
               Grupo de buses
               <select
@@ -319,13 +316,11 @@ export function ConfigureRouteModal({
             </label>
           </div>
 
-          {/* SECCIÓN 2: TARIFAS DE LA RUTA (SOLO ASIENTO NORMAL) */}
+          {/* SECCIÓN 2: TARIFAS DE LA RUTA */}
           <div className="cooperative-routes__config-section">
-            <h4>2. Tarifas por tramo (asiento normal)</h4>
+            <h4>2. Tarifas por tramo</h4>
             <p className="cooperative-routes__config-desc">
-              Solo ingresa la tarifa del <strong>asiento normal</strong>. Los demás tipos de asiento
-              (VIP) aplican automáticamente el <strong>+{vipPercentage}%</strong> configurado por
-              la cooperativa.
+              Tarifa base (asiento normal). El asiento VIP suma automáticamente el +{vipPercentage}%.
             </p>
             <div className="cooperative-routes__fare-grid">
               <div className="cooperative-routes__fare-row cooperative-routes__fare-row--head">
@@ -406,10 +401,16 @@ export function ConfigureRouteModal({
             </label>
             <button
               type="submit"
-              className="cooperative-routes__button cooperative-routes__button--secondary"
+              className="cooperative-routes__button cooperative-routes__button--secondary cooperative-routes__button--icon"
               disabled={isAddingFrequency || !selectedGroupId}
             >
-              {isAddingFrequency ? 'Agregando...' : '+ Agregar salida'}
+              <span className="cooperative-routes__btn-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </span>
+              {isAddingFrequency ? 'Agregando...' : 'Agregar salida'}
             </button>
           </form>
 

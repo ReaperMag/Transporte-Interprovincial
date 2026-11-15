@@ -463,6 +463,7 @@ export function CooperativeRoutesPage() {
         <div className="cooperative-routes__header-actions">
           <button
             type="button"
+            className="cooperative-routes__button cooperative-routes__button--icon"
             ref={newRouteButtonRef}
             onClick={() => {
               setError(null);
@@ -471,6 +472,12 @@ export function CooperativeRoutesPage() {
             disabled={isLoading || groups.length === 0}
             title={groups.length === 0 ? 'Crea primero un grupo de buses' : undefined}
           >
+            <span className="cooperative-routes__btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </span>
             Nueva ruta
           </button>
           {!isLoading && groups.length === 0 && (
@@ -499,17 +506,11 @@ export function CooperativeRoutesPage() {
         <p role="status">Cargando rutas, catálogo geográfico y grupos...</p>
       ) : (
         <>
-          {/* BLOQUE 1 (ANTES 2): RUTAS REGISTRADAS */}
+          {/* BLOQUE 1: RUTAS REGISTRADAS */}
           <section className="cooperative-routes__step" aria-labelledby="routes-builder-title">
             <div className="cooperative-routes__step-heading">
               <span>1</span>
-              <div>
-                <h3 id="routes-builder-title">Rutas registradas</h3>
-                <p>
-                  Filtra por texto, grupo o estado. En cada ruta puedes pulsar Configurar para
-                  asignar grupo, horarios de salida y tarifa base.
-                </p>
-              </div>
+              <h3 id="routes-builder-title">Rutas registradas</h3>
             </div>
             <RouteFilters
               search={routeSearch}
@@ -571,12 +572,19 @@ export function CooperativeRoutesPage() {
                             </span>
                             <button
                               type="button"
-                              className="cooperative-routes__button cooperative-routes__button--small cooperative-routes__button--secondary"
+                              className="cooperative-routes__button cooperative-routes__button--small cooperative-routes__button--secondary cooperative-routes__button--icon"
                               onClick={() => {
                                 setIsNewRouteConfig(false);
                                 setConfiguringRoute(route);
                               }}
+                              title="Configurar grupo, horarios y tarifas de esta ruta"
                             >
+                              <span className="cooperative-routes__btn-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="3" />
+                                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                                </svg>
+                              </span>
                               Configurar
                             </button>
                           </div>
@@ -596,17 +604,11 @@ export function CooperativeRoutesPage() {
             </div>
           </section>
 
-          {/* BLOQUE 2 (ANTES 4): HOJA DE RUTA DEL GRUPO */}
+          {/* BLOQUE 2: HOJA DE RUTA DEL GRUPO */}
           <section className="cooperative-routes__step" aria-labelledby="route-sheet-title">
             <div className="cooperative-routes__step-heading">
               <span>2</span>
-              <div>
-                <h3 id="route-sheet-title">Hoja de ruta del grupo</h3>
-                <p>
-                  Visualiza los seis días de rotación automática de buses por grupo. La asignación y
-                  publicación de servicios es automática.
-                </p>
-              </div>
+              <h3 id="route-sheet-title">Hoja de ruta del grupo</h3>
             </div>
             <div className="cooperative-routes__sheet-controls">
               <label>
@@ -676,21 +678,31 @@ export function CooperativeRoutesPage() {
               </label>
               <button
                 type="button"
-                className="cooperative-routes__button cooperative-routes__button--secondary cooperative-routes__button--refresh"
+                className="cooperative-routes__button cooperative-routes__button--secondary cooperative-routes__button--refresh cooperative-routes__button--icon"
                 onClick={() => void handleRefreshPlan()}
                 disabled={isLoadingPlan || isRecalculating || isAutoAssigning || !selectedGroupId}
-                title="Recarga los datos actuales del servidor, incluyendo buses en descanso"
+                title="Recarga los datos actuales del servidor"
               >
-                {isRecalculating ? 'Actualizando...' : '🔄 Actualizar'}
+                <span className="cooperative-routes__btn-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
+                  </svg>
+                </span>
+                {isRecalculating ? 'Actualizando...' : 'Actualizar'}
               </button>
               <button
                 type="button"
-                className="cooperative-routes__button cooperative-routes__button--auto-assign"
+                className="cooperative-routes__button cooperative-routes__button--auto-assign cooperative-routes__button--icon"
                 onClick={() => void handleAutoAssign()}
                 disabled={isLoadingPlan || isRecalculating || isAutoAssigning || !selectedGroupId}
-                title="Regenera el plan completo: rota buses automáticamente y aplica los descansos configurados en el grupo"
+                title="Regenera el plan completo: rotación de buses y descansos del grupo"
               >
-                {isAutoAssigning ? 'Auto-asignando...' : '⚡ Auto-asignar buses'}
+                <span className="cooperative-routes__btn-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                </span>
+                {isAutoAssigning ? 'Auto-asignando...' : 'Auto-asignar buses'}
               </button>
             </div>
             <div className="cooperative-routes__sheet-meta">
