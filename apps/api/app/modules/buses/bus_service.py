@@ -27,6 +27,13 @@ class BusSeatTypeNotFoundError(Exception):
 class BusInUseError(Exception):
     pass
 
+class BusCapacityExceededError(Exception):
+    def __init__(self, seat_count: int, capacity: int) -> None:
+        super().__init__(
+            f"La plantilla contiene {seat_count} asientos, "
+            f"pero la capacidad máxima del bus es {capacity} pasajeros."
+        )
+
 
 def _validate_group(db: Session, cooperative_id: int, group_id: int) -> None:
     if repository.get_bus_group(db, cooperative_id, group_id) is None:
@@ -46,6 +53,21 @@ def _validate_template(
 
     if template is None:
         raise BusTemplateNotFoundError
+
+def _validate_template_capacity(
+    db: Session,
+    template_id: int,
+    passenger_capacity: int,
+) -> None:
+    total_seats = (
+        db.query(TemplateSeat)
+        .filter(TemplateSeat.template_id == template_id)
+        .count()
+    )
+
+    if total_seats > passenger_capacity:
+        raise BusCapacityExceededError(total_seats, passenger_capacity)
+
 def _plate_exists(
     db: Session, plate: str, *, excluding_bus_id: int | None = None
 ) -> bool:
@@ -97,8 +119,11 @@ def create_bus(
         raise ValueError("Debe proporcionarse exactamente una plantilla.")
     _validate_group(db, cooperative_id, group_id)
 
+
     if template_id is not None:
         _validate_template(db, cooperative_id, template_id)
+        _validate_template_capacity(db, template_id, passenger_capacity)
+
 
     if template is not None:
         for seat in template["seats"]:
@@ -211,6 +236,27 @@ def update_bus(
         db, str(changes["plate"]), excluding_bus_id=bus_id
     ):
         raise DuplicateBusPlateError
+
+    # Issue #59: validar la capacidad al cambiar la plantilla
+    # o la capacidad de un bus existente.
+    if "passenger_capacity" in changes or "template_id" in changes:
+        final_capacity = changes.get(
+            "passenger_capacity",
+            bus.passenger_capacity,
+        )
+
+        final_template_id = changes.get(
+            "template_id",
+            bus.template_id,
+        )
+
+        if final_capacity is not None and final_template_id is not None:
+            _validate_template_capacity(
+                db,
+                int(final_template_id),
+                int(final_capacity),
+            )
+
     for field, value in changes.items():
         setattr(bus, field, value)
     if "status" in changes:
