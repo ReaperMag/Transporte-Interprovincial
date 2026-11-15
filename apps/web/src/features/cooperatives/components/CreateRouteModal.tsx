@@ -14,7 +14,6 @@ interface RouteStopDraft {
   minutes: string;
   province: string;
   canton: string;
-  search: string;
 }
 
 interface CreateRouteModalProps {
@@ -46,13 +45,11 @@ export function CreateRouteModal({
   const [groupId, setGroupId] = useState(defaultGroupId);
   const [originProvince, setOriginProvince] = useState(initialOrigin?.province ?? '');
   const [originCanton, setOriginCanton] = useState(initialOrigin?.canton ?? '');
-  const [originSearch, setOriginSearch] = useState('');
   const [originCityId, setOriginCityId] = useState(String(initialOrigin?.id ?? ''));
   const [destinationProvince, setDestinationProvince] = useState(
     initialDestination?.province ?? '',
   );
   const [destinationCanton, setDestinationCanton] = useState(initialDestination?.canton ?? '');
-  const [destinationSearch, setDestinationSearch] = useState('');
   const [destinationCityId, setDestinationCityId] = useState(
     String(initialDestination?.id ?? ''),
   );
@@ -252,23 +249,15 @@ export function CreateRouteModal({
               localities={catalog?.localities ?? []}
               province={originProvince}
               canton={originCanton}
-              search={originSearch}
               value={originCityId}
               showLocality
               excludedIds={[destinationCityId, ...stops.map((stop) => stop.cityId)]}
               onProvinceChange={(value) => {
                 setOriginProvince(value);
                 setOriginCanton('');
-                setOriginSearch('');
                 setOriginCityId('');
               }}
-              onCantonChange={(value) => {
-                setOriginCanton(value);
-                setOriginSearch('');
-              }}
-              onSearchChange={(value) => {
-                setOriginSearch(value);
-              }}
+              onCantonChange={setOriginCanton}
               onValueChange={(value) => {
                 setOriginCityId(value);
                 if (value && value === destinationCityId) setDestinationCityId('');
@@ -281,23 +270,15 @@ export function CreateRouteModal({
               localities={catalog?.localities ?? []}
               province={destinationProvince}
               canton={destinationCanton}
-              search={destinationSearch}
               value={destinationCityId}
               showLocality
               excludedIds={[originCityId, ...stops.map((stop) => stop.cityId)]}
               onProvinceChange={(value) => {
                 setDestinationProvince(value);
                 setDestinationCanton('');
-                setDestinationSearch('');
                 setDestinationCityId('');
               }}
-              onCantonChange={(value) => {
-                setDestinationCanton(value);
-                setDestinationSearch('');
-              }}
-              onSearchChange={(value) => {
-                setDestinationSearch(value);
-              }}
+              onCantonChange={setDestinationCanton}
               onValueChange={(value) => {
                 setDestinationCityId(value);
                 if (value && value === originCityId) setOriginCityId('');
@@ -331,7 +312,6 @@ export function CreateRouteModal({
                     localities={catalog?.localities ?? []}
                     province={stop.province}
                     canton={stop.canton}
-                    search={stop.search}
                     value={stop.cityId}
                     showLocality
                     excludedIds={[
@@ -346,13 +326,9 @@ export function CreateRouteModal({
                         province: value,
                         canton: '',
                         cityId: '',
-                        search: '',
                       })
                     }
-                    onCantonChange={(value) =>
-                      updateStop(index, { canton: value, search: '' })
-                    }
-                    onSearchChange={(value) => updateStop(index, { search: value })}
+                    onCantonChange={(value) => updateStop(index, { canton: value })}
                     onValueChange={(value) => updateStop(index, { cityId: value })}
                   />
                   <label>
@@ -423,7 +399,7 @@ export function CreateRouteModal({
               onClick={() =>
                 setStops((current) => [
                   ...current,
-                  { cityId: '', minutes: '', province: '', canton: '', search: '' },
+                  { cityId: '', minutes: '', province: '', canton: '' },
                 ])
               }
               disabled={!originCityId || !destinationCityId || stops.length >= 20}
