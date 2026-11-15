@@ -76,6 +76,8 @@ export function CooperativeRoutesPage() {
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [configuringRoute, setConfiguringRoute] = useState<CooperativeRoute | null>(null);
   const [isNewRouteConfig, setIsNewRouteConfig] = useState(false);
+  const [sheetOriginFilter, setSheetOriginFilter] = useState('');
+  const [sheetDestinationFilter, setSheetDestinationFilter] = useState('');
   const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [startingCities, setStartingCities] = useState<Record<string, Record<number, string>>>({});
@@ -324,18 +326,58 @@ export function CooperativeRoutesPage() {
         }
       }
     }
+    const routesById = new Map(routes.map((r) => [r.id, r]));
+
     return Array.from(map.values())
-      .map((f) => ({
-        frequencyId: 'frequencyId' in f ? f.frequencyId : f.id,
-        routeId: f.routeId,
-        routeName: f.routeName,
-        departureTime: f.departureTime,
-        durationMinutes: f.durationMinutes,
-        resolutionNumber: f.resolutionNumber,
-        stops: f.stops,
-      }))
+      .map((f) => {
+        const route = routesById.get(f.routeId);
+        let originCity = route?.originCity ?? '';
+        let destinationCity = route?.destinationCity ?? '';
+        if ((!originCity || !destinationCity) && f.routeName) {
+          const parts = f.routeName.split(/\s*[-–→]\s*/);
+          if (parts.length >= 2) {
+            originCity = originCity || parts[0].trim();
+            destinationCity = destinationCity || parts[1].trim();
+          }
+        }
+        return {
+          frequencyId: 'frequencyId' in f ? f.frequencyId : f.id,
+          routeId: f.routeId,
+          routeName: f.routeName,
+          originCity,
+          destinationCity,
+          departureTime: f.departureTime,
+          durationMinutes: f.durationMinutes,
+          resolutionNumber: f.resolutionNumber,
+          stops: f.stops,
+        };
+      })
       .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
-  }, [frequencies, plans, serviceDates]);
+  }, [frequencies, plans, serviceDates, routes]);
+
+  const sheetOrigins = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of sheetFrequencies) {
+      if (f.originCity) set.add(f.originCity);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [sheetFrequencies]);
+
+  const sheetDestinations = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of sheetFrequencies) {
+      if (f.destinationCity) set.add(f.destinationCity);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [sheetFrequencies]);
+
+  const filteredSheetFrequencies = useMemo(() => {
+    return sheetFrequencies.filter((f) => {
+      if (sheetOriginFilter && f.originCity !== sheetOriginFilter) return false;
+      if (sheetDestinationFilter && f.destinationCity !== sheetDestinationFilter) return false;
+      return true;
+    });
+  }, [sheetFrequencies, sheetOriginFilter, sheetDestinationFilter]);
 
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
@@ -577,6 +619,8 @@ export function CooperativeRoutesPage() {
                     setPlans({});
                     setAssignedBuses({});
                     setStartingCities({});
+                    setSheetOriginFilter('');
+                    setSheetDestinationFilter('');
                   }}
                   disabled={!groups.length}
                 >
@@ -599,6 +643,36 @@ export function CooperativeRoutesPage() {
                     setStartingCities({});
                   }}
                 />
+              </label>
+              <label>
+                Origen
+                <select
+                  value={sheetOriginFilter}
+                  onChange={(event) => setSheetOriginFilter(event.target.value)}
+                  disabled={sheetOrigins.length === 0}
+                >
+                  <option value="">Todos los orígenes</option>
+                  {sheetOrigins.map((origin) => (
+                    <option key={origin} value={origin}>
+                      {origin}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Destino
+                <select
+                  value={sheetDestinationFilter}
+                  onChange={(event) => setSheetDestinationFilter(event.target.value)}
+                  disabled={sheetDestinations.length === 0}
+                >
+                  <option value="">Todos los destinos</option>
+                  {sheetDestinations.map((dest) => (
+                    <option key={dest} value={dest}>
+                      {dest}
+                    </option>
+                  ))}
+                </select>
               </label>
               <button
                 type="button"
@@ -693,55 +767,63 @@ export function CooperativeRoutesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sheetFrequencies.map((frequency) => (
-                        <tr key={frequency.frequencyId}>
-                          <td>
-                            <strong>{frequency.routeName}</strong>
-                            <small>{frequency.resolutionNumber}</small>
+                      {filteredSheetFrequencies.length === 0 ? (
+                        <tr>
+                          <td colSpan={3 + serviceDates.length} style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                            No hay frecuencias que coincidan con el origen y destino seleccionados.
                           </td>
-                          <td>{displayTime(frequency.departureTime)}</td>
-                          <td>
-                            {frequency.stops.length
-                              ? frequency.stops.join(' → ')
-                              : 'Sin paradas intermedias'}
-                          </td>
-                          {serviceDates.map((day) => {
-                            const dayPlan = plans[day];
-                            const isPublished = dayPlan?.status === 'published';
-                            const canEditBus = !isPublished || dayPlan.canReassign;
-                            return (
-                              <td key={day}>
-                                <select
-                                  aria-label={`${frequency.routeName} ${dayLabel(day)}`}
-                                  value={assignedBuses[day]?.[frequency.frequencyId] ?? ''}
-                                  onChange={(event) =>
-                                    void handleBusAssignmentChange(
-                                      day,
-                                      frequency.frequencyId,
-                                      event.target.value,
-                                    )
-                                  }
-                                  disabled={!canEditBus}
-                                >
-                                  <option value="">Sin asignar</option>
-                                  {dayPlan?.buses.map((bus) => (
-                                    <option
-                                      value={bus.id}
-                                      key={bus.id}
-                                      disabled={!bus.isActive || bus.status !== 'operativo'}
-                                    >
-                                      Bus {bus.number}
-                                      {bus.status !== 'operativo'
-                                        ? ` · ${bus.status.replaceAll('_', ' ')}`
-                                        : ''}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                            );
-                          })}
                         </tr>
-                      ))}
+                      ) : (
+                        filteredSheetFrequencies.map((frequency) => (
+                          <tr key={frequency.frequencyId}>
+                            <td>
+                              <strong>{frequency.routeName}</strong>
+                              <small>{frequency.resolutionNumber}</small>
+                            </td>
+                            <td>{displayTime(frequency.departureTime)}</td>
+                            <td>
+                              {frequency.stops.length
+                                ? frequency.stops.join(' → ')
+                                : 'Sin paradas intermedias'}
+                            </td>
+                            {serviceDates.map((day) => {
+                              const dayPlan = plans[day];
+                              const isPublished = dayPlan?.status === 'published';
+                              const canEditBus = !isPublished || dayPlan.canReassign;
+                              return (
+                                <td key={day}>
+                                  <select
+                                    aria-label={`${frequency.routeName} ${dayLabel(day)}`}
+                                    value={assignedBuses[day]?.[frequency.frequencyId] ?? ''}
+                                    onChange={(event) =>
+                                      void handleBusAssignmentChange(
+                                        day,
+                                        frequency.frequencyId,
+                                        event.target.value,
+                                      )
+                                    }
+                                    disabled={!canEditBus}
+                                  >
+                                    <option value="">Sin asignar</option>
+                                    {dayPlan?.buses.map((bus) => (
+                                      <option
+                                        value={bus.id}
+                                        key={bus.id}
+                                        disabled={!bus.isActive || bus.status !== 'operativo'}
+                                      >
+                                        Bus {bus.number}
+                                        {bus.status !== 'operativo'
+                                          ? ` · ${bus.status.replaceAll('_', ' ')}`
+                                          : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
