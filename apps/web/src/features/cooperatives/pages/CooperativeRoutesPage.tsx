@@ -19,11 +19,33 @@ import { Link } from 'react-router-dom';
 import { CreateRouteModal } from '../components/CreateRouteModal';
 import { ConfigureRouteModal } from '../components/ConfigureRouteModal';
 import { RouteFilters, type RouteStatusFilter } from '../components/RouteFilters';
+import {
+  RouteLocationFilter,
+  type RouteLocationFilterValue,
+} from '../components/RouteLocationFilter';
 import { normalizeLocationSearch } from '../utils/normalizeLocationSearch';
 import {
   getGeographicCatalog,
   type GeographicCatalog,
 } from '../../geography/services/geographicCatalog.service';
+
+const EMPTY_LOCATION_FILTER: RouteLocationFilterValue = {
+  province: '',
+  canton: '',
+  locality: '',
+};
+
+function matchesLocationFilter(
+  city: RouteCity | undefined,
+  filter: RouteLocationFilterValue,
+): boolean {
+  if (!filter.province && !filter.canton && !filter.locality) return true;
+  if (!city) return false;
+  if (filter.province && city.province !== filter.province) return false;
+  if (filter.canton && city.canton !== filter.canton) return false;
+  if (filter.locality && String(city.id) !== filter.locality) return false;
+  return true;
+}
 
 function localDateValue(): string {
   const now = new Date();
@@ -70,11 +92,17 @@ export function CooperativeRoutesPage() {
   const [routeSearch, setRouteSearch] = useState('');
   const [routeGroupFilter, setRouteGroupFilter] = useState('all');
   const [routeStatusFilter, setRouteStatusFilter] = useState<RouteStatusFilter>('all');
+  const [routeOriginFilter, setRouteOriginFilter] =
+    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
+  const [routeDestinationFilter, setRouteDestinationFilter] =
+    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [configuringRoute, setConfiguringRoute] = useState<CooperativeRoute | null>(null);
   const [isNewRouteConfig, setIsNewRouteConfig] = useState(false);
-  const [sheetOriginFilter, setSheetOriginFilter] = useState('');
-  const [sheetDestinationFilter, setSheetDestinationFilter] = useState('');
+  const [sheetOriginFilter, setSheetOriginFilter] =
+    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
+  const [sheetDestinationFilter, setSheetDestinationFilter] =
+    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
   const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [startingCities, setStartingCities] = useState<Record<string, Record<number, string>>>({});
@@ -297,6 +325,7 @@ export function CooperativeRoutesPage() {
 
   const filteredRoutes = useMemo(() => {
     const query = normalizeLocationSearch(routeSearch);
+    const citiesById = new Map(cities.map((city) => [city.id, city]));
     return routes.filter((route) => {
       const haystack = normalizeLocationSearch(
         [
@@ -315,9 +344,31 @@ export function CooperativeRoutesPage() {
       const matchesStatus =
         routeStatusFilter === 'all' ||
         (routeStatusFilter === 'active' ? route.isActive : !route.isActive);
-      return matchesSearch && matchesGroup && matchesStatus;
+      const matchesOrigin = matchesLocationFilter(
+        citiesById.get(route.originCityId),
+        routeOriginFilter,
+      );
+      const matchesDestination = matchesLocationFilter(
+        citiesById.get(route.destinationCityId),
+        routeDestinationFilter,
+      );
+      return (
+        matchesSearch &&
+        matchesGroup &&
+        matchesStatus &&
+        matchesOrigin &&
+        matchesDestination
+      );
     });
-  }, [routes, routeSearch, routeGroupFilter, routeStatusFilter]);
+  }, [
+    routes,
+    cities,
+    routeSearch,
+    routeGroupFilter,
+    routeStatusFilter,
+    routeOriginFilter,
+    routeDestinationFilter,
+  ]);
 
   const sheetFrequencies = useMemo(() => {
     const map = new Map<number, (typeof frequencies)[number] | RouteSheet['frequencies'][number]>();
@@ -353,7 +404,9 @@ export function CooperativeRoutesPage() {
           routeId: f.routeId,
           routeName: f.routeName,
           originCity,
+          originCityId: route?.originCityId ?? null,
           destinationCity,
+          destinationCityId: route?.destinationCityId ?? null,
           departureTime: f.departureTime,
           durationMinutes: f.durationMinutes,
           resolutionNumber: f.resolutionNumber,
@@ -363,29 +416,21 @@ export function CooperativeRoutesPage() {
       .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [frequencies, plans, serviceDates, routes]);
 
-  const sheetOrigins = useMemo(() => {
-    const set = new Set<string>();
-    for (const f of sheetFrequencies) {
-      if (f.originCity) set.add(f.originCity);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [sheetFrequencies]);
-
-  const sheetDestinations = useMemo(() => {
-    const set = new Set<string>();
-    for (const f of sheetFrequencies) {
-      if (f.destinationCity) set.add(f.destinationCity);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [sheetFrequencies]);
-
   const filteredSheetFrequencies = useMemo(() => {
+    const citiesById = new Map(cities.map((city) => [city.id, city]));
     return sheetFrequencies.filter((f) => {
-      if (sheetOriginFilter && f.originCity !== sheetOriginFilter) return false;
-      if (sheetDestinationFilter && f.destinationCity !== sheetDestinationFilter) return false;
-      return true;
+      return (
+        matchesLocationFilter(
+          f.originCityId === null ? undefined : citiesById.get(f.originCityId),
+          sheetOriginFilter,
+        ) &&
+        matchesLocationFilter(
+          f.destinationCityId === null ? undefined : citiesById.get(f.destinationCityId),
+          sheetDestinationFilter,
+        )
+      );
     });
-  }, [sheetFrequencies, sheetOriginFilter, sheetDestinationFilter]);
+  }, [sheetFrequencies, cities, sheetOriginFilter, sheetDestinationFilter]);
 
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
@@ -600,6 +645,20 @@ export function CooperativeRoutesPage() {
               onGroupChange={setRouteGroupFilter}
               onStatusChange={setRouteStatusFilter}
             />
+            <div className="cooperative-routes__location-filter-grid">
+              <RouteLocationFilter
+                title="Filtrar origen"
+                catalog={geographicCatalog}
+                value={routeOriginFilter}
+                onChange={setRouteOriginFilter}
+              />
+              <RouteLocationFilter
+                title="Filtrar destino"
+                catalog={geographicCatalog}
+                value={routeDestinationFilter}
+                onChange={setRouteDestinationFilter}
+              />
+            </div>
             <div className="cooperative-routes__registered">
               <h4>Listado de rutas</h4>
               {routes.length === 0 ? (
@@ -708,8 +767,8 @@ export function CooperativeRoutesPage() {
                     setPlans({});
                     setAssignedBuses({});
                     setStartingCities({});
-                    setSheetOriginFilter('');
-                    setSheetDestinationFilter('');
+                    setSheetOriginFilter(EMPTY_LOCATION_FILTER);
+                    setSheetDestinationFilter(EMPTY_LOCATION_FILTER);
                   }}
                   disabled={!groups.length}
                 >
@@ -732,36 +791,6 @@ export function CooperativeRoutesPage() {
                     setStartingCities({});
                   }}
                 />
-              </label>
-              <label>
-                Origen
-                <select
-                  value={sheetOriginFilter}
-                  onChange={(event) => setSheetOriginFilter(event.target.value)}
-                  disabled={sheetOrigins.length === 0}
-                >
-                  <option value="">Todos los orígenes</option>
-                  {sheetOrigins.map((origin) => (
-                    <option key={origin} value={origin}>
-                      {origin}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Destino
-                <select
-                  value={sheetDestinationFilter}
-                  onChange={(event) => setSheetDestinationFilter(event.target.value)}
-                  disabled={sheetDestinations.length === 0}
-                >
-                  <option value="">Todos los destinos</option>
-                  {sheetDestinations.map((dest) => (
-                    <option key={dest} value={dest}>
-                      {dest}
-                    </option>
-                  ))}
-                </select>
               </label>
               <button
                 type="button"
@@ -809,6 +838,20 @@ export function CooperativeRoutesPage() {
                 </span>
                 {isAutoAssigning ? 'Auto-asignando...' : 'Auto-asignar buses'}
               </button>
+            </div>
+            <div className="cooperative-routes__location-filter-grid">
+              <RouteLocationFilter
+                title="Filtrar origen"
+                catalog={geographicCatalog}
+                value={sheetOriginFilter}
+                onChange={setSheetOriginFilter}
+              />
+              <RouteLocationFilter
+                title="Filtrar destino"
+                catalog={geographicCatalog}
+                value={sheetDestinationFilter}
+                onChange={setSheetDestinationFilter}
+              />
             </div>
             <div className="cooperative-routes__sheet-meta">
               <span>

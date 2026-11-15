@@ -420,6 +420,34 @@
   gap: 0.75rem;
 }
 
+.cooperative-routes__location-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.cooperative-routes__location-filter {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #dbe5f0;
+  border-radius: 0.65rem;
+  padding: 0.9rem;
+  background: #f8fafc;
+}
+
+.cooperative-routes__location-filter legend {
+  padding: 0 0.35rem;
+  color: #0e5a6b;
+  font-weight: 700;
+}
+
+.cooperative-routes__location-filter-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .cooperative-routes__frequency-form {
   grid-template-columns: repeat(4, minmax(10rem, 1fr));
 }
@@ -1034,6 +1062,10 @@
   .cooperative-routes__filters {
     grid-template-columns: 1fr;
   }
+
+  .cooperative-routes__location-filter-grid {
+    grid-template-columns: 1fr;
+  }
   .cooperative-routes__form,
   .cooperative-routes__frequency-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1053,7 +1085,7 @@
   }
 
   .cooperative-routes__fare-row {
-    grid-template-columns: minmax(8rem, 1fr) 6rem 6rem;
+    grid-template-columns: minmax(8rem, 1fr) minmax(0, 1.2fr);
   }
 }
 
@@ -1074,7 +1106,8 @@
   .cooperative-routes__form,
   .cooperative-routes__frequency-form,
   .cooperative-routes__stop-row,
-  .cooperative-routes__location-fields {
+  .cooperative-routes__location-fields,
+  .cooperative-routes__location-filter-fields {
     grid-template-columns: 1fr;
   }
 
