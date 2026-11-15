@@ -9,6 +9,7 @@ import { getCooperativeSeatTypes, type CooperativeSeatType } from '../services/s
 interface BusFloorplanEditorProps {
   template: BusTemplate;
   onChange: (template: BusTemplate) => void;
+  capacity: number;
   readOnly?: boolean;
 }
 
@@ -40,10 +41,12 @@ function getLegacySeatType(name: string): SeatType {
 export function BusFloorplanEditor({
   template,
   onChange,
+  capacity,
   readOnly = false,
 }: BusFloorplanEditorProps) {
   const [selectedFloor, setSelectedFloor] = useState(1);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
+  const [capacityError, setCapacityError] = useState<string | null>(null);
 
   // Tipo utilizado para agregar asientos.
   const [seatType, setSeatType] = useState<SeatType>('normal');
@@ -51,9 +54,7 @@ export function BusFloorplanEditor({
 
   // Catálogo de tipos de asiento de la cooperativa.
   const [cooperativeSeatTypes, setCooperativeSeatTypes] = useState<CooperativeSeatType[]>([]);
-
   const [seatTypesLoading, setSeatTypesLoading] = useState(true);
-
   const [seatTypesError, setSeatTypesError] = useState<string | null>(null);
 
   const [layout, setLayout] = useState({
@@ -61,6 +62,10 @@ export function BusFloorplanEditor({
     columns: template.columns,
     seatsPerRow: Math.min(4, template.columns - 1),
   });
+
+  const hasValidCapacity = Number.isInteger(capacity) && capacity > 0;
+  const capacityExceeded = hasValidCapacity && template.seats.length > capacity;
+  const capacityReached = hasValidCapacity && template.seats.length >= capacity;
 
   // Cargar los tipos registrados por la cooperativa.
   useEffect(() => {
@@ -104,16 +109,13 @@ export function BusFloorplanEditor({
   }, []);
 
   const floorSeats = template.seats.filter((seat) => seat.floor === selectedFloor);
-
   const selectedSeat = template.seats.find((seat) => seat.id === selectedSeatId);
-
   const selectedFloorSeatCount = floorSeats.length;
 
   // Obtener el nombre real del tipo asignado a un asiento.
   const getSeatTypeName = (seat: TemplateSeat): string => {
     if (seat.seatTypeId != null) {
       const configuredType = cooperativeSeatTypes.find((type) => type.id === seat.seatTypeId);
-
       return configuredType?.name ?? `Tipo #${seat.seatTypeId}`;
     }
 
@@ -136,10 +138,29 @@ export function BusFloorplanEditor({
 
     setSelectedFloor(1);
     setSelectedSeatId(null);
+    setCapacityError(null);
   };
 
-  // Generar automáticamente la distribución de asientos.
+  // Generar automáticamente la distribución sin superar la capacidad total del bus.
   const applyLayout = () => {
+    if (!hasValidCapacity) {
+      setCapacityError(
+        'Debes indicar una capacidad de pasajeros válida antes de distribuir asientos.',
+      );
+      return;
+    }
+
+    const positions = getSeatPositions(layout.columns, layout.seatsPerRow);
+    const totalGeneratedSeats = template.floors * layout.rows * positions.length;
+
+    if (totalGeneratedSeats > capacity) {
+      setCapacityError(
+        `La distribución generaría ${totalGeneratedSeats} asientos, ` +
+          `pero la capacidad máxima del bus es ${capacity} pasajeros.`,
+      );
+      return;
+    }
+
     const seats: TemplateSeat[] = [];
     let number = 1;
 
@@ -149,7 +170,7 @@ export function BusFloorplanEditor({
 
     for (let floor = 1; floor <= template.floors; floor += 1) {
       for (let row = 1; row <= layout.rows; row += 1) {
-        for (const column of getSeatPositions(layout.columns, layout.seatsPerRow)) {
+        for (const column of positions) {
           seats.push({
             id: `seat-${floor}-${row}-${column}`,
             number,
@@ -173,6 +194,7 @@ export function BusFloorplanEditor({
       seats,
     );
 
+    setCapacityError(null);
     setSelectedSeatId(null);
   };
 
@@ -191,7 +213,6 @@ export function BusFloorplanEditor({
     }
 
     const selectedType = cooperativeSeatTypes.find((type) => `catalog:${type.id}` === value);
-
     if (!selectedType) return;
 
     setSeatTypeId(selectedType.id);
@@ -200,6 +221,18 @@ export function BusFloorplanEditor({
 
   // Agregar un asiento en una posición vacía.
   const addSeat = (row: number, column: number) => {
+    if (!hasValidCapacity) {
+      setCapacityError('La capacidad del bus debe ser un número entero mayor que cero.');
+      return;
+    }
+
+    if (template.seats.length >= capacity) {
+      setCapacityError(
+        `No puedes agregar más asientos. La capacidad máxima del bus es ${capacity} pasajeros.`,
+      );
+      return;
+    }
+
     const number = Math.max(0, ...template.seats.map((seat) => seat.number)) + 1;
 
     const seat: TemplateSeat = {
@@ -213,6 +246,7 @@ export function BusFloorplanEditor({
     };
 
     updateTemplate({}, [...template.seats, seat]);
+    setCapacityError(null);
     setSelectedSeatId(seat.id);
   };
 
@@ -222,6 +256,7 @@ export function BusFloorplanEditor({
       template.seats.filter((seat) => seat.id !== selectedSeatId),
     );
 
+    setCapacityError(null);
     setSelectedSeatId(null);
   };
 
@@ -249,7 +284,6 @@ export function BusFloorplanEditor({
     }
 
     const selectedType = cooperativeSeatTypes.find((type) => `catalog:${type.id}` === value);
-
     if (!selectedType) return;
 
     updateTemplate(
@@ -472,8 +506,34 @@ export function BusFloorplanEditor({
       )}
 
       <div className="bus-floorplan-editor__summary" role="status">
-        Piso {selectedFloor}: {selectedFloorSeatCount} asientos · Total: {template.seats.length}
+        Piso {selectedFloor}: {selectedFloorSeatCount} asientos · Total: {template.seats.length} /{' '}
+        {capacity} asientos
       </div>
+
+      {!hasValidCapacity && (
+        <p className="bus-floorplan-editor__capacity-error" role="alert">
+          La capacidad de pasajeros debe ser un número entero mayor que cero.
+        </p>
+      )}
+
+      {capacityExceeded && (
+        <p className="bus-floorplan-editor__capacity-error" role="alert">
+          Esta plantilla contiene {template.seats.length} asientos y supera la capacidad máxima de{' '}
+          {capacity} pasajeros. Reduce los asientos o aumenta la capacidad del bus.
+        </p>
+      )}
+
+      {!capacityExceeded && capacityReached && !readOnly && (
+        <p role="status">
+          Capacidad máxima alcanzada. Puedes quitar un asiento para agregarlo en otra posición.
+        </p>
+      )}
+
+      {capacityError && (
+        <p className="bus-floorplan-editor__capacity-error" role="alert">
+          {capacityError}
+        </p>
+      )}
 
       <section className="bus-seat-map" aria-label={`Editor de asientos: ${template.name}`}>
         {template.floors > 1 && (
@@ -500,7 +560,6 @@ export function BusFloorplanEditor({
         <div className="bus-seat-map__vehicle">
           <div className="bus-seat-map__front" aria-label="Frente del bus">
             <span className="bus-seat-map__front-label">Frente del bus</span>
-
             <span className="bus-seat-map__driver" aria-label="Conductor">
               Conductor
             </span>
@@ -521,14 +580,11 @@ export function BusFloorplanEditor({
               },
               (_, index) => {
                 const row = Math.floor(index / template.columns) + 1;
-
                 const column = (index % template.columns) + 1;
-
                 const seat = floorSeats.find((item) => item.row === row && item.column === column);
 
                 if (seat) {
                   const seatLabel = getSeatTypeName(seat);
-
                   const isSpecialType = seatLabel.trim().toLowerCase() !== 'normal';
 
                   return (
@@ -569,7 +625,7 @@ export function BusFloorplanEditor({
                       gridRow: row,
                     }}
                     aria-label={`Agregar asiento en fila ${row}, columna ${column}`}
-                    disabled={readOnly || seatTypesLoading}
+                    disabled={readOnly || seatTypesLoading || !hasValidCapacity || capacityReached}
                     onClick={() => addSeat(row, column)}
                   >
                     +
