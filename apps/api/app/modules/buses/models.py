@@ -127,11 +127,18 @@ class BusGroup(TenantModel):
             "normalized_name",
             unique=True,
         ),
+        CheckConstraint(
+            "rest_buses_count >= 0",
+            name="ck_bus_groups_rest_buses_count",
+        ),
     )
 
     name: Mapped[str] = mapped_column(String(100))
     normalized_name: Mapped[str] = mapped_column(String(100), default="")
     description: Mapped[str | None] = mapped_column(String(255))
+    rest_buses_count: Mapped[int] = mapped_column(
+        default=1, server_default="1", nullable=False
+    )
 
     @validates("name")
     def normalize_name(self, _key: str, value: str) -> str:

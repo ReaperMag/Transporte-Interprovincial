@@ -152,6 +152,10 @@ def init_db() -> None:
                 )
             )
 
+    from app.modules.schedules.planning_schema import ensure_route_planning_schema
+
+    ensure_route_planning_schema(engine)
+
 
 def reset_db() -> None:
     """Borra todas las tablas y las vuelve a crear. Se pierden todos los datos."""

@@ -17,7 +17,9 @@ from app.modules.schedules.models import (
     RouteSheet,
     RouteSheetBusLocation,
     RouteSheetStatus,
+    route_sheet_standby_buses,
 )
+from app.modules.schedules import rotation
 from app.modules.trips.models import Trip, TripStatus
 
 
@@ -160,6 +162,8 @@ def create_frequency(
         raise RouteNotSchedulableError
     if not _has_full_route_fares(db, route):
         raise RouteFareMissingError
+    if route.bus_group_id is not None and route.bus_group_id != group.id:
+        raise RouteAssignedToAnotherGroupError
 
     existing_group_ids = set(
         db.scalars(
@@ -337,6 +341,201 @@ def _validate_assignments(
             )
 
 
+def _bus_read(bus: Bus) -> dict:
+    return {
+        "id": bus.id,
+        "number": bus.number,
+        "plate": bus.plate,
+        "status": bus.status,
+        "is_active": bus.is_active,
+    }
+
+
+def _can_reassign(db: Session, sheet: RouteSheet) -> bool:
+    if sheet.status != RouteSheetStatus.PUBLISHED or not sheet.trips:
+        return False
+    trip_ids = [trip.id for trip in sheet.trips]
+    has_reservations = db.scalar(
+        select(Reservation.id).where(Reservation.trip_id.in_(trip_ids)).limit(1)
+    )
+    return has_reservations is None and all(
+        trip.status == TripStatus.SCHEDULED
+        and _as_local(trip.departure_at) > datetime.now(LOCAL_TIMEZONE)
+        for trip in sheet.trips
+    )
+
+
+def _sheet_warnings(buses: list[Bus], sheet: RouteSheet | None, rest_count: int) -> list[str]:
+    operational = [
+        bus for bus in buses if bus.is_active and bus.status == BusStatus.OPERATIONAL
+    ]
+    if not operational:
+        return [rotation.NO_OPERATIONAL_BUSES]
+
+    warnings: list[str] = []
+    if rest_count >= len(operational):
+        warnings.append(rotation.REST_COUNT_TOO_HIGH)
+    standby_ids = {bus.id for bus in sheet.standby_buses} if sheet else set()
+    assigned_ids = {
+        trip.bus_id for trip in sheet.trips if trip.bus_id is not None
+    } if sheet else set()
+    if len(standby_ids) < min(max(rest_count, 0), len(operational) - 1):
+        warnings.append(rotation.NO_REST_BUSES)
+    spare_ids = {bus.id for bus in operational} - standby_ids - assigned_ids
+    if len(standby_ids) + len(assigned_ids) >= len(operational) and not spare_ids:
+        warnings.append(rotation.NO_SPARE_BUSES)
+    return warnings
+
+
+def _group_frequency_models(
+    db: Session, cooperative_id: int, bus_group_id: int
+) -> list[Frequency]:
+    statement = (
+        select(Frequency)
+        .join(Route, Frequency.route_id == Route.id)
+        .options(
+            selectinload(Frequency.route).selectinload(Route.origin_city),
+            selectinload(Frequency.route).selectinload(Route.destination_city),
+            selectinload(Frequency.route)
+            .selectinload(Route.stops)
+            .selectinload(RouteStop.city),
+        )
+        .where(
+            Frequency.cooperative_id == cooperative_id,
+            Frequency.bus_group_id == bus_group_id,
+            Frequency.is_active.is_(True),
+            Route.cooperative_id == cooperative_id,
+            Route.is_active.is_(True),
+        )
+        .order_by(Frequency.departure_time, Frequency.id)
+    )
+    return list(db.scalars(statement).all())
+
+
+def _frequency_model_read(frequency: Frequency, bus_id: int | None) -> dict:
+    route = frequency.route
+    return {
+        "frequency_id": frequency.id,
+        "route_id": route.id,
+        "route_name": f"{route.origin_city.name} - {route.destination_city.name}",
+        "departure_time": frequency.departure_time,
+        "duration_minutes": route.duration_minutes,
+        "resolution_number": frequency.resolution_number,
+        "stops": [stop.city.name for stop in sorted(route.stops, key=lambda item: item.stop_order)],
+        "bus_id": bus_id,
+    }
+
+
+def get_route_sheet_auto_plan(
+    db: Session,
+    cooperative_id: int,
+    bus_group_id: int,
+    start_date: date,
+    days: int,
+    force: bool = False,
+) -> list[dict]:
+    group = db.scalar(
+        select(BusGroup).where(
+            BusGroup.id == bus_group_id,
+            BusGroup.cooperative_id == cooperative_id,
+        )
+    )
+    if group is None:
+        raise BusGroupNotFoundError
+
+    period_days = max(1, min(days, 31))
+    service_dates = [start_date + timedelta(days=index) for index in range(period_days)]
+    sheets = db.scalars(
+        select(RouteSheet)
+        .options(
+            selectinload(RouteSheet.trips),
+            selectinload(RouteSheet.standby_buses),
+        )
+        .where(
+            RouteSheet.cooperative_id == cooperative_id,
+            RouteSheet.bus_group_id == bus_group_id,
+            RouteSheet.service_date.in_(service_dates),
+        )
+    ).all()
+    sheets_by_date = {sheet.service_date: sheet for sheet in sheets}
+    frequencies = _group_frequency_models(db, cooperative_id, bus_group_id)
+    frequencies_by_id = {frequency.id: frequency for frequency in frequencies}
+    buses = list(
+        db.scalars(
+            select(Bus)
+            .where(
+                Bus.cooperative_id == cooperative_id,
+                Bus.group_id == bus_group_id,
+            )
+            .order_by(Bus.number, Bus.id)
+        ).all()
+    )
+
+    results: list[dict] = []
+    for service_date in service_dates:
+        sheet = sheets_by_date.get(service_date)
+        has_reservations = False
+        if sheet is not None:
+            trip_ids = [trip.id for trip in sheet.trips]
+            if trip_ids:
+                has_reservations = bool(
+                    db.scalar(
+                        select(Reservation.id)
+                        .where(Reservation.trip_id.in_(trip_ids))
+                        .limit(1)
+                    )
+                )
+
+        if sheet is not None and (not force or has_reservations):
+            results.append(
+                get_route_sheet(db, cooperative_id, bus_group_id, service_date)
+            )
+            continue
+
+        if sheet is not None and force and not has_reservations:
+            db.delete(sheet)
+            db.commit()
+            sheet = None
+
+        plan = rotation.build_daily_plan(
+            buses,
+            frequencies,
+            service_date,
+            group.rest_buses_count,
+        )
+        bus_id_by_frequency = {
+            assignment.frequency_id: assignment.bus_id
+            for assignment in plan.assignments
+        }
+        results.append(
+            {
+                "id": sheet.id if sheet else None,
+                "bus_group_id": bus_group_id,
+                "service_date": service_date,
+                "status": sheet.status if sheet else None,
+                "mode": RouteSheetMode.AUTOMATIC,
+                "auto_generated": True,
+                "rest_buses_count": group.rest_buses_count,
+                "can_reassign": False,
+                "frequencies": [
+                    _frequency_model_read(
+                        frequency,
+                        bus_id_by_frequency.get(frequency.id),
+                    )
+                    for frequency in frequencies
+                ],
+                "buses": [_bus_read(bus) for bus in buses],
+                "standby_buses": [_bus_read(bus) for bus in plan.standby_buses],
+                "warnings": plan.warnings,
+                "starting_locations": [
+                    {"bus_id": bus_id, "city_id": city_id}
+                    for bus_id, city_id in plan.starting_locations.items()
+                ],
+            }
+        )
+    return results
+
+
 def get_route_sheet(
     db: Session,
     cooperative_id: int,
@@ -354,7 +553,10 @@ def get_route_sheet(
 
     sheet = db.scalar(
         select(RouteSheet)
-        .options(selectinload(RouteSheet.trips))
+        .options(
+            selectinload(RouteSheet.trips),
+            selectinload(RouteSheet.standby_buses),
+        )
         .where(
             RouteSheet.cooperative_id == cooperative_id,
             RouteSheet.bus_group_id == bus_group_id,
@@ -382,26 +584,16 @@ def get_route_sheet(
         )
         .order_by(Bus.number, Bus.id)
     ).all()
-    can_reassign = False
-    if sheet is not None and sheet.status == RouteSheetStatus.PUBLISHED and sheet.trips:
-        trip_ids = [trip.id for trip in sheet.trips]
-        has_reservations = db.scalar(
-            select(Reservation.id).where(Reservation.trip_id.in_(trip_ids)).limit(1)
-        )
-        can_reassign = (
-            has_reservations is None
-            and all(
-                trip.status == TripStatus.SCHEDULED
-                and _as_local(trip.departure_at) > datetime.now(LOCAL_TIMEZONE)
-                for trip in sheet.trips
-            )
-        )
+    can_reassign = _can_reassign(db, sheet) if sheet is not None else False
 
     return {
         "id": sheet.id if sheet else None,
         "bus_group_id": bus_group_id,
         "service_date": service_date,
         "status": sheet.status if sheet else None,
+        "mode": sheet.mode if sheet else RouteSheetMode.MANUAL,
+        "auto_generated": False,
+        "rest_buses_count": group.rest_buses_count,
         "can_reassign": can_reassign,
         "frequencies": [
             {
@@ -420,16 +612,11 @@ def get_route_sheet(
             }
             for frequency in frequencies
         ],
-        "buses": [
-            {
-                "id": bus.id,
-                "number": bus.number,
-                "plate": bus.plate,
-                "status": bus.status,
-                "is_active": bus.is_active,
-            }
-            for bus in buses
-        ],
+        "buses": [_bus_read(bus) for bus in buses],
+        "standby_buses": (
+            [_bus_read(bus) for bus in sheet.standby_buses] if sheet else []
+        ),
+        "warnings": _sheet_warnings(list(buses), sheet, group.rest_buses_count),
         "starting_locations": [
             {"bus_id": location.bus_id, "city_id": location.city_id}
             for location in starting_locations
@@ -453,7 +640,10 @@ def save_route_sheet(
 
     sheet = db.scalar(
         select(RouteSheet)
-        .options(selectinload(RouteSheet.trips))
+        .options(
+            selectinload(RouteSheet.trips),
+            selectinload(RouteSheet.standby_buses),
+        )
         .where(
             RouteSheet.cooperative_id == cooperative_id,
             RouteSheet.bus_group_id == payload.bus_group_id,
@@ -532,6 +722,37 @@ def save_route_sheet(
         buses_by_id[bus.id] = bus
         selected_assignments.append((frequency, bus))
 
+    standby_ids = list(payload.standby_bus_ids)
+    if len(set(standby_ids)) != len(standby_ids):
+        raise BusAssignmentError("No repitas un bus en descanso.")
+    standby_buses: list[Bus] = []
+    for bus_id in standby_ids:
+        bus = db.scalar(
+            select(Bus).where(
+                Bus.id == bus_id,
+                Bus.cooperative_id == cooperative_id,
+                Bus.group_id == payload.bus_group_id,
+            )
+        )
+        if bus is None:
+            raise BusAssignmentError(
+                "El bus en descanso no pertenece al grupo de la hoja."
+            )
+        if bus.status != BusStatus.OPERATIONAL or not bus.is_active:
+            raise BusAssignmentError(
+                f"El bus {bus.number} no está operativo; no puede quedar en descanso."
+            )
+        if bus.id in buses_by_id:
+            raise BusAssignmentError(
+                f"El bus {bus.number} no puede estar asignado y en descanso a la vez."
+            )
+        standby_buses.append(bus)
+
+    if is_published and not _can_reassign(db, sheet):
+        current_standby_ids = {bus.id for bus in sheet.standby_buses}
+        if current_standby_ids != set(standby_ids):
+            raise RouteSheetPublishedError
+
     starting_location_ids = [item.bus_id for item in payload.starting_locations]
     if len(set(starting_location_ids)) != len(starting_location_ids):
         raise BusAssignmentError("No repitas la ubicación inicial de un bus.")
@@ -569,16 +790,31 @@ def save_route_sheet(
             cooperative_id=cooperative_id,
             bus_group_id=payload.bus_group_id,
             service_date=payload.service_date,
-            mode=RouteSheetMode.MANUAL,
+            mode=payload.mode,
             status=RouteSheetStatus.DRAFT,
         )
         db.add(sheet)
         db.flush()
     elif not is_published:
+        sheet.mode = payload.mode
         for trip in list(sheet.trips):
             db.delete(trip)
             sheet.trips.remove(trip)
         db.flush()
+
+    db.execute(
+        route_sheet_standby_buses.delete().where(
+            route_sheet_standby_buses.c.route_sheet_id == sheet.id
+        )
+    )
+    if standby_buses:
+        db.execute(
+            route_sheet_standby_buses.insert(),
+            [
+                {"route_sheet_id": sheet.id, "bus_id": bus.id}
+                for bus in standby_buses
+            ],
+        )
 
     db.execute(
         RouteSheetBusLocation.__table__.delete().where(

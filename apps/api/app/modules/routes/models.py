@@ -1,10 +1,18 @@
 import enum
 from decimal import Decimal
 
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint, false
+from sqlalchemy import (
+    Boolean,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    UniqueConstraint,
+    false,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.modules.buses.models import SeatType
+from app.modules.buses.models import BusGroup, SeatType
 from app.shared.base_model import BaseModel, str_enum
 from app.shared.tenant_model import TenantModel
 
@@ -36,15 +44,20 @@ class Route(TenantModel):
     """Recorrido entre dos ciudades, directo o con paradas intermedias."""
 
     __tablename__ = "routes"
+    __table_args__ = (Index("idx_routes_bus_group_id", "bus_group_id"),)
 
     origin_city_id: Mapped[int] = mapped_column(ForeignKey("cities.id", ondelete="RESTRICT"))
     destination_city_id: Mapped[int] = mapped_column(ForeignKey("cities.id", ondelete="RESTRICT"))
     route_type: Mapped[RouteType] = mapped_column(str_enum(RouteType))
     duration_minutes: Mapped[int | None]
     is_active: Mapped[bool] = mapped_column(default=True)
+    bus_group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bus_groups.id", ondelete="RESTRICT"), nullable=True
+    )
 
     origin_city: Mapped[City] = relationship(foreign_keys=[origin_city_id])
     destination_city: Mapped[City] = relationship(foreign_keys=[destination_city_id])
+    bus_group: Mapped["BusGroup | None"] = relationship()
     stops: Mapped[list["RouteStop"]] = relationship(
         back_populates="route", cascade="all, delete-orphan", order_by="RouteStop.stop_order"
     )

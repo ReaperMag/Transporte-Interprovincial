@@ -3,11 +3,13 @@ export interface CooperativeBusGroup {
   name: string;
   description: string | null;
   busCount: number;
+  restBusesCount: number;
 }
 
 export interface BusGroupInput {
   name: string;
   description: string | null;
+  restBusesCount?: number;
 }
 
 const groupsUrl = '/api/v1/cooperatives/me/groups';
