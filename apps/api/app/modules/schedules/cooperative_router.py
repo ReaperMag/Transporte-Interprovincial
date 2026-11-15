@@ -119,6 +119,28 @@ def add_frequency(
         raise _schedule_error(exc) from exc
 
 
+@router.get("/route-sheets/auto-plan", response_model=list[RouteSheetRead])
+def read_route_sheet_auto_plan(
+    group_id: int = Query(gt=0, alias="groupId"),
+    start_date: date = Query(alias="startDate"),
+    days: int = Query(default=6, ge=1, le=31),
+    force: bool = Query(default=False),
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+) -> list[RouteSheetRead]:
+    try:
+        return cooperative_service.get_route_sheet_auto_plan(
+            db,
+            _cooperative_id(account),
+            group_id,
+            start_date,
+            days,
+            force=force,
+        )
+    except cooperative_service.BusGroupNotFoundError as exc:
+        raise _schedule_error(exc) from exc
+
+
 @router.get("/route-sheets", response_model=RouteSheetRead)
 def read_route_sheet(
     group_id: int = Query(gt=0, alias="groupId"),

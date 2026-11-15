@@ -5,7 +5,6 @@ import {
   normalizeGeographicSearch,
   PassengerLocationFilter,
   type PassengerCanton,
-  type SearchLocation,
 } from '../components/PassengerLocationFilter';
 import {
   getTripCities,

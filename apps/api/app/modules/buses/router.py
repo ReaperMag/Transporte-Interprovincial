@@ -414,6 +414,7 @@ def read_bus_groups(
             id=group.id,
             name=group.name,
             description=group.description,
+            rest_buses_count=group.rest_buses_count,
             bus_count=bus_count,
         )
         for group, bus_count in repository.list_bus_groups(db, cooperative_id)
@@ -438,6 +439,7 @@ def create_bus_group(
             cooperative_id,
             name=payload.name,
             description=payload.description,
+            rest_buses_count=payload.rest_buses_count,
         )
     except service.DuplicateBusGroupNameError as exc:
         raise HTTPException(
@@ -449,6 +451,7 @@ def create_bus_group(
         id=group.id,
         name=group.name,
         description=group.description,
+        rest_buses_count=group.rest_buses_count,
         bus_count=0,
     )
 
@@ -493,6 +496,7 @@ def edit_bus_group(
         id=group.id,
         name=group.name,
         description=group.description,
+        rest_buses_count=group.rest_buses_count,
         bus_count=repository.count_group_buses(db, group.id),
     )
 

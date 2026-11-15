@@ -122,8 +122,9 @@ def test_cooperative_cannot_create_a_catalog_location(test_environment):
 
 def test_routes_can_only_use_catalogued_localities(test_environment):
     client, engine = test_environment
-    create_cooperative_account(engine)
+    cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
     destination_id = create_city(client, "Ambato", "Tungurahua")
     with client.app.state.session_factory() as db:
         canton = db.scalar(
@@ -139,6 +140,7 @@ def test_routes_can_only_use_catalogued_localities(test_environment):
     response = client.post(
         f"{PLANNING_URL}/routes",
         json={
+            "busGroupId": group_id,
             "originCityId": origin_id,
             "destinationCityId": destination_id,
             "durationMinutes": 180,
@@ -155,6 +157,7 @@ def create_route(
     origin_id: int,
     destination_id: int,
     *,
+    group_id: int,
     duration: int,
     stops=None,
     fares=None,
@@ -162,6 +165,7 @@ def create_route(
     response = client.post(
         f"{PLANNING_URL}/routes",
         json={
+            "busGroupId": group_id,
             "originCityId": origin_id,
             "destinationCityId": destination_id,
             "durationMinutes": duration,
@@ -225,12 +229,15 @@ def test_cooperative_can_create_route_with_ordered_stops_and_group_frequency(tes
         client,
         ambato_id,
         quito_id,
+        group_id=group_id,
         duration=180,
         stops=[{"cityId": latacunga_id, "minutesFromOrigin": 65}],
     )
     frequency = create_frequency(client, route["id"], group_id, "08:00")
 
     assert route["routeType"] == "with_stops"
+    assert route["busGroupId"] == group_id
+    assert route["busGroupName"] == "Interprovincial"
     assert route["stops"][0]["cityName"] == "Latacunga"
     assert frequency["busGroupId"] == group_id
     assert frequency["routeName"] == "Ambato - Quito"
@@ -244,7 +251,7 @@ def test_published_route_sheet_frequency_appears_in_passenger_trip_search(test_e
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
-    route = create_route(client, origin_id, destination_id, duration=180)
+    route = create_route(client, origin_id, destination_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     service_date = date.today() + timedelta(days=1)
 
@@ -342,7 +349,7 @@ def test_route_frequencies_must_share_one_bus_group(test_environment):
 
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
-    route = create_route(client, origin_id, destination_id, duration=180)
+    route = create_route(client, origin_id, destination_id, group_id=group_id, duration=180)
     create_frequency(client, route["id"], group_id, "08:00")
 
     response = client.post(
@@ -367,7 +374,7 @@ def test_route_without_full_fares_cannot_be_assigned_to_a_sheet(test_environment
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
-    route = create_route(client, origin_id, destination_id, duration=180)
+    route = create_route(client, origin_id, destination_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     with Session(engine) as db:
         db.execute(delete(Fare).where(Fare.route_id == route["id"]))
@@ -392,6 +399,7 @@ def test_cooperative_can_set_and_update_route_fares(test_environment):
     client, engine = test_environment
     cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
     origin_id = create_city(client, "Quito", "Pichincha")
     destination_id = create_city(client, "Ambato", "Tungurahua")
     fares = [
@@ -403,6 +411,7 @@ def test_cooperative_can_set_and_update_route_fares(test_environment):
         client,
         origin_id,
         destination_id,
+        group_id=group_id,
         duration=180,
         fares=fares,
     )
@@ -454,12 +463,14 @@ def test_cooperative_can_set_and_update_route_fares(test_environment):
 
 def test_route_rejects_subroutes_out_of_order(test_environment):
     client, engine = test_environment
-    create_cooperative_account(engine)
+    cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
 
     response = client.post(
         f"{PLANNING_URL}/routes",
         json={
+            "busGroupId": group_id,
             "originCityId": 1,
             "destinationCityId": 2,
             "durationMinutes": 180,
@@ -481,8 +492,12 @@ def test_route_sheet_rejects_route_conflict_and_allows_replacement_bus(test_envi
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    outbound = create_route(client, ambato_id, quito_id, duration=240)
-    return_route = create_route(client, quito_id, ambato_id, duration=240)
+    outbound = create_route(
+        client, ambato_id, quito_id, group_id=group_id, duration=240
+    )
+    return_route = create_route(
+        client, quito_id, ambato_id, group_id=group_id, duration=240
+    )
     outbound_frequency = create_frequency(client, outbound["id"], group_id, "08:00")
     return_frequency = create_frequency(client, return_route["id"], group_id, "11:00")
     service_date = "2030-01-01"
@@ -554,7 +569,7 @@ def test_route_sheet_requires_correct_starting_city_and_disallows_edit_after_pub
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    route = create_route(client, ambato_id, quito_id, duration=180)
+    route = create_route(client, ambato_id, quito_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
 
     invalid_location = client.put(
@@ -578,7 +593,7 @@ def test_draft_route_sheet_can_replace_a_bus(test_environment):
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    route = create_route(client, ambato_id, quito_id, duration=180)
+    route = create_route(client, ambato_id, quito_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     payload = {
         "busGroupId": group_id,
@@ -614,7 +629,7 @@ def test_published_route_sheet_allows_replacement_only_without_reservations(test
     group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     quito_id = create_city(client, "Quito", "Pichincha")
-    route = create_route(client, ambato_id, quito_id, duration=180)
+    route = create_route(client, ambato_id, quito_id, group_id=group_id, duration=180)
     frequency = create_frequency(client, route["id"], group_id, "08:00")
     service_date = (date.today() + timedelta(days=365)).isoformat()
     payload = {
@@ -678,8 +693,9 @@ def test_cooperative_sets_route_fares_per_segment_and_seat_type(test_environment
     from decimal import Decimal
 
     client, engine = test_environment
-    create_cooperative_account(engine)
+    cooperative = create_cooperative_account(engine)
     assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
 
     ambato_id = create_city(client, "Ambato", "Tungurahua")
     latacunga_id = create_city(client, "Latacunga", "Cotopaxi")
@@ -688,6 +704,7 @@ def test_cooperative_sets_route_fares_per_segment_and_seat_type(test_environment
         client,
         ambato_id,
         quito_id,
+        group_id=group_id,
         duration=180,
         stops=[{"cityId": latacunga_id, "minutesFromOrigin": 65}],
         fares=[],
@@ -779,3 +796,437 @@ def test_cooperative_sets_route_fares_per_segment_and_seat_type(test_environment
         headers={"Origin": settings.frontend_origin},
     )
     assert invalid_segment.status_code == 422
+
+
+def set_rest_buses(client, group_id: int, count: int) -> None:
+    response = client.patch(
+        f"/api/v1/cooperatives/me/groups/{group_id}",
+        json={"restBusesCount": count},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["restBusesCount"] == count
+
+
+def add_buses(engine, cooperative_id: int, group_id: int, numbers: list[str]) -> list[int]:
+    with Session(engine) as db:
+        template = db.scalar(
+            select(BusTemplate).where(BusTemplate.cooperative_id == cooperative_id)
+        )
+        buses = [
+            Bus(
+                cooperative_id=cooperative_id,
+                number=number,
+                plate=f"XYZ-{number}",
+                chassis_brand="Hino",
+                body_brand="Marcopolo",
+                template_id=template.id,
+                group_id=group_id,
+                status="operativo",
+                is_active=True,
+            )
+            for number in numbers
+        ]
+        db.add_all(buses)
+        db.commit()
+        return [bus.id for bus in buses]
+
+
+def test_auto_plan_rotates_the_first_assignment_between_days(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    set_rest_buses(client, group_id, 0)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    morning = create_frequency(client, route["id"], group_id, "08:00")
+    noon = create_frequency(client, route["id"], group_id, "12:00")
+
+    response = client.get(
+        f"{PLANNING_URL}/route-sheets/auto-plan",
+        params={"groupId": group_id, "startDate": "2030-01-07", "days": 2},
+    )
+
+    assert response.status_code == 200, response.text
+    monday, tuesday = response.json()
+    first_by_day = [
+        next(item for item in day["frequencies"] if item["frequencyId"] == morning["id"])
+        for day in (monday, tuesday)
+    ]
+    assert first_by_day[0]["busId"] == bus_ids[1]
+    assert first_by_day[1]["busId"] == bus_ids[0]
+    assert all(day["mode"] == "automatic" and day["autoGenerated"] for day in (monday, tuesday))
+    assert all(
+        next(item for item in day["frequencies"] if item["frequencyId"] == noon["id"])["busId"]
+        is not None
+        for day in (monday, tuesday)
+    )
+    assert monday["standbyBuses"] == []
+
+
+def test_auto_plan_returns_resting_buses_and_changes_them_daily(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    extra_ids = add_buses(engine, cooperative.id, group_id, ["03", "04"])
+    all_bus_ids = bus_ids + extra_ids
+    set_rest_buses(client, group_id, 1)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    create_frequency(client, route["id"], group_id, "08:00")
+
+    response = client.get(
+        f"{PLANNING_URL}/route-sheets/auto-plan",
+        params={"groupId": group_id, "startDate": "2030-01-07", "days": 4},
+    )
+
+    assert response.status_code == 200, response.text
+    days = response.json()
+    standby_ids = [[bus["id"] for bus in day["standbyBuses"]] for day in days]
+    assert all(len(ids) == 1 for ids in standby_ids)
+    assert len({ids[0] for ids in standby_ids}) == 4
+    assert {ids[0] for ids in standby_ids} == set(all_bus_ids)
+    assert all(day["restBusesCount"] == 1 for day in days)
+
+
+def test_auto_plan_returns_published_sheet_without_overwriting_it(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    set_rest_buses(client, group_id, 0)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    service_date = "2030-01-07"
+    saved = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json={
+            "busGroupId": group_id,
+            "serviceDate": service_date,
+            "assignments": [
+                {"frequencyId": frequency["id"], "busId": bus_ids[1]}
+            ],
+            "startingLocations": [{"busId": bus_ids[1], "cityId": origin_id}],
+            "standbyBusIds": [],
+            "mode": "manual",
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert saved.status_code == 200, saved.text
+    published = client.post(
+        f"{PLANNING_URL}/route-sheets/{saved.json()['id']}/publish",
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert published.status_code == 200, published.text
+
+    response = client.get(
+        f"{PLANNING_URL}/route-sheets/auto-plan",
+        params={"groupId": group_id, "startDate": service_date, "days": 1},
+    )
+
+    assert response.status_code == 200, response.text
+    day = response.json()[0]
+    assert day["status"] == "published"
+    assert day["autoGenerated"] is False
+    assert day["frequencies"][0]["busId"] == bus_ids[1]
+    with Session(engine) as db:
+        trips = db.scalars(
+            select(Trip).where(Trip.route_sheet_id == published.json()["id"])
+        ).all()
+        assert [trip.bus_id for trip in trips] == [bus_ids[1]]
+
+
+def test_auto_plan_force_recalculates_unreserved_sheets(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    set_rest_buses(client, group_id, 0)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    service_date = "2030-01-07"
+    saved = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json={
+            "busGroupId": group_id,
+            "serviceDate": service_date,
+            "assignments": [
+                {"frequencyId": frequency["id"], "busId": bus_ids[0]}
+            ],
+            "startingLocations": [{"busId": bus_ids[0], "cityId": origin_id}],
+            "standbyBusIds": [],
+            "mode": "automatic",
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert saved.status_code == 200
+
+    res_normal = client.get(
+        f"{PLANNING_URL}/route-sheets/auto-plan",
+        params={"groupId": group_id, "startDate": service_date, "days": 1},
+    )
+    assert res_normal.json()[0]["frequencies"][0]["busId"] == bus_ids[0]
+
+    res_force = client.get(
+        f"{PLANNING_URL}/route-sheets/auto-plan",
+        params={"groupId": group_id, "startDate": service_date, "days": 1, "force": "true"},
+    )
+    assert res_force.status_code == 200
+    assert res_force.json()[0]["autoGenerated"] is True
+    assert res_force.json()[0]["frequencies"][0]["busId"] == bus_ids[1]
+
+
+def test_auto_plan_returns_saved_draft_without_regenerating_it(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    set_rest_buses(client, group_id, 1)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    service_date = "2030-01-07"
+    payload = {
+        "busGroupId": group_id,
+        "serviceDate": service_date,
+        "assignments": [{"frequencyId": frequency["id"], "busId": bus_ids[0]}],
+        "startingLocations": [{"busId": bus_ids[0], "cityId": origin_id}],
+        "standbyBusIds": [bus_ids[1]],
+        "mode": "automatic",
+    }
+    saved = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert saved.status_code == 200, saved.text
+
+    response = client.get(
+        f"{PLANNING_URL}/route-sheets/auto-plan",
+        params={"groupId": group_id, "startDate": service_date, "days": 1},
+    )
+
+    assert response.status_code == 200, response.text
+    day = response.json()[0]
+    assert day["autoGenerated"] is False
+    assert day["status"] == "draft"
+    assert day["mode"] == "automatic"
+    assert day["frequencies"][0]["busId"] == bus_ids[0]
+    assert [bus["id"] for bus in day["standbyBuses"]] == [bus_ids[1]]
+
+
+def test_auto_plan_is_scoped_to_the_authenticated_cooperative(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    with Session(engine) as db:
+        foreign_coop = Cooperative(name="Cooperativa Ajena", ruc="1791234567999")
+        db.add(foreign_coop)
+        db.flush()
+        foreign_group = BusGroup(
+            cooperative_id=foreign_coop.id, name="Grupo ajeno"
+        )
+        db.add(foreign_group)
+        db.commit()
+        db.refresh(foreign_group)
+        foreign_group_id = foreign_group.id
+
+    response = client.get(
+        f"{PLANNING_URL}/route-sheets/auto-plan",
+        params={"groupId": foreign_group_id, "startDate": "2030-01-07", "days": 2},
+    )
+
+    assert response.status_code == 404
+
+
+def test_route_sheet_saves_and_returns_standby_buses(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    set_rest_buses(client, group_id, 1)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    payload = {
+        "busGroupId": group_id,
+        "serviceDate": "2030-01-07",
+        "assignments": [{"frequencyId": frequency["id"], "busId": bus_ids[0]}],
+        "startingLocations": [{"busId": bus_ids[0], "cityId": origin_id}],
+        "standbyBusIds": [bus_ids[1]],
+        "mode": "automatic",
+    }
+
+    saved = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["mode"] == "automatic"
+    assert [bus["id"] for bus in saved.json()["standbyBuses"]] == [bus_ids[1]]
+
+    loaded = client.get(
+        f"{PLANNING_URL}/route-sheets",
+        params={"groupId": group_id, "serviceDate": "2030-01-07"},
+    )
+    assert loaded.status_code == 200
+    assert [bus["id"] for bus in loaded.json()["standbyBuses"]] == [bus_ids[1]]
+
+    payload["standbyBusIds"] = [bus_ids[0]]
+    invalid = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert invalid.status_code == 409
+    assert "asignado y en descanso" in invalid.json()["detail"]
+
+    payload["standbyBusIds"] = [bus_ids[0], bus_ids[0]]
+    duplicate = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert duplicate.status_code == 409
+    assert "repitas un bus en descanso" in duplicate.json()["detail"]
+
+
+def test_route_rejects_group_from_another_cooperative(test_environment):
+    client, engine = test_environment
+    create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    with Session(engine) as db:
+        foreign_coop = Cooperative(name="Cooperativa Externa", ruc="1791234567888")
+        db.add(foreign_coop)
+        db.flush()
+        foreign_group = BusGroup(cooperative_id=foreign_coop.id, name="Externo")
+        db.add(foreign_group)
+        db.commit()
+        db.refresh(foreign_group)
+        foreign_group_id = foreign_group.id
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+
+    response = client.post(
+        f"{PLANNING_URL}/routes",
+        json={
+            "busGroupId": foreign_group_id,
+            "originCityId": origin_id,
+            "destinationCityId": destination_id,
+            "durationMinutes": 180,
+            "stops": [],
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 404
+
+
+def test_published_sheet_with_reservations_cannot_change_resting_buses(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    set_rest_buses(client, group_id, 1)
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    payload = {
+        "busGroupId": group_id,
+        "serviceDate": "2030-01-07",
+        "assignments": [{"frequencyId": frequency["id"], "busId": bus_ids[0]}],
+        "startingLocations": [{"busId": bus_ids[0], "cityId": origin_id}],
+        "standbyBusIds": [bus_ids[1]],
+        "mode": "automatic",
+    }
+    saved = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert saved.status_code == 200, saved.text
+    published = client.post(
+        f"{PLANNING_URL}/route-sheets/{saved.json()['id']}/publish",
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert published.status_code == 200, published.text
+    with Session(engine) as db:
+        trip = db.query(Trip).filter_by(route_sheet_id=published.json()["id"]).one()
+        db.add(
+            Reservation(
+                trip_id=trip.id,
+                status=ReservationStatus.PENDING_PAYMENT,
+            )
+        )
+        db.commit()
+
+    payload["standbyBusIds"] = []
+    blocked = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json=payload,
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert blocked.status_code == 409
+
+
+def test_cooperative_can_update_route_group(test_environment):
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, _ = create_group_and_buses(engine, cooperative.id)
+    with Session(engine) as db:
+        new_group = BusGroup(cooperative_id=cooperative.id, name="Grupo Ejecutivo")
+        db.add(new_group)
+        db.commit()
+        db.refresh(new_group)
+        new_group_id = new_group.id
+
+    origin_id = create_city(client, "Ambato", "Tungurahua")
+    destination_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(
+        client, origin_id, destination_id, group_id=group_id, duration=180
+    )
+    freq = create_frequency(client, route["id"], group_id, "08:00")
+
+    response = client.patch(
+        f"{PLANNING_URL}/routes/{route['id']}",
+        json={"busGroupId": new_group_id},
+        headers={"Origin": settings.frontend_origin},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["busGroupId"] == new_group_id
+    assert data["busGroupName"] == "Grupo Ejecutivo"
+
+    # Verify frequency group synced
+    with Session(engine) as db:
+        from app.modules.schedules.models import Frequency
+        synced_freq = db.scalar(select(Frequency).where(Frequency.id == freq["id"]))
+        assert synced_freq.bus_group_id == new_group_id

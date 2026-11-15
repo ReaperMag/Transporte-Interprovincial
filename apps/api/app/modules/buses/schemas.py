@@ -35,6 +35,7 @@ GroupDescription = Annotated[str, StringConstraints(max_length=255)]
 class BusGroupCreate(BusGroupSchema):
     name: GroupName
     description: GroupDescription | None = None
+    rest_buses_count: int = Field(default=1, ge=0, le=50)
 
     @field_validator("name")
     @classmethod
@@ -53,6 +54,7 @@ class BusGroupCreate(BusGroupSchema):
 class BusGroupUpdate(BusGroupSchema):
     name: GroupName | None = None
     description: GroupDescription | None = None
+    rest_buses_count: int | None = Field(default=None, ge=0, le=50)
 
     @field_validator("name")
     @classmethod
@@ -75,6 +77,7 @@ class BusGroupRead(BusGroupSchema):
     name: str
     description: str | None
     bus_count: int = Field(serialization_alias="busCount")
+    rest_buses_count: int
 
 
 BusText = Annotated[str, StringConstraints(min_length=1, max_length=50)]

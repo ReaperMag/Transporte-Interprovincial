@@ -15,6 +15,7 @@ from app.modules.routes.cooperative_schemas import (
     CityRead,
     CooperativeRouteCreate,
     CooperativeRouteRead,
+    CooperativeRouteUpdate,
     RouteFareSave,
 )
 
@@ -92,6 +93,41 @@ def add_route(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Una ubicación seleccionada no existe o no está habilitada en el catálogo.",
+        ) from exc
+    except cooperative_service.BusGroupNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El grupo de buses no existe en tu cooperativa.",
+        ) from exc
+
+
+@router.patch(
+    "/routes/{route_id}",
+    response_model=CooperativeRouteRead,
+)
+def edit_route(
+    route_id: int,
+    payload: CooperativeRouteUpdate,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> CooperativeRouteRead:
+    try:
+        return cooperative_service.update_route(
+            db,
+            _cooperative_id(account),
+            route_id,
+            payload,
+        )
+    except cooperative_service.RouteNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La ruta no existe o no pertenece a tu cooperativa.",
+        ) from exc
+    except cooperative_service.BusGroupNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El grupo de buses no existe en tu cooperativa.",
         ) from exc
 
 

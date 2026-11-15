@@ -6,7 +6,6 @@ import {
   normalizeGeographicSearch,
   PassengerLocationFilter,
   type PassengerCanton,
-  type SearchLocation,
 } from '../components/PassengerLocationFilter';
 import {
   getTripCities,
@@ -45,7 +44,7 @@ function generateNextSevenDays(): DayTab[] {
     const target = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
     const dateString = getEcuadorDateString(target);
 
-    let dayName = '';
+    let dayName: string;
     if (i === 0) dayName = 'Hoy';
     else if (i === 1) dayName = 'Mañana';
     else {
