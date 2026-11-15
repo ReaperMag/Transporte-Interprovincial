@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_vali
 
 CatalogName = Annotated[str, StringConstraints(min_length=1, max_length=150)]
 CatalogImageUrl = Annotated[str, StringConstraints(max_length=500)]
+CatalogCountry = Annotated[str, StringConstraints(min_length=1, max_length=100)]
 CatalogMetadata = Annotated[str, StringConstraints(min_length=1, max_length=150)]
 
 
@@ -25,7 +26,7 @@ class CatalogItemBase(BaseModel):
 class CatalogItemCreate(CatalogItemBase):
     name: CatalogName
     image_url: CatalogImageUrl | None = None
-    origin_country: CatalogMetadata | None = None
+    origin_country: CatalogCountry | None = None
     location: CatalogMetadata | None = None
 
     @field_validator("name")
@@ -50,7 +51,7 @@ class CatalogItemCreate(CatalogItemBase):
 class CatalogItemUpdate(CatalogItemBase):
     name: CatalogName
     image_url: CatalogImageUrl | None = None
-    origin_country: CatalogMetadata | None = None
+    origin_country: CatalogCountry | None = None
     location: CatalogMetadata | None = None
 
     @field_validator("name")
@@ -83,3 +84,4 @@ class CatalogItemRead(CatalogItemBase):
 class VehicleCatalogRead(BaseModel):
     chassis: list[CatalogItemRead]
     bodyworks: list[CatalogItemRead]
+    bodywork_locations: list[str] = Field(serialization_alias="bodyworkLocations")

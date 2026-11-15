@@ -41,13 +41,16 @@ def _create_item(
     existing = db.scalar(select(model).where(model.normalized_name == normalized_name))
     if existing is not None:
         raise DuplicateCatalogItemError
-    item = model(
-        name=name,
-        normalized_name=normalized_name,
-        image_url=image_url if model is ChassisBrand else None,
-        origin_country=origin_country if model is ChassisBrand else None,
-        location=location if model is BodyworkBrand else None,
-    )
+    item_data = {
+        "name": name,
+        "normalized_name": normalized_name,
+        "image_url": image_url,
+    }
+    if model is ChassisBrand:
+        item_data["origin_country"] = origin_country
+    else:
+        item_data["location"] = location
+    item = model(**item_data)
     db.add(item)
     try:
         db.commit()
@@ -147,13 +150,16 @@ def ensure_vehicle_catalog(db: Session) -> int:
                     existing[normalized_name].location = BODYWORK_LOCATIONS.get(name)
                     changed = True
                 continue
-            item = model(
-                name=name,
-                normalized_name=normalized_name,
-                image_url=CHASSIS_IMAGE_URLS.get(name) if model is ChassisBrand else None,
-                origin_country=CHASSIS_ORIGIN_COUNTRIES.get(name) if model is ChassisBrand else None,
-                location=BODYWORK_LOCATIONS.get(name) if model is BodyworkBrand else None,
-            )
+            item_data = {
+                "name": name,
+                "normalized_name": normalized_name,
+                "image_url": CHASSIS_IMAGE_URLS.get(name),
+            }
+            if model is ChassisBrand:
+                item_data["origin_country"] = CHASSIS_ORIGIN_COUNTRIES.get(name)
+            else:
+                item_data["location"] = BODYWORK_LOCATIONS.get(name)
+            item = model(**item_data)
             db.add(item)
             existing[normalized_name] = item
             added += 1

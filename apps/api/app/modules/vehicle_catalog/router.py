@@ -4,7 +4,9 @@ from sqlalchemy.orm import Session
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.permissions import require_admin_access
+from app.modules.routes.ecuador_geography import ECUADOR_PROVINCES
 from app.modules.vehicle_catalog import service
+from app.modules.vehicle_catalog.catalog_data import BODYWORK_PROVINCE_CAPITALS
 from app.modules.vehicle_catalog.models import BodyworkBrand, ChassisBrand
 from app.modules.vehicle_catalog.schemas import (
     CatalogItemCreate,
@@ -34,6 +36,13 @@ def read_vehicle_catalog(db: Session = Depends(get_db)) -> VehicleCatalogRead:
     return VehicleCatalogRead(
         chassis=service.list_items(db, ChassisBrand),
         bodyworks=service.list_items(db, BodyworkBrand),
+        bodywork_locations=sorted(
+            {
+                capital
+                for province, capital in BODYWORK_PROVINCE_CAPITALS.items()
+                if province in ECUADOR_PROVINCES
+            }
+        ),
     )
 
 
