@@ -13,10 +13,7 @@ import {
   type RouteSheet,
   type RouteSheetWarning,
 } from '../services/routeSchedule.service';
-import {
-  getCooperativeSeatTypes,
-  type CooperativeSeatType,
-} from '../services/seatType.service';
+import { getCooperativeSeatTypes, type CooperativeSeatType } from '../services/seatType.service';
 import './CooperativeRoutesPage.css';
 import { Link } from 'react-router-dom';
 import { CreateRouteModal } from '../components/CreateRouteModal';
@@ -268,9 +265,7 @@ export function CooperativeRoutesPage() {
       setLoadedPlanKey(planKey);
       setSuccess('Hoja de ruta actualizada correctamente.');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'No fue posible actualizar la hoja de ruta.',
-      );
+      setError(err instanceof Error ? err.message : 'No fue posible actualizar la hoja de ruta.');
     } finally {
       setIsRecalculating(false);
     }
@@ -294,14 +289,11 @@ export function CooperativeRoutesPage() {
       setLoadedPlanKey(planKey);
       setSuccess('Buses auto-asignados y buses en descanso recalculados exitosamente.');
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'No fue posible auto-asignar los buses.',
-      );
+      setError(err instanceof Error ? err.message : 'No fue posible auto-asignar los buses.');
     } finally {
       setIsAutoAssigning(false);
     }
   };
-
 
   const filteredRoutes = useMemo(() => {
     const query = normalizeLocationSearch(routeSearch);
@@ -408,7 +400,9 @@ export function CooperativeRoutesPage() {
     if (created.busGroupId) {
       setSelectedGroupId(String(created.busGroupId));
     }
-    setSuccess(`Ruta ${created.originCity} – ${created.destinationCity} creada. Completa sus tarifas en el siguiente paso.`);
+    setSuccess(
+      `Ruta ${created.originCity} – ${created.destinationCity} creada. Completa sus tarifas en el siguiente paso.`,
+    );
     setIsNewRouteConfig(true);
     setConfiguringRoute(created);
     void handleAutoAssign();
@@ -489,7 +483,16 @@ export function CooperativeRoutesPage() {
             title={groups.length === 0 ? 'Crea primero un grupo de buses' : undefined}
           >
             <span className="cooperative-routes__btn-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
@@ -508,9 +511,21 @@ export function CooperativeRoutesPage() {
       {(error || success) && (
         <aside className="cooperative-routes__toast-container" aria-live="polite">
           {error && (
-            <div className="cooperative-routes__toast cooperative-routes__toast--error" role="alert">
+            <div
+              className="cooperative-routes__toast cooperative-routes__toast--error"
+              role="alert"
+            >
               <span className="cooperative-routes__toast-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <line x1="12" y1="8" x2="12" y2="12" />
                   <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -531,9 +546,21 @@ export function CooperativeRoutesPage() {
             </div>
           )}
           {success && (
-            <div className="cooperative-routes__toast cooperative-routes__toast--success" role="status">
+            <div
+              className="cooperative-routes__toast cooperative-routes__toast--success"
+              role="status"
+            >
               <span className="cooperative-routes__toast-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
               </span>
@@ -632,12 +659,20 @@ export function CooperativeRoutesPage() {
                               title="Configurar grupo, horarios y tarifas de esta ruta"
                             >
                               <span className="cooperative-routes__btn-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  width="14"
+                                  height="14"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
                                   <circle cx="12" cy="12" r="3" />
                                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                                 </svg>
                               </span>
-                              Configurar
                             </button>
                           </div>
                         </div>
@@ -736,7 +771,16 @@ export function CooperativeRoutesPage() {
                 title="Recarga los datos actuales del servidor"
               >
                 <span className="cooperative-routes__btn-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="15"
+                    height="15"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
                   </svg>
                 </span>
@@ -750,7 +794,16 @@ export function CooperativeRoutesPage() {
                 title="Regenera el plan completo: rotación de buses y descansos del grupo"
               >
                 <span className="cooperative-routes__btn-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="15"
+                    height="15"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                   </svg>
                 </span>
@@ -833,7 +886,10 @@ export function CooperativeRoutesPage() {
                     <tbody>
                       {filteredSheetFrequencies.length === 0 ? (
                         <tr>
-                          <td colSpan={3 + serviceDates.length} style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                          <td
+                            colSpan={3 + serviceDates.length}
+                            style={{ textAlign: 'center', padding: '2rem 1rem' }}
+                          >
                             No hay frecuencias que coincidan con el origen y destino seleccionados.
                           </td>
                         </tr>
