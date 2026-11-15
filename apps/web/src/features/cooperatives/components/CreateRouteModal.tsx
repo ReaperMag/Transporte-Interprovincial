@@ -118,15 +118,12 @@ export function CreateRouteModal({
   const validate = (): string | null => {
     if (!groupId) return 'Selecciona el grupo de buses de la ruta.';
     if (!originProvince || !originCanton || !originCityId) {
-      return 'Selecciona la provincia y cantón de origen.';
+      return 'Selecciona la provincia, cantón y localidad de origen.';
     }
     if (!destinationProvince || !destinationCanton || !destinationCityId) {
-      return 'Selecciona la provincia y cantón de destino.';
+      return 'Selecciona la provincia, cantón y localidad de destino.';
     }
-    if (
-      originCityId === destinationCityId ||
-      (originProvince === destinationProvince && originCanton === destinationCanton)
-    ) {
+    if (originCityId === destinationCityId) {
       return 'El origen y el destino deben ser diferentes.';
     }
     const durationMinutes = Number(duration);
@@ -257,7 +254,7 @@ export function CreateRouteModal({
               canton={originCanton}
               search={originSearch}
               value={originCityId}
-              showLocality={false}
+              showLocality
               excludedIds={[destinationCityId, ...stops.map((stop) => stop.cityId)]}
               onProvinceChange={(value) => {
                 setOriginProvince(value);
@@ -286,7 +283,7 @@ export function CreateRouteModal({
               canton={destinationCanton}
               search={destinationSearch}
               value={destinationCityId}
-              showLocality={false}
+              showLocality
               excludedIds={[originCityId, ...stops.map((stop) => stop.cityId)]}
               onProvinceChange={(value) => {
                 setDestinationProvince(value);
@@ -336,7 +333,7 @@ export function CreateRouteModal({
                     canton={stop.canton}
                     search={stop.search}
                     value={stop.cityId}
-                    showLocality={false}
+                    showLocality
                     excludedIds={[
                       originCityId,
                       destinationCityId,

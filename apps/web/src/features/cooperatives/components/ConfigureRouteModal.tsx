@@ -112,7 +112,10 @@ export function ConfigureRouteModal({
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    firstFieldRef.current?.focus();
+    const firstField =
+      firstFieldRef.current ??
+      dialogRef.current?.querySelector<HTMLElement>('input:not([disabled]), select:not([disabled])');
+    firstField?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -344,30 +347,31 @@ export function ConfigureRouteModal({
         )}
 
         <form onSubmit={(event) => void handleSaveConfiguration(event)}>
-          {/* SECCIÓN 1: ASIGNACIÓN DE GRUPO */}
-          <div className="cooperative-routes__config-section">
-            <h4>1. Grupo de buses asignado</h4>
-            <label>
-              Grupo de buses
-              <select
-                ref={firstFieldRef}
-                value={selectedGroupId}
-                onChange={(event) => setSelectedGroupId(event.target.value)}
-                required
-              >
-                <option value="">Selecciona un grupo</option>
-                {groups.map((group) => (
-                  <option value={group.id} key={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          {!isNewRoute && (
+            <div className="cooperative-routes__config-section">
+              <h4>1. Grupo de buses asignado</h4>
+              <label>
+                Grupo de buses
+                <select
+                  ref={firstFieldRef}
+                  value={selectedGroupId}
+                  onChange={(event) => setSelectedGroupId(event.target.value)}
+                  required
+                >
+                  <option value="">Selecciona un grupo</option>
+                  {groups.map((group) => (
+                    <option value={group.id} key={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
 
           {/* SECCIÓN 2: TARIFAS DE LA RUTA */}
           <div className="cooperative-routes__config-section">
-            <h4>2. Tarifas por tramo</h4>
+            <h4>{isNewRoute ? 'Tarifas por tramo' : '2. Tarifas por tramo'}</h4>
             <p className="cooperative-routes__config-desc">
               Tarifa base (asiento normal). El asiento VIP suma automáticamente el +{vipPercentage}%.
             </p>
@@ -424,7 +428,11 @@ export function ConfigureRouteModal({
 
         {/* SECCIÓN 3: FRECUENCIAS DE LA RUTA */}
         <div className="cooperative-routes__config-section cooperative-routes__config-section--frequencies">
-          <h4>3. Horarios y frecuencias de esta ruta</h4>
+          <h4>
+            {isNewRoute
+              ? 'Horarios y frecuencias de esta ruta'
+              : '3. Horarios y frecuencias de esta ruta'}
+          </h4>
           <form
             className="cooperative-routes__mini-form"
             onSubmit={(event) => void handleAddFrequency(event)}

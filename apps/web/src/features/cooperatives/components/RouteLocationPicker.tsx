@@ -54,9 +54,10 @@ export function RouteLocationPicker({
 
   const handleCantonChange = (selectedCanton: string) => {
     onCantonChange(selectedCanton);
+    onSearchChange?.('');
+    onValueChange('');
     if (!showLocality) {
       if (!selectedCanton) {
-        onValueChange('');
         return;
       }
       const match =
