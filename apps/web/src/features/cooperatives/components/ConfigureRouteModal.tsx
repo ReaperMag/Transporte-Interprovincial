@@ -14,6 +14,7 @@ interface ConfigureRouteModalProps {
   groups: CooperativeBusGroup[];
   seatTypes: CooperativeSeatType[];
   frequencies: CooperativeFrequency[];
+  isNewRoute?: boolean;
   onClose: () => void;
   onUpdated: (updatedRoute: CooperativeRoute) => void;
   onFrequencyCreated: (frequency: CooperativeFrequency) => void;
@@ -24,6 +25,7 @@ export function ConfigureRouteModal({
   groups,
   seatTypes,
   frequencies,
+  isNewRoute = false,
   onClose,
   onUpdated,
   onFrequencyCreated,
@@ -244,12 +246,25 @@ export function ConfigureRouteModal({
       >
         <header className="cooperative-routes__modal-header">
           <div>
+            {isNewRoute && (
+              <div className="cooperative-routes__modal-steps">
+                <span className="cooperative-routes__modal-step cooperative-routes__modal-step--completed">
+                  ✓ Paso 1: Recorrido creado
+                </span>
+                <span className="cooperative-routes__modal-step-arrow">→</span>
+                <span className="cooperative-routes__modal-step cooperative-routes__modal-step--active">
+                  Paso 2: Tarifas y horarios
+                </span>
+              </div>
+            )}
             <h3 id="configure-route-title">
-              Configurar ruta: {route.originCity} – {route.destinationCity}
+              {isNewRoute ? 'Establecer tarifas y horarios: ' : 'Configurar ruta: '}
+              {route.originCity} – {route.destinationCity}
             </h3>
             <p>
-              Asigna el grupo de buses, gestiona sus horarios de salida y define la tarifa base
-              (asiento normal).
+              {isNewRoute
+                ? 'La ruta ha sido creada. Ahora define la tarifa base (asiento normal) y los horarios de salida.'
+                : 'Asigna el grupo de buses, gestiona sus horarios de salida y define la tarifa base (asiento normal).'}
             </p>
           </div>
           <button
@@ -351,10 +366,14 @@ export function ConfigureRouteModal({
 
           <div className="cooperative-routes__form-actions">
             <button type="button" onClick={onClose} disabled={isSaving}>
-              Cerrar
+              {isNewRoute ? 'Omitir por ahora' : 'Cerrar'}
             </button>
             <button type="submit" disabled={isSaving || !selectedGroupId}>
-              {isSaving ? 'Guardando configuración...' : 'Guardar configuración'}
+              {isSaving
+                ? 'Guardando configuración...'
+                : isNewRoute
+                  ? 'Guardar tarifas y finalizar'
+                  : 'Guardar configuración'}
             </button>
           </div>
         </form>

@@ -798,6 +798,41 @@
   margin-bottom: 1rem;
 }
 
+.cooperative-routes__modal-steps {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cooperative-routes__modal-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.cooperative-routes__modal-step--active {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 700;
+}
+
+.cooperative-routes__modal-step--completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.cooperative-routes__modal-step-arrow {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
 .cooperative-routes__modal-header h3 {
   margin: 0;
 }

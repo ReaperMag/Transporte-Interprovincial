@@ -75,6 +75,7 @@ export function CooperativeRoutesPage() {
   const [routeStatusFilter, setRouteStatusFilter] = useState<RouteStatusFilter>('all');
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [configuringRoute, setConfiguringRoute] = useState<CooperativeRoute | null>(null);
+  const [isNewRouteConfig, setIsNewRouteConfig] = useState(false);
   const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [startingCities, setStartingCities] = useState<Record<string, Record<number, string>>>({});
@@ -349,7 +350,9 @@ export function CooperativeRoutesPage() {
     if (created.busGroupId) {
       setSelectedGroupId(String(created.busGroupId));
     }
-    setSuccess(`Ruta ${created.originCity} – ${created.destinationCity} creada.`);
+    setSuccess(`Ruta ${created.originCity} – ${created.destinationCity} creada. Completa sus tarifas en el siguiente paso.`);
+    setIsNewRouteConfig(true);
+    setConfiguringRoute(created);
     void handleAutoAssign();
   };
 
@@ -527,7 +530,10 @@ export function CooperativeRoutesPage() {
                             <button
                               type="button"
                               className="cooperative-routes__button cooperative-routes__button--small cooperative-routes__button--secondary"
-                              onClick={() => setConfiguringRoute(route)}
+                              onClick={() => {
+                                setIsNewRouteConfig(false);
+                                setConfiguringRoute(route);
+                              }}
                             >
                               Configurar
                             </button>
@@ -780,12 +786,17 @@ export function CooperativeRoutesPage() {
           groups={groups}
           seatTypes={seatTypes}
           frequencies={frequencies}
-          onClose={() => setConfiguringRoute(null)}
+          isNewRoute={isNewRouteConfig}
+          onClose={() => {
+            setConfiguringRoute(null);
+            setIsNewRouteConfig(false);
+          }}
           onUpdated={(updated) => {
             setRoutes((current) =>
               current.map((item) => (item.id === updated.id ? updated : item)),
             );
             setConfiguringRoute(null);
+            setIsNewRouteConfig(false);
             setSuccess(`Ruta ${updated.originCity} – ${updated.destinationCity} configurada.`);
             void handleAutoAssign();
           }}

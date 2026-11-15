@@ -101,20 +101,6 @@ export function CreateRouteModal({
     };
   }, []);
 
-  const applyExample = (destinationName: string) => {
-    const origin = findLocality(catalog, 'ambato');
-    const destination = findLocality(catalog, destinationName);
-    if (!origin || !destination) return;
-    setOriginProvince(origin.province);
-    setOriginCanton(origin.canton ?? '');
-    setOriginSearch('');
-    setOriginCityId(String(origin.id));
-    setDestinationProvince(destination.province);
-    setDestinationCanton(destination.canton ?? '');
-    setDestinationSearch('');
-    setDestinationCityId(String(destination.id));
-  };
-
   const updateStop = (index: number, patch: Partial<RouteStopDraft>) => {
     setStops((current) =>
       current.map((stop, stopIndex) => (stopIndex === index ? { ...stop, ...patch } : stop)),
@@ -213,6 +199,15 @@ export function CreateRouteModal({
       >
         <header className="cooperative-routes__modal-header">
           <div>
+            <div className="cooperative-routes__modal-steps">
+              <span className="cooperative-routes__modal-step cooperative-routes__modal-step--active">
+                Paso 1: Recorrido y paradas
+              </span>
+              <span className="cooperative-routes__modal-step-arrow">→</span>
+              <span className="cooperative-routes__modal-step">
+                Paso 2: Tarifas y horarios
+              </span>
+            </div>
             <h3 id="create-route-title">Nueva ruta</h3>
             <p>Asigna el grupo de buses y define el recorrido con sus paradas.</p>
           </div>
@@ -405,7 +400,7 @@ export function CreateRouteModal({
               Cancelar
             </button>
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Guardando...' : 'Guardar ruta'}
+              {isSubmitting ? 'Creando ruta...' : 'Crear ruta y configurar tarifas →'}
             </button>
           </div>
         </form>
