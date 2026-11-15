@@ -58,7 +58,7 @@ body:has(.admin-layout) {
   align-items: center;
   gap: 10px;
   color: #5b6670;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
 }
 
 .admin-header__breadcrumb b {
@@ -81,7 +81,7 @@ body:has(.admin-layout) {
   max-width: 260px;
   overflow: hidden;
   color: #5b6670;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -94,7 +94,7 @@ body:has(.admin-layout) {
   color: #14212b;
   cursor: pointer;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
@@ -116,7 +116,7 @@ body:has(.admin-layout) {
   padding: 10px 38px;
   background: #f7e3e0;
   color: #b3362b;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
 }
 
 @media (max-width: 760px) {

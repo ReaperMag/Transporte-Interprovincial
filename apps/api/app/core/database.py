@@ -18,6 +18,7 @@ MODEL_MODULES = (
     "app.modules.staff.models",
     "app.modules.passengers.models",
     "app.modules.buses.models",
+    "app.modules.vehicle_catalog.models",
     "app.modules.routes.models",
     "app.modules.schedules.models",
     "app.modules.trips.models",
@@ -70,6 +71,20 @@ def init_db() -> None:
     """Crea las tablas que aún no existen y aplica cambios aditivos de esquema."""
     import_models()
     Base.metadata.create_all(bind=engine)
+
+    catalog_columns = {
+        "chassis_brands": ("image_url", "origin_country"),
+        "bodywork_brands": ("image_url", "location"),
+    }
+    for table_name, additive_columns in catalog_columns.items():
+        columns = {column["name"] for column in inspect(engine).get_columns(table_name)}
+        with engine.begin() as connection:
+            for column_name in additive_columns:
+                if column_name not in columns:
+                    definition = "VARCHAR(100)" if column_name == "origin_country" else "VARCHAR(150)" if column_name == "location" else "VARCHAR(500)"
+                    connection.execute(
+                        text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+                    )
 
     # Catálogo geográfico incorporado desde develop.
     from app.modules.routes.geographic_schema import ensure_geographic_schema
@@ -151,10 +166,6 @@ def init_db() -> None:
                     "REFERENCES passengers(id) ON DELETE SET NULL"
                 )
             )
-
-    from app.modules.schedules.planning_schema import ensure_route_planning_schema
-
-    ensure_route_planning_schema(engine)
 
 
 def reset_db() -> None:

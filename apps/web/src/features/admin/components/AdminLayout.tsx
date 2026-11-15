@@ -10,6 +10,7 @@ import './AdminLayout.css';
 const sections: readonly SidebarSection[] = [
   { to: '/admin/panel', label: 'Panel de resumen', icon: 'home' },
   { to: '/admin/cooperativas', label: 'Cooperativas', icon: 'groups' },
+  { to: '/admin/chasis-carrocerias', label: 'Chasis y carrocerías', icon: 'bus' },
   { to: '/admin/provincias-cantones', label: 'Catálogo geográfico', icon: 'map' },
 ];
 
@@ -20,6 +21,7 @@ export function AdminLayout() {
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const isDashboard = location.pathname === '/admin/panel';
   const isGeographicCatalog = location.pathname === '/admin/provincias-cantones';
+  const isVehicleCatalog = location.pathname === '/admin/chasis-carrocerias';
 
   const handleLogout = async () => {
     setLogoutError(null);
@@ -52,9 +54,11 @@ export function AdminLayout() {
             <strong>
               {isDashboard
                 ? 'Panel de resumen'
-                : isGeographicCatalog
-                  ? 'Catálogo geográfico'
-                  : 'Gestión de cooperativas'}
+                : isVehicleCatalog
+                  ? 'Chasis y carrocerías'
+                  : isGeographicCatalog
+                    ? 'Catálogo geográfico'
+                    : 'Gestión de cooperativas'}
             </strong>
           </div>
           <div className="admin-header__account">

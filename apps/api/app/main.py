@@ -10,6 +10,7 @@ from app.core.bootstrap import ensure_initial_admin, initialize_roles
 from app.core.config import settings
 from app.core.database import SessionLocal, init_db
 from app.modules.routes.geographic_service import ensure_geographic_catalog
+from app.modules.vehicle_catalog.service import ensure_vehicle_catalog
 
 
 # Muestra en consola los mensajes de la aplicación (por ejemplo, los correos
@@ -28,6 +29,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         initialize_roles(db)
         if initialize_database:
             ensure_geographic_catalog(db)
+            ensure_vehicle_catalog(db)
         ensure_initial_admin(db)
     yield
 
