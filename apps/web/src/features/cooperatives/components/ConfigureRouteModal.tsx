@@ -45,7 +45,7 @@ export function ConfigureRouteModal({
     seatTypes.find((item) => item.name.toLowerCase().includes('vip')) ??
     seatTypes.find((item) => Number(item.percentage) > 0) ??
     null;
-  const vipPercentage = vipType ? Number(vipType.percentage) : 15;
+  const vipPercentage = Number(vipType?.percentage ?? 0);
 
   const segments = useMemo(() => {
     const cityIds = [
@@ -151,11 +151,13 @@ export function ConfigureRouteModal({
     [frequencies, route.id],
   );
 
-  const calculateVipPrice = (priceStr: string): string => {
-    const num = parseFloat(priceStr);
-    if (isNaN(num) || num <= 0) return '—';
-    const vip = num * (1 + vipPercentage / 100);
-    return `$${vip.toFixed(2)}`;
+  const calculateSeatPrice = (basePrice: number, percentage: number): number =>
+    Number((basePrice * (1 + percentage / 100)).toFixed(2));
+
+  const formatSeatPrice = (priceStr: string, percentage: number): string => {
+    const basePrice = Number(priceStr);
+    if (!Number.isFinite(basePrice) || basePrice <= 0) return '—';
+    return `$${calculateSeatPrice(basePrice, percentage).toFixed(2)}`;
   };
 
   const handleAddFrequency = async (event: FormEvent) => {
@@ -204,7 +206,7 @@ export function ConfigureRouteModal({
         });
       }
 
-      // 2. Guardar tarifas de asiento normal (y calcular asiento VIP con el porcentaje cooperativa)
+      // 2. Guardar tarifas normal y VIP con el porcentaje configurado por la cooperativa
       const faresToSave: Array<{
         originCityId: number;
         destinationCityId: number;
@@ -222,7 +224,7 @@ export function ConfigureRouteModal({
             seatType: 'normal',
             price: priceValue,
           });
-          const vipPrice = Number((priceValue * (1 + vipPercentage / 100)).toFixed(2));
+          const vipPrice = calculateSeatPrice(priceValue, vipPercentage);
           faresToSave.push({
             originCityId: segment.originCityId,
             destinationCityId: segment.destinationCityId,
@@ -373,13 +375,12 @@ export function ConfigureRouteModal({
           <div className="cooperative-routes__config-section">
             <h4>{isNewRoute ? 'Tarifas por tramo' : '2. Tarifas por tramo'}</h4>
             <p className="cooperative-routes__config-desc">
-              Tarifa base (asiento normal). El asiento VIP suma automáticamente el +{vipPercentage}%.
+              Ingresa la tarifa base del asiento normal para calcular el precio de cada tipo de asiento.
             </p>
             <div className="cooperative-routes__fare-grid">
               <div className="cooperative-routes__fare-row cooperative-routes__fare-row--head">
                 <span>Tramo</span>
                 <span>Asiento Normal ($)</span>
-                <span>Asiento VIP (+{vipPercentage}%)</span>
               </div>
               {segments.map((segment) => {
                 const key = `${segment.originCityId}:${segment.destinationCityId}`;
@@ -387,25 +388,46 @@ export function ConfigureRouteModal({
                 return (
                   <div className="cooperative-routes__fare-row" key={key}>
                     <span>{segment.label}</span>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0.01}
-                      step={0.01}
-                      placeholder="0.00"
-                      aria-label={`Tarifa normal ${segment.label}`}
-                      value={normalValue}
-                      onChange={(event) =>
-                        setNormalPrices((current) => ({
-                          ...current,
-                          [key]: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                    <span className="cooperative-routes__fare-preview">
-                      {calculateVipPrice(normalValue)}
-                    </span>
+                    <div className="cooperative-routes__fare-base-price">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={0.01}
+                        step={0.01}
+                        placeholder="0.00"
+                        aria-label={`Tarifa normal ${segment.label}`}
+                        value={normalValue}
+                        onChange={(event) =>
+                          setNormalPrices((current) => ({
+                            ...current,
+                            [key]: event.target.value,
+                          }))
+                        }
+                        required
+                      />
+                      {seatTypes.length > 0 ? (
+                        <ul
+                          className="cooperative-routes__fare-preview-list"
+                          aria-label={`Precios por tipo de asiento para ${segment.label}`}
+                        >
+                          {seatTypes.map((seatType) => {
+                            const percentage = Number(seatType.percentage);
+                            return (
+                              <li key={seatType.id}>
+                                <span>
+                                  {seatType.name} (+{percentage.toFixed(2)}%)
+                                </span>
+                                <strong>{formatSeatPrice(normalValue, percentage)}</strong>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="cooperative-routes__fare-preview-empty">
+                          No hay tipos de asiento configurados.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 );
               })}

@@ -450,8 +450,8 @@
 
 .cooperative-routes__fare-row {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) 8rem 8rem;
-  align-items: center;
+  grid-template-columns: minmax(12rem, 1fr) minmax(14rem, 1fr);
+  align-items: start;
   gap: 0.65rem;
 }
 
@@ -468,6 +468,37 @@
 
 .cooperative-routes__fare-row input {
   width: 100%;
+}
+
+.cooperative-routes__fare-base-price {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.cooperative-routes__fare-preview-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cooperative-routes__fare-preview-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.cooperative-routes__fare-preview-list strong {
+  color: #0e5a6b;
+}
+
+.cooperative-routes__fare-preview-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .cooperative-routes__stop-list {
@@ -1106,14 +1137,6 @@
   margin: 0 0 0.9rem;
   color: #64748b;
   font-size: 0.875rem;
-}
-
-.cooperative-routes__fare-preview {
-  display: flex;
-  align-items: center;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #0e5a6b;
 }
 
 .cooperative-routes__mini-form {
