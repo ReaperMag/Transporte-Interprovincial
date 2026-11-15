@@ -18,6 +18,7 @@ MODEL_MODULES = (
     "app.modules.staff.models",
     "app.modules.passengers.models",
     "app.modules.buses.models",
+    "app.modules.vehicle_catalog.models",
     "app.modules.routes.models",
     "app.modules.schedules.models",
     "app.modules.trips.models",
@@ -151,10 +152,6 @@ def init_db() -> None:
                     "REFERENCES passengers(id) ON DELETE SET NULL"
                 )
             )
-
-    from app.modules.schedules.planning_schema import ensure_route_planning_schema
-
-    ensure_route_planning_schema(engine)
 
 
 def reset_db() -> None:

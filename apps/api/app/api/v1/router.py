@@ -23,6 +23,7 @@ from app.modules.schedules.cooperative_router import router as cooperative_sched
 from app.modules.staff.router import router as staff_router, staff_self_router
 from app.modules.tickets.router import router as tickets_router
 from app.modules.trips.router import router as trips_router
+from app.modules.vehicle_catalog.router import router as vehicle_catalog_router
 
 
 router = APIRouter(prefix="/api/v1")
@@ -45,3 +46,4 @@ router.include_router(payments_router)
 router.include_router(reservations_router)
 router.include_router(tickets_router)
 router.include_router(trips_router)
+router.include_router(vehicle_catalog_router)
