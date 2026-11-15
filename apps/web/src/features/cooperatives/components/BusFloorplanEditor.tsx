@@ -41,6 +41,14 @@ function getLegacySeatType(name: string): SeatType {
   return name.trim().toLowerCase() === 'vip' ? 'vip' : 'normal';
 }
 
+// Issue #59: renumerar según la posición física, primero piso, luego fila y columna.
+// El identificador y el tipo de cada asiento se mantienen intactos.
+function renumberSeats(seats: TemplateSeat[]): TemplateSeat[] {
+  return [...seats]
+    .sort((a, b) => a.floor - b.floor || a.row - b.row || a.column - b.column)
+    .map((seat, index) => ({ ...seat, number: index + 1 }));
+}
+
 export function BusFloorplanEditor({
   template,
   onChange,
@@ -233,7 +241,7 @@ export function BusFloorplanEditor({
       return;
     }
 
-    const number = Math.max(0, ...template.seats.map((seat) => seat.number)) + 1;
+    const number = template.seats.length + 1;
 
     const seat: TemplateSeat = {
       id: `seat-${selectedFloor}-${row}-${column}-${number}`,
@@ -245,16 +253,13 @@ export function BusFloorplanEditor({
       seatTypeId,
     };
 
-    updateTemplate({}, [...template.seats, seat]);
+    updateTemplate({}, renumberSeats([...template.seats, seat]));
     setCapacityError(null);
     setSelectedSeatId(seat.id);
   };
 
   const removeSelectedSeat = () => {
-    updateTemplate(
-      {},
-      template.seats.filter((seat) => seat.id !== selectedSeatId),
-    );
+    updateTemplate({}, renumberSeats(template.seats.filter((seat) => seat.id !== selectedSeatId)));
 
     setCapacityError(null);
     setSelectedSeatId(null);
