@@ -72,6 +72,20 @@ def init_db() -> None:
     import_models()
     Base.metadata.create_all(bind=engine)
 
+    catalog_columns = {
+        "chassis_brands": ("image_url", "origin_country"),
+        "bodywork_brands": ("image_url", "location"),
+    }
+    for table_name, additive_columns in catalog_columns.items():
+        columns = {column["name"] for column in inspect(engine).get_columns(table_name)}
+        with engine.begin() as connection:
+            for column_name in additive_columns:
+                if column_name not in columns:
+                    definition = "VARCHAR(100)" if column_name == "origin_country" else "VARCHAR(150)" if column_name == "location" else "VARCHAR(500)"
+                    connection.execute(
+                        text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+                    )
+
     # Catálogo geográfico incorporado desde develop.
     from app.modules.routes.geographic_schema import ensure_geographic_schema
 

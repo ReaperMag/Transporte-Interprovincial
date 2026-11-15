@@ -10,6 +10,8 @@ class ChassisBrand(BaseModel):
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     normalized_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(500))
+    origin_country: Mapped[str | None] = mapped_column(String(100))
 
 
 class BodyworkBrand(BaseModel):
@@ -18,3 +20,5 @@ class BodyworkBrand(BaseModel):
 
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     normalized_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(500))
+    location: Mapped[str | None] = mapped_column(String(150))

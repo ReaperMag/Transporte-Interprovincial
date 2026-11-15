@@ -1,5 +1,3 @@
-from collections.abc import Callable
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
@@ -47,7 +45,14 @@ def create_vehicle_catalog_item(
     _: None = Depends(validate_request_origin),
 ) -> CatalogItemRead:
     try:
-        return service.create_item(db, _model(kind), payload.name)
+        return service.create_item(
+            db,
+            _model(kind),
+            payload.name,
+            payload.image_url,
+            payload.origin_country,
+            payload.location,
+        )
     except service.DuplicateCatalogItemError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese nombre ya está registrado.") from exc
 
@@ -61,7 +66,15 @@ def update_vehicle_catalog_item(
     _: None = Depends(validate_request_origin),
 ) -> CatalogItemRead:
     try:
-        return service.update_item(db, _model(kind), item_id, payload.name)
+        return service.update_item(
+            db,
+            _model(kind),
+            item_id,
+            payload.name,
+            payload.image_url,
+            payload.origin_country,
+            payload.location,
+        )
     except service.CatalogItemNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registro no encontrado.") from exc
     except service.DuplicateCatalogItemError as exc:
