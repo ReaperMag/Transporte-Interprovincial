@@ -1,6 +1,9 @@
 export interface VehicleCatalogItem {
   id: number;
   name: string;
+  imageUrl: string | null;
+  originCountry: string | null;
+  location: string | null;
 }
 
 export interface VehicleCatalog {
@@ -68,10 +71,18 @@ export function getVehicleCatalog(signal?: AbortSignal): Promise<VehicleCatalog>
 export function createVehicleCatalogItem(
   kind: VehicleCatalogKind,
   name: string,
+  imageUrl?: string,
+  originCountry?: string,
+  location?: string,
 ): Promise<VehicleCatalogItem> {
   return request(`${catalogUrl}/${kind}`, {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({
+      name,
+      imageUrl: imageUrl || null,
+      originCountry: originCountry || null,
+      location: location || null,
+    }),
   });
 }
 
@@ -79,10 +90,18 @@ export function updateVehicleCatalogItem(
   kind: VehicleCatalogKind,
   id: number,
   name: string,
+  imageUrl?: string,
+  originCountry?: string,
+  location?: string,
 ): Promise<VehicleCatalogItem> {
   return request(`${catalogUrl}/${kind}/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({
+      name,
+      imageUrl: imageUrl || null,
+      originCountry: originCountry || null,
+      location: location || null,
+    }),
   });
 }
 
