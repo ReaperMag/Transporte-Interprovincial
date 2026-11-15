@@ -250,13 +250,17 @@
   gap: 12px;
   min-width: 220px;
 }
-.vehicle-catalog__brand > span:last-child {
-  display: grid;
-  gap: 3px;
-}
-.vehicle-catalog__brand small {
-  color: #8792a1;
-  font-size: 0.72rem;
+.vehicle-catalog__metadata {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid #eee5e0;
+  border-radius: 999px;
+  background: #fcf8f6;
+  color: #684536;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 .vehicle-catalog__brand-logo {
   display: grid;
@@ -335,6 +339,43 @@
   background: #fff;
   box-shadow: 0 24px 70px rgb(20 33 43 / 28%);
 }
+.vehicle-catalog__delete-dialog {
+  width: min(100%, 460px);
+}
+.vehicle-catalog__delete-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid #ece5e1;
+  border-radius: 12px;
+  background: #fcfaf9;
+}
+.vehicle-catalog__delete-summary > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+.vehicle-catalog__delete-summary strong {
+  overflow-wrap: anywhere;
+  color: #172436;
+  font-size: 0.95rem;
+}
+.vehicle-catalog__delete-summary > div > span {
+  color: #647184;
+  font-size: 0.8rem;
+}
+.vehicle-catalog__delete-dialog > p {
+  margin: 0;
+  color: #5b6670;
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+.vehicle-catalog__delete-dialog > .vehicle-catalog__delete-error {
+  margin-top: 12px;
+  color: #ab2636;
+}
 .vehicle-catalog__dialog > header {
   display: flex;
   align-items: flex-start;
@@ -369,6 +410,16 @@
   display: grid;
   gap: 16px;
 }
+.vehicle-catalog__form-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #f2c9cf;
+  border-radius: 9px;
+  background: #fff3f3;
+  color: #ab2636;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
 .vehicle-catalog__dialog label {
   display: grid;
   gap: 7px;
@@ -376,16 +427,40 @@
   font-size: 0.75rem;
   font-weight: 700;
 }
-.vehicle-catalog__dialog input {
+.vehicle-catalog__dialog input,
+.vehicle-catalog__dialog select {
   box-sizing: border-box;
   width: 100%;
   min-height: 42px;
-  padding: 9px 11px;
   border: 1px solid #dcd9d2;
   border-radius: 8px;
-  background: #f8f6f3;
+  background-color: #f8f6f3;
+  color: #172436;
   font: inherit;
   font-size: 0.8rem;
+}
+.vehicle-catalog__dialog input {
+  padding: 9px 11px;
+}
+.vehicle-catalog__dialog select {
+  appearance: none;
+  padding: 9px 38px 9px 11px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23647184' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  cursor: pointer;
+}
+.vehicle-catalog__dialog input:focus-visible,
+.vehicle-catalog__dialog select:focus-visible {
+  border-color: #a8502e;
+  outline: 2px solid rgb(168 80 46 / 20%);
+  outline-offset: 1px;
+}
+.vehicle-catalog__dialog select:disabled {
+  background-color: #f0eeeb;
+  color: #8792a1;
+  cursor: not-allowed;
 }
 .vehicle-catalog__field-hint {
   margin-top: -2px;
@@ -423,6 +498,19 @@
   border-color: #8c3c25;
   background: #8c3c25;
   color: #fff;
+}
+.vehicle-catalog__dialog-actions button.is-danger {
+  border-color: #b3362b;
+  background: #b3362b;
+  color: #fff;
+}
+.vehicle-catalog__dialog-actions button.is-danger:hover:not(:disabled) {
+  border-color: #922a22;
+  background: #922a22;
+}
+.vehicle-catalog__dialog-actions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 @media (max-width: 700px) {
   .vehicle-catalog__hero-art {
@@ -462,7 +550,7 @@
     flex: 1;
   }
   .vehicle-catalog__table {
-    min-width: 500px;
+    min-width: 620px;
   }
   .vehicle-catalog__dialog {
     padding: 24px 18px;

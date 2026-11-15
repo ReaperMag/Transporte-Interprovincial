@@ -9,6 +9,7 @@ export interface VehicleCatalogItem {
 export interface VehicleCatalog {
   chassis: VehicleCatalogItem[];
   bodyworks: VehicleCatalogItem[];
+  bodyworkLocations: string[];
 }
 
 export type VehicleCatalogKind = 'chassis' | 'bodyworks';

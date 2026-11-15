@@ -15,6 +15,14 @@ const kindLabels: Record<VehicleCatalogKind, string> = {
   bodyworks: 'Marcas de carrocer\u00eda',
 };
 
+function normalizeSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLocaleLowerCase('es');
+}
+
 function BrandLogo({ item }: { item: VehicleCatalogItem }) {
   const [hasImageError, setHasImageError] = useState(false);
   const initials = item.name
@@ -49,11 +57,19 @@ export function VehicleCatalogPage() {
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [metadata, setMetadata] = useState('');
+  const [customCountry, setCustomCountry] = useState('');
   const [editing, setEditing] = useState<VehicleCatalogItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    item: VehicleCatalogItem;
+    kind: VehicleCatalogKind;
+  } | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,20 +92,34 @@ export function VehicleCatalogPage() {
   }, []);
 
   const metadataOptions = useMemo(() => {
+    if (activeKind === 'bodyworks') {
+      return catalog?.bodyworkLocations ?? [];
+    }
     const values = (catalog?.[activeKind] ?? [])
-      .map((item) => (activeKind === 'chassis' ? item.originCountry : item.location))
+      .map((item) => item.originCountry)
       .filter((value): value is string => Boolean(value));
     return [...new Set(values)].sort((left, right) => left.localeCompare(right, 'es'));
   }, [activeKind, catalog]);
 
   const items = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase('es');
-    return (catalog?.[activeKind] ?? []).filter(
-      (item) =>
-        (query ? item.name.toLocaleLowerCase('es').includes(query) : true) &&
+    const query = normalizeSearch(search);
+    return (catalog?.[activeKind] ?? []).filter((item) => {
+      const searchableText = normalizeSearch(
+        [item.name, activeKind === 'chassis' ? item.originCountry : item.location]
+          .filter(Boolean)
+          .join(' '),
+      );
+      return (
+        (!query || searchableText.includes(query)) &&
         (!metadataFilter ||
-          (activeKind === 'chassis' ? item.originCountry : item.location) === metadataFilter),
-    );
+          (activeKind === 'chassis'
+            ? item.originCountry === metadataFilter
+            : item.location
+                ?.split('/')
+                .map((location) => location.trim())
+                .includes(metadataFilter)))
+      );
+    });
   }, [activeKind, catalog, metadataFilter, search]);
 
   const openCreate = () => {
@@ -98,7 +128,9 @@ export function VehicleCatalogPage() {
     setName('');
     setImageUrl('');
     setMetadata('');
+    setCustomCountry('');
     setError(null);
+    setFormError(null);
     setNotice(null);
   };
 
@@ -108,7 +140,9 @@ export function VehicleCatalogPage() {
     setName(item.name);
     setImageUrl(item.imageUrl ?? '');
     setMetadata(activeKind === 'chassis' ? (item.originCountry ?? '') : (item.location ?? ''));
+    setCustomCountry('');
     setError(null);
+    setFormError(null);
     setNotice(null);
   };
 
@@ -119,6 +153,8 @@ export function VehicleCatalogPage() {
       setName('');
       setImageUrl('');
       setMetadata('');
+      setCustomCountry('');
+      setFormError(null);
     }
   };
 
@@ -126,11 +162,20 @@ export function VehicleCatalogPage() {
     event.preventDefault();
     const value = name.trim();
     if (!value) {
-      setError('Escribe el nombre de la marca.');
+      setFormError('Escribe el nombre de la marca.');
+      return;
+    }
+    const originCountry = customCountry.trim() || metadata.trim();
+    if (activeKind === 'chassis' && !originCountry) {
+      setFormError('Selecciona un país de origen o escribe uno nuevo.');
+      return;
+    }
+    if (activeKind === 'bodyworks' && !metadata.trim()) {
+      setFormError('Selecciona la ciudad de origen de la carrocería.');
       return;
     }
     setSaving(true);
-    setError(null);
+    setFormError(null);
     setNotice(null);
     try {
       const saved = editing
@@ -139,14 +184,14 @@ export function VehicleCatalogPage() {
             editing.id,
             value,
             imageUrl.trim(),
-            activeKind === 'chassis' ? metadata : undefined,
+            activeKind === 'chassis' ? originCountry : undefined,
             activeKind === 'bodyworks' ? metadata : undefined,
           )
         : await createVehicleCatalogItem(
             activeKind,
             value,
             imageUrl.trim(),
-            activeKind === 'chassis' ? metadata : undefined,
+            activeKind === 'chassis' ? originCountry : undefined,
             activeKind === 'bodyworks' ? metadata : undefined,
           );
       setCatalog((current) =>
@@ -164,7 +209,7 @@ export function VehicleCatalogPage() {
       setNotice(editing ? 'Marca actualizada correctamente.' : 'Marca agregada correctamente.');
       closeForm();
     } catch (requestError: unknown) {
-      setError(
+      setFormError(
         requestError instanceof Error ? requestError.message : 'No se pudo guardar la marca.',
       );
     } finally {
@@ -172,25 +217,30 @@ export function VehicleCatalogPage() {
     }
   };
 
-  const handleDelete = async (item: VehicleCatalogItem) => {
-    if (!window.confirm(`\u00bfEliminar la marca \u201c${item.name}\u201d?`)) return;
-    setError(null);
+  const handleDelete = async () => {
+    if (!deleteTarget || isDeleting) return;
+    const { item, kind } = deleteTarget;
+    setIsDeleting(true);
+    setDeleteError(null);
     setNotice(null);
     try {
-      await deleteVehicleCatalogItem(activeKind, item.id);
+      await deleteVehicleCatalogItem(kind, item.id);
       setCatalog((current) =>
         current
           ? {
               ...current,
-              [activeKind]: current[activeKind].filter((entry) => entry.id !== item.id),
+              [kind]: current[kind].filter((entry) => entry.id !== item.id),
             }
           : current,
       );
       setNotice('Marca eliminada correctamente.');
+      setDeleteTarget(null);
     } catch (requestError: unknown) {
-      setError(
+      setDeleteError(
         requestError instanceof Error ? requestError.message : 'No se pudo eliminar la marca.',
       );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -213,7 +263,7 @@ export function VehicleCatalogPage() {
           <strong>{loading ? '—' : (catalog?.chassis.length ?? 0)}</strong>
         </article>
         <article>
-          <span>Carrocer\u00edas</span>
+          <span>Carrocerías</span>
           <strong>{loading ? '—' : (catalog?.bodyworks.length ?? 0)}</strong>
         </article>
         <article>
@@ -258,7 +308,9 @@ export function VehicleCatalogPage() {
         <header className="vehicle-catalog__list-header">
           <div>
             <h2 id="vehicle-list-title">{kindLabels[activeKind]}</h2>
-            <p>Catálogo global sin ciudades asociadas a las carrocerías.</p>
+            <p>
+              Consulta las marcas con su {activeKind === 'chassis' ? 'país de origen' : 'ciudad'}.
+            </p>
           </div>
           <button className="vehicle-catalog__add" onClick={openCreate} type="button">
             <span>+</span> Agregar marca
@@ -267,7 +319,7 @@ export function VehicleCatalogPage() {
 
         <div className="vehicle-catalog__filters">
           <label>
-            <span>Buscar marca</span>
+            <span>Buscar marca o {activeKind === 'chassis' ? 'país' : 'ciudad'}</span>
             <input
               type="search"
               value={search}
@@ -299,13 +351,14 @@ export function VehicleCatalogPage() {
             <thead>
               <tr>
                 <th>Marca</th>
+                <th>{activeKind === 'chassis' ? 'País de origen' : 'Ciudad o cantón'}</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={2} className="vehicle-catalog__empty">
+                  <td colSpan={3} className="vehicle-catalog__empty">
                     Cargando el cat\u00e1logo...
                   </td>
                 </tr>
@@ -315,15 +368,15 @@ export function VehicleCatalogPage() {
                     <td>
                       <div className="vehicle-catalog__brand">
                         <BrandLogo item={item} />
-                        <span>
-                          <strong>{item.name}</strong>
-                          <small>
-                            {activeKind === 'chassis'
-                              ? `Fabricante de chasis · ${item.originCountry ?? 'País no registrado'}`
-                              : `Fabricante de carrocer\u00eda · ${item.location ?? 'Ubicación no registrada'}`}
-                          </small>
-                        </span>
+                        <strong>{item.name}</strong>
                       </div>
+                    </td>
+                    <td>
+                      <span className="vehicle-catalog__metadata">
+                        {activeKind === 'chassis'
+                          ? (item.originCountry ?? 'País no registrado')
+                          : (item.location ?? 'Ubicación no registrada')}
+                      </span>
                     </td>
                     <td>
                       <div className="vehicle-catalog__actions">
@@ -340,7 +393,10 @@ export function VehicleCatalogPage() {
                           aria-label={`Eliminar ${item.name}`}
                           title="Eliminar"
                           className="is-danger"
-                          onClick={() => void handleDelete(item)}
+                          onClick={() => {
+                            setDeleteError(null);
+                            setDeleteTarget({ item, kind: activeKind });
+                          }}
                           type="button"
                         >
                           <span aria-hidden="true">⌫</span>
@@ -352,8 +408,8 @@ export function VehicleCatalogPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={2} className="vehicle-catalog__empty">
-                    No hay marcas que coincidan con la b\u00fasqueda.
+                  <td colSpan={3} className="vehicle-catalog__empty">
+                    No hay marcas que coincidan con la busqueda.
                   </td>
                 </tr>
               )}
@@ -379,45 +435,78 @@ export function VehicleCatalogPage() {
                 ×
               </button>
             </header>
-            <form onSubmit={(event) => void handleSubmit(event)}>
+            <form noValidate onSubmit={(event) => void handleSubmit(event)}>
+              {formError && (
+                <p className="vehicle-catalog__form-error" role="alert">
+                  {formError}
+                </p>
+              )}
               <label>
                 <span>Nombre de la marca</span>
                 <input
                   autoFocus
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) => {
+                    setName(event.target.value);
+                    setFormError(null);
+                  }}
                   maxLength={150}
-                  placeholder={
-                    activeKind === 'chassis' ? 'Ej. Hino' : 'Ej. Carrocer\u00edas Cepeda'
-                  }
+                  placeholder={activeKind === 'chassis' ? 'Ej. Hino' : 'Ej. Carrocerías Cepeda'}
                 />
               </label>
               {activeKind === 'chassis' && (
-                <label>
-                  <span>País de origen</span>
-                  <select
-                    value={metadata}
-                    onChange={(event) => setMetadata(event.target.value)}
-                    required
-                  >
-                    <option value="">Selecciona un país</option>
-                    {metadataOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <>
+                  <label>
+                    <span>País de origen</span>
+                    <select
+                      value={metadata}
+                      onChange={(event) => {
+                        setMetadata(event.target.value);
+                        setCustomCountry('');
+                        setFormError(null);
+                      }}
+                      required={!customCountry.trim()}
+                    >
+                      <option value="">Selecciona un país</option>
+                      {metadataOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {!editing && (
+                    <label>
+                      <span>O agrega un país al catálogo</span>
+                      <input
+                        value={customCountry}
+                        onChange={(event) => {
+                          setCustomCountry(event.target.value);
+                          if (event.target.value) setMetadata('');
+                          setFormError(null);
+                        }}
+                        maxLength={100}
+                        placeholder="Escribe el nombre del país"
+                      />
+                    </label>
+                  )}
+                </>
               )}
               {activeKind === 'bodyworks' && (
                 <label>
                   <span>Ciudad o cantón</span>
                   <select
                     value={metadata}
-                    onChange={(event) => setMetadata(event.target.value)}
+                    onChange={(event) => {
+                      setMetadata(event.target.value);
+                      setFormError(null);
+                    }}
                     required
                   >
                     <option value="">Selecciona una ubicación</option>
+                    {editing && metadata && !metadataOptions.includes(metadata) && (
+                      <option value={metadata}>{metadata}</option>
+                    )}
                     {metadataOptions.map((option) => (
                       <option key={option} value={option}>
                         {option}
@@ -437,12 +526,14 @@ export function VehicleCatalogPage() {
                     placeholder="https://..."
                   />
                   <small className="vehicle-catalog__field-hint">
-                    La imagen se mostrar\u00e1 a la izquierda de la marca.
+                    La imagen se mostrará a la izquierda de la marca.
                   </small>
                 </label>
               )}
               <p>
-                Solo se registra el nombre de la marca; no se almacenan ciudades ni ubicaciones.
+                {activeKind === 'chassis'
+                  ? 'El país de origen se guarda junto con la marca del chasis.'
+                  : 'La ciudad de fabricación se guarda junto con la marca de la carrocería.'}
               </p>
               <div className="vehicle-catalog__dialog-actions">
                 <button onClick={closeForm} disabled={saving} type="button">
@@ -453,6 +544,63 @@ export function VehicleCatalogPage() {
                 </button>
               </div>
             </form>
+          </section>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="vehicle-catalog__backdrop">
+          <section
+            className="vehicle-catalog__dialog vehicle-catalog__delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="vehicle-delete-title"
+            aria-describedby="vehicle-delete-description"
+          >
+            <header>
+              <div>
+                <span>Confirmación requerida</span>
+                <h2 id="vehicle-delete-title">Eliminar marca</h2>
+              </div>
+            </header>
+            <div className="vehicle-catalog__delete-summary">
+              <BrandLogo item={deleteTarget.item} />
+              <div>
+                <strong>{deleteTarget.item.name}</strong>
+                <span>
+                  {deleteTarget.kind === 'chassis'
+                    ? `País: ${deleteTarget.item.originCountry ?? 'No registrado'}`
+                    : `Ciudad: ${deleteTarget.item.location ?? 'No registrada'}`}
+                </span>
+              </div>
+            </div>
+            <p id="vehicle-delete-description">
+              ¿Confirmas que deseas eliminar esta marca del catálogo? Esta acción no se puede
+              deshacer.
+            </p>
+            {deleteError && (
+              <p className="vehicle-catalog__delete-error" role="alert">
+                {deleteError}
+              </p>
+            )}
+            <div className="vehicle-catalog__dialog-actions">
+              <button
+                autoFocus
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="is-danger"
+                onClick={() => void handleDelete()}
+                disabled={isDeleting}
+                type="button"
+              >
+                {isDeleting ? 'Eliminando…' : 'Sí, eliminar'}
+              </button>
+            </div>
           </section>
         </div>
       )}
