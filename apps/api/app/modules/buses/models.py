@@ -1,3 +1,4 @@
+
 import enum
 from decimal import Decimal
 
@@ -78,7 +79,7 @@ class BusStatus(enum.StrEnum):
 
 
 class BusTemplate(TenantModel):
-    """Plantilla de estructura del bus: pisos, baño y distribución de asientos."""
+    """Plantilla de pisos, baño y distribución de asientos del bus."""
 
     __tablename__ = "bus_templates"
 
@@ -89,37 +90,54 @@ class BusTemplate(TenantModel):
     columns: Mapped[int]
 
     seats: Mapped[list["TemplateSeat"]] = relationship(
-        back_populates="template", cascade="all, delete-orphan", order_by="TemplateSeat.number"
+        back_populates="template",
+        cascade="all, delete-orphan",
+        order_by="TemplateSeat.number",
     )
 
 
 class TemplateSeat(BaseModel):
-    """Asiento dentro de una plantilla, con su posición en la cuadrícula y su tipo."""
+    """Asiento con posición en la plantilla y tipo asignado."""
 
     __tablename__ = "template_seats"
-    __table_args__ = (UniqueConstraint("template_id", "number"),)
 
-    template_id: Mapped[int] = mapped_column(ForeignKey("bus_templates.id", ondelete="CASCADE"))
+    __table_args__ = (
+        UniqueConstraint("template_id", "number"),
+    )
+
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("bus_templates.id", ondelete="CASCADE")
+    )
+
     number: Mapped[int]
     floor: Mapped[int] = mapped_column(default=1)
     row: Mapped[int]
     column: Mapped[int]
-    seat_type: Mapped[SeatType] = mapped_column(str_enum(SeatType), default=SeatType.NORMAL)
-    seat_type_id: Mapped[int | None] = mapped_column(
-    ForeignKey(
-        "cooperative_seat_types.id",
-        ondelete="RESTRICT",
-    ),
-    nullable=True,
-)
 
-    template: Mapped[BusTemplate] = relationship(back_populates="seats")
+    seat_type: Mapped[SeatType] = mapped_column(
+        str_enum(SeatType),
+        default=SeatType.NORMAL,
+    )
+
+    # Issue #54: tipo de asiento personalizado por cooperativa.
+    seat_type_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "cooperative_seat_types.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=True,
+    )
+
+    template: Mapped[BusTemplate] = relationship(
+        back_populates="seats"
+    )
 
 
 class BusGroup(TenantModel):
-    """Grupo de buses, por ejemplo 'Buses cómodos' o 'Buses cantonales'. La hoja de ruta es por grupo."""
+    """Grupo de buses utilizado para su organización y hojas de ruta."""
 
     __tablename__ = "bus_groups"
+
     __table_args__ = (
         Index(
             "uq_bus_groups_cooperative_normalized_name",
@@ -130,7 +148,10 @@ class BusGroup(TenantModel):
     )
 
     name: Mapped[str] = mapped_column(String(100))
-    normalized_name: Mapped[str] = mapped_column(String(100), default="")
+    normalized_name: Mapped[str] = mapped_column(
+        String(100),
+        default="",
+    )
     description: Mapped[str | None] = mapped_column(String(255))
 
     @validates("name")
@@ -141,43 +162,163 @@ class BusGroup(TenantModel):
 
 
 class Bus(TenantModel):
-    __tablename__ = "buses"
-    __table_args__ = (UniqueConstraint("cooperative_id", "number"),)
+    """Bus registrado por una cooperativa."""
 
-    number: Mapped[str] = mapped_column(String(10), nullable=False)  # Número de disco
-    plate: Mapped[str] = mapped_column(String(10), unique=True)
-    chassis_brand: Mapped[str] = mapped_column(String(50))
-    chassis_number: Mapped[str | None] = mapped_column(String(50))
-    body_brand: Mapped[str] = mapped_column(String(50))  # Carrocería
+    __tablename__ = "buses"
+
+    __table_args__ = (
+        UniqueConstraint("cooperative_id", "number"),
+    )
+
+    # --------------------------------------------------
+    # IDENTIFICACIÓN DEL BUS
+    # --------------------------------------------------
+
+    number: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+    )
+
+    plate: Mapped[str] = mapped_column(
+        String(10),
+        unique=True,
+    )
+
+    # --------------------------------------------------
+    # CHASIS Y CARROCERÍA
+    # --------------------------------------------------
+
+    # Nombres históricos.
+    # Se conservan incluso si Administración elimina
+    # una marca de los catálogos globales.
+    chassis_brand: Mapped[str] = mapped_column(
+        String(100),
+    )
+
+    chassis_number: Mapped[str | None] = mapped_column(
+        String(50),
+    )
+
+    body_brand: Mapped[str] = mapped_column(
+        String(150),
+    )
+
+    # --------------------------------------------------
+    # ISSUE #63: CATÁLOGOS GLOBALES DE VEHÍCULOS
+    # --------------------------------------------------
+
+    # Referencia opcional a la marca de chasis
+    # administrada desde el panel Administrador.
+    chassis_brand_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "chassis_brands.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+    )
+
+    # Referencia opcional a la marca de carrocería
+    # administrada desde el panel Administrador.
+    bodywork_brand_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "bodywork_brands.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+    )
+
+    # --------------------------------------------------
+    # DATOS GENERALES DEL BUS
+    # --------------------------------------------------
+
     year: Mapped[int | None]
-    photo_url: Mapped[str | None] = mapped_column(String(500))
-    template_id: Mapped[int ] = mapped_column(
-        ForeignKey("bus_templates.id", ondelete="RESTRICT"), nullable=False
+
+    photo_url: Mapped[str | None] = mapped_column(
+        String(500),
     )
-    group_id: Mapped[int | None] = mapped_column(ForeignKey("bus_groups.id", ondelete="SET NULL"))
-    is_active: Mapped[bool] = mapped_column(default=True)
-    brand: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    model: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    passenger_capacity: Mapped[int | None] = mapped_column(nullable=True)
-    floors: Mapped[int] = mapped_column(default=2, server_default="2")
+
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "bus_templates.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+
+    group_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "bus_groups.id",
+            ondelete="SET NULL",
+        ),
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        default=True,
+    )
+
+    # Campo histórico mantenido por compatibilidad
+    # con las funcionalidades existentes.
+    brand: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    model: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    passenger_capacity: Mapped[int | None] = mapped_column(
+        nullable=True,
+    )
+
+    floors: Mapped[int] = mapped_column(
+        default=2,
+        server_default="2",
+    )
+
     origin: Mapped[BusOrigin | None] = mapped_column(
-        str_enum(BusOrigin), nullable=True
+        str_enum(BusOrigin),
+        nullable=True,
     )
+
     status: Mapped[BusStatus] = mapped_column(
-        str_enum(BusStatus), default=BusStatus.OPERATIONAL, server_default="operativo"
+        str_enum(BusStatus),
+        default=BusStatus.OPERATIONAL,
+        server_default="operativo",
     )
+
+    # --------------------------------------------------
+    # RELACIONES
+    # --------------------------------------------------
 
     template: Mapped[BusTemplate] = relationship()
+
     group: Mapped[BusGroup | None] = relationship()
+
     photos: Mapped[list["BusPhoto"]] = relationship(
-        back_populates="bus", cascade="all, delete-orphan", order_by="BusPhoto.id"
+        back_populates="bus",
+        cascade="all, delete-orphan",
+        order_by="BusPhoto.id",
     )
 
 
 class BusPhoto(BaseModel):
+    """Fotografía asociada a un bus."""
+
     __tablename__ = "bus_photos"
 
-    bus_id: Mapped[int] = mapped_column(ForeignKey("buses.id", ondelete="CASCADE"))
-    file_path: Mapped[str] = mapped_column(String(500))
+    bus_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "buses.id",
+            ondelete="CASCADE",
+        )
+    )
 
-    bus: Mapped[Bus] = relationship(back_populates="photos")
+    file_path: Mapped[str] = mapped_column(
+        String(500),
+    )
+
+    bus: Mapped[Bus] = relationship(
+        back_populates="photos"
+    )

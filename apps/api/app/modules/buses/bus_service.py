@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.buses import repository, seat_type_service
 from app.modules.buses.models import Bus, BusPhoto, BusStatus, BusTemplate, TemplateSeat
+from app.modules.vehicle_catalog.models import BodyworkBrand, ChassisBrand
 
 
 class DuplicateBusPlateError(Exception):
@@ -33,6 +34,28 @@ class BusCapacityExceededError(Exception):
             f"La plantilla contiene {seat_count} asientos, "
             f"pero la capacidad máxima del bus es {capacity} pasajeros."
         )
+
+
+class BusCatalogItemNotFoundError(Exception):
+    """La marca seleccionada no existe en el catálogo."""
+
+
+def _catalog_brand_name(
+    db: Session,
+    model: type[ChassisBrand] | type[BodyworkBrand],
+    item_id: int,
+) -> str:
+    item = db.get(model, item_id)
+
+    if item is None:
+        label = "chasis" if model is ChassisBrand else "carrocería"
+
+        raise BusCatalogItemNotFoundError(
+            f"La marca de {label} seleccionada "
+            "no existe en el catálogo global."
+        )
+
+    return item.name
 
 
 def _validate_group(db: Session, cooperative_id: int, group_id: int) -> None:
@@ -113,11 +136,25 @@ def create_bus(
     group_id: int,
     template_id: int | None,
     template: dict[str, object] | None,
+    chassis_brand_id: int | None = None,
+    bodywork_brand_id: int | None = None,
     photo_paths: list[str] | None = None,
 ) -> Bus:
     if (template_id is None) == (template is None):
         raise ValueError("Debe proporcionarse exactamente una plantilla.")
     _validate_group(db, cooperative_id, group_id)
+        # Issue #63: obtener los nombres oficiales de los catálogos.
+    chassis_name = (
+        _catalog_brand_name(db, ChassisBrand, chassis_brand_id)
+        if chassis_brand_id is not None
+        else brand
+    )
+
+    bodywork_name = (
+        _catalog_brand_name(db, BodyworkBrand, bodywork_brand_id)
+        if bodywork_brand_id is not None
+        else brand
+    )
 
 
     if template_id is not None:
@@ -176,9 +213,11 @@ def create_bus(
             cooperative_id=cooperative_id,
             number=number,
             plate=plate,
-            chassis_brand=brand,
-            body_brand=brand,
-            brand=brand,
+            chassis_brand=chassis_name,
+            chassis_brand_id=chassis_brand_id,
+            body_brand=bodywork_name,
+            bodywork_brand_id=bodywork_brand_id,
+            brand=chassis_name,
             model=model,
             year=year,
             passenger_capacity=passenger_capacity,
@@ -236,7 +275,35 @@ def update_bus(
         db, str(changes["plate"]), excluding_bus_id=bus_id
     ):
         raise DuplicateBusPlateError
+        # Issue #63: actualizar la referencia y el nombre del chasis.
+    if (
+        "chassis_brand_id" in changes
+        and changes["chassis_brand_id"] is not None
+    ):
+        chassis_name = _catalog_brand_name(
+            db,
+            ChassisBrand,
+            int(changes["chassis_brand_id"]),
+        )
 
+        changes["chassis_brand"] = chassis_name
+        changes["brand"] = chassis_name
+
+    elif "brand" in changes and changes["brand"] != bus.brand:
+        # Compatibilidad con clientes que todavía envían texto.
+        changes["chassis_brand_id"] = None
+        changes["chassis_brand"] = changes["brand"]
+
+    # Issue #63: actualizar la referencia y el nombre de carrocería.
+    if (
+        "bodywork_brand_id" in changes
+        and changes["bodywork_brand_id"] is not None
+    ):
+        changes["body_brand"] = _catalog_brand_name(
+            db,
+            BodyworkBrand,
+            int(changes["bodywork_brand_id"]),
+        )
     # Issue #59: validar la capacidad al cambiar la plantilla
     # o la capacidad de un bus existente.
     if "passenger_capacity" in changes or "template_id" in changes:
