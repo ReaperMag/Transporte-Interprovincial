@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+
 import { CooperativeBusCreateWizard } from '../components/CooperativeBusCreateWizard';
+
 import {
   cleanPlate,
   digitsError,
@@ -7,7 +9,14 @@ import {
   plateError,
   preventNonNumericKeys,
 } from '../../../shared/utils/validation';
+
 import { getCooperativeBusGroups, type CooperativeBusGroup } from '../services/busGroup.service';
+
+import {
+  getCooperativeVehicleCatalog,
+  type CooperativeVehicleCatalog,
+} from '../services/cooperativeVehicleCatalog.service';
+
 import {
   addCooperativeBusPhotos,
   createCooperativeBus,
@@ -22,6 +31,7 @@ import {
   type BusOrigin,
   type BusStatus,
 } from '../services/bus.service';
+
 import './CooperativeBusesPage.css';
 
 type BusForm = Omit<BusInput, 'templateId'> & {
@@ -32,6 +42,8 @@ const createInitialForm = (): BusForm => ({
   number: '',
   plate: '',
   brand: '',
+  chassisBrandId: null,
+  bodyworkBrandId: null,
   model: '',
   year: new Date().getFullYear(),
   capacity: 40,
@@ -52,6 +64,7 @@ export function CooperativeBusesPage() {
   const [buses, setBuses] = useState<CooperativeBus[]>([]);
   const [groups, setGroups] = useState<CooperativeBusGroup[]>([]);
   const [form, setForm] = useState<BusForm>(createInitialForm);
+
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingPhotos, setEditingPhotos] = useState<CooperativeBusPhoto[]>([]);
   const [savingPhotos, setSavingPhotos] = useState(false);
@@ -66,8 +79,37 @@ export function CooperativeBusesPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const canSave = !saving && form.templateId !== null;
+  // Issue #63: catálogos globales.
+  const [catalog, setCatalog] = useState<CooperativeVehicleCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
+  // Conservar los nombres de buses antiguos.
+  const [historicalBrands, setHistoricalBrands] = useState({
+    chassis: '',
+    bodywork: '',
+  });
+
+  const unavailableChassis =
+    !catalogLoading &&
+    catalog !== null &&
+    form.chassisBrandId != null &&
+    !catalog.chassis.some((item) => item.id === form.chassisBrandId);
+
+  const unavailableBodywork =
+    !catalogLoading &&
+    catalog !== null &&
+    form.bodyworkBrandId != null &&
+    !catalog.bodyworks.some((item) => item.id === form.bodyworkBrandId);
+
+  const canSave =
+    !saving && form.templateId !== null && !unavailableChassis && !unavailableBodywork;
+
   const showingEditor = creating || editingId !== null;
+
+  // ----------------------------------------------------
+  // CARGA DE BUSES Y GRUPOS
+  // ----------------------------------------------------
 
   const load = useCallback(async () => {
     try {
@@ -97,6 +139,58 @@ export function CooperativeBusesPage() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  // ----------------------------------------------------
+  // ISSUE #63: CARGAR CATÁLOGOS GLOBALES
+  // ----------------------------------------------------
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getCooperativeVehicleCatalog(controller.signal)
+      .then(setCatalog)
+      .catch((loadError: unknown) => {
+        if (controller.signal.aborted) return;
+
+        setCatalogError(
+          loadError instanceof Error ? loadError.message : 'No fue posible cargar las marcas.',
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCatalogLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const chooseChassis = (value: string) => {
+    const selected = catalog?.chassis.find((item) => item.id === Number(value));
+
+    if (!selected) return;
+
+    setForm((current) => ({
+      ...current,
+      chassisBrandId: selected.id,
+      brand: selected.name,
+    }));
+  };
+
+  const chooseBodywork = (value: string) => {
+    const selected = catalog?.bodyworks.find((item) => item.id === Number(value));
+
+    if (!selected) return;
+
+    setForm((current) => ({
+      ...current,
+      bodyworkBrandId: selected.id,
+    }));
+  };
+
+  // ----------------------------------------------------
+  // FORMULARIO DE EDICIÓN
+  // ----------------------------------------------------
+
   const change = <K extends keyof BusForm>(field: K, value: BusForm[K]) => {
     setForm((current) => ({
       ...current,
@@ -108,6 +202,12 @@ export function CooperativeBusesPage() {
     setForm(createInitialForm());
     setEditingId(null);
     setEditingPhotos([]);
+
+    setHistoricalBrands({
+      chassis: '',
+      bodywork: '',
+    });
+
     setCreating(false);
   };
 
@@ -125,6 +225,7 @@ export function CooperativeBusesPage() {
     }
 
     const validationError = digitsError(form.number) ?? plateError(form.plate);
+
     if (validationError) {
       setError(validationError);
       return;
@@ -141,6 +242,7 @@ export function CooperativeBusesPage() {
       };
 
       if (editingId === null) return;
+
       await updateCooperativeBus(editingId, input);
 
       setSuccess('Los cambios del bus se guardaron.');
@@ -153,6 +255,10 @@ export function CooperativeBusesPage() {
     }
   };
 
+  // ----------------------------------------------------
+  // CREACIÓN DE BUSES
+  // ----------------------------------------------------
+
   const create = async (input: CooperativeBusCreateInput, photos: File[]) => {
     setSaving(true);
     setError(null);
@@ -160,6 +266,7 @@ export function CooperativeBusesPage() {
 
     try {
       await createCooperativeBus(input, photos);
+
       setCreating(false);
       setSuccess('El bus se registró correctamente.');
       await load();
@@ -170,19 +277,34 @@ export function CooperativeBusesPage() {
     }
   };
 
+  // ----------------------------------------------------
+  // SELECCIONAR BUS PARA EDITAR
+  // ----------------------------------------------------
+
   const edit = (bus: CooperativeBus) => {
     setEditingId(bus.id);
     setEditingPhotos(bus.photos ?? []);
+
+    setHistoricalBrands({
+      chassis: bus.chassisBrand || bus.brand,
+      bodywork: bus.bodyBrand,
+    });
+
     setCreating(false);
 
     setForm({
       number: bus.number,
       plate: bus.plate,
       brand: bus.brand,
+
+      // Issue #63: recuperar las marcas registradas.
+      chassisBrandId: bus.chassisBrandId,
+      bodyworkBrandId: bus.bodyworkBrandId,
+
       model: bus.model,
       year: bus.year,
       capacity: bus.capacity,
-      floors: 2,
+      floors: bus.floors,
       origin: bus.origin,
       status: bus.status,
       groupId: bus.groupId,
@@ -192,6 +314,10 @@ export function CooperativeBusesPage() {
     setError(null);
     setSuccess(null);
   };
+
+  // ----------------------------------------------------
+  // ELIMINACIÓN DE BUSES
+  // ----------------------------------------------------
 
   const remove = async (bus: CooperativeBus) => {
     if (!window.confirm(`¿Eliminar el bus ${bus.plate}? Esta acción no se puede deshacer.`)) {
@@ -212,14 +338,23 @@ export function CooperativeBusesPage() {
     }
   };
 
+  // ----------------------------------------------------
+  // FOTOGRAFÍAS DEL BUS
+  // ----------------------------------------------------
+
   const addPhotos = async (event: ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? []);
     event.target.value = '';
-    if (editingId === null || selected.length === 0) return;
+
+    if (editingId === null || selected.length === 0) {
+      return;
+    }
+
     if (selected.some((file) => !['image/jpeg', 'image/png'].includes(file.type))) {
       setError('Solo puedes subir fotos JPG o PNG.');
       return;
     }
+
     if (editingPhotos.length + selected.length > 8) {
       setError('El bus puede tener hasta 8 fotos.');
       return;
@@ -228,13 +363,18 @@ export function CooperativeBusesPage() {
     setSavingPhotos(true);
     setError(null);
     setSuccess(null);
+
     try {
       const created = await addCooperativeBusPhotos(editingId, selected);
+
       setEditingPhotos((current) => [...current, ...created]);
+
       setSuccess('Las fotos del bus se actualizaron.');
       await load();
     } catch (photoError) {
-      setError(photoError instanceof Error ? photoError.message : 'No fue posible subir las fotos.');
+      setError(
+        photoError instanceof Error ? photoError.message : 'No fue posible subir las fotos.',
+      );
     } finally {
       setSavingPhotos(false);
     }
@@ -242,29 +382,42 @@ export function CooperativeBusesPage() {
 
   const removePhoto = async (photo: CooperativeBusPhoto) => {
     if (editingId === null) return;
+
     setSavingPhotos(true);
     setError(null);
     setSuccess(null);
+
     try {
       await deleteCooperativeBusPhoto(editingId, photo.id);
+
       setEditingPhotos((current) => current.filter((item) => item.id !== photo.id));
-      setSuccess('La foto se elimin? del bus.');
+
+      setSuccess('La foto se eliminó del bus.');
       await load();
     } catch (photoError) {
-      setError(photoError instanceof Error ? photoError.message : 'No fue posible eliminar la foto.');
+      setError(
+        photoError instanceof Error ? photoError.message : 'No fue posible eliminar la foto.',
+      );
     } finally {
       setSavingPhotos(false);
     }
   };
+
+  // ----------------------------------------------------
+  // INTERFAZ
+  // ----------------------------------------------------
 
   return (
     <section className="cooperative-buses">
       <header className="cooperative-buses__header" hidden={showingEditor}>
         <div>
           <p className="cooperative-buses__eyebrow">Administración de flota</p>
+
           <h2>Gestión de buses</h2>
+
           <p>Registra y controla los vehículos de tu cooperativa.</p>
         </div>
+
         {editingId === null && (
           <button
             type="button"
@@ -313,6 +466,7 @@ export function CooperativeBusesPage() {
         </p>
       )}
 
+      {/* FORMULARIO DE EDICIÓN */}
       <form
         className="cooperative-buses__form"
         onSubmit={(event) => void submit(event)}
@@ -342,14 +496,60 @@ export function CooperativeBusesPage() {
           />
         </label>
 
+        {/* Issue #63: marca de chasis */}
         <label>
-          Marca
-          <input
-            required
-            maxLength={50}
-            value={form.brand}
-            onChange={(event) => change('brand', event.target.value)}
-          />
+          Marca de chasis
+          <select
+            value={form.chassisBrandId ?? ''}
+            disabled={catalogLoading || catalogError !== null || !catalog?.chassis.length}
+            onChange={(event) => chooseChassis(event.target.value)}
+          >
+            <option value="" disabled>
+              {catalogLoading
+                ? 'Cargando marcas...'
+                : `Sin vínculo actual (histórico: ${historicalBrands.chassis || 'No disponible'})`}
+            </option>
+
+            {unavailableChassis && (
+              <option value={form.chassisBrandId ?? ''} disabled>
+                Marca eliminada del catálogo. Selecciona otra.
+              </option>
+            )}
+
+            {catalog?.chassis.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* Issue #63: marca de carrocería */}
+        <label>
+          Marca de carrocería
+          <select
+            value={form.bodyworkBrandId ?? ''}
+            disabled={catalogLoading || catalogError !== null || !catalog?.bodyworks.length}
+            onChange={(event) => chooseBodywork(event.target.value)}
+          >
+            <option value="" disabled>
+              {catalogLoading
+                ? 'Cargando marcas...'
+                : `Sin vínculo actual (histórico: ${historicalBrands.bodywork || 'No disponible'})`}
+            </option>
+
+            {unavailableBodywork && (
+              <option value={form.bodyworkBrandId ?? ''} disabled>
+                Marca eliminada del catálogo. Selecciona otra.
+              </option>
+            )}
+
+            {catalog?.bodyworks.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label>
@@ -367,9 +567,9 @@ export function CooperativeBusesPage() {
           <input
             required
             type="number"
-            onKeyDown={preventNonNumericKeys}
             min={1950}
             max={new Date().getFullYear() + 1}
+            onKeyDown={preventNonNumericKeys}
             value={form.year}
             onChange={(event) => change('year', Number(event.target.value))}
           />
@@ -380,9 +580,9 @@ export function CooperativeBusesPage() {
           <input
             required
             type="number"
-            onKeyDown={preventNonNumericKeys}
             min={1}
             max={200}
+            onKeyDown={preventNonNumericKeys}
             value={form.capacity}
             onChange={(event) => change('capacity', Number(event.target.value))}
           />
@@ -390,7 +590,7 @@ export function CooperativeBusesPage() {
 
         <label>
           Pisos
-          <input value="2" readOnly />
+          <input value={form.floors} readOnly />
         </label>
 
         <label>
@@ -454,13 +654,29 @@ export function CooperativeBusesPage() {
           Este bus conserva su plantilla asignada.
         </p>
 
+        {catalogError && (
+          <p className="cooperative-buses__message cooperative-buses__message--error" role="alert">
+            {catalogError} Puedes editar los demás datos sin cambiar las marcas actuales.
+          </p>
+        )}
+
+        {(unavailableChassis || unavailableBodywork) && (
+          <p className="cooperative-buses__message cooperative-buses__message--error" role="alert">
+            Una marca seleccionada ya no existe en el catálogo. Selecciona una marca vigente antes
+            de guardar.
+          </p>
+        )}
+
+        {/* FOTOGRAFÍAS EN EDICIÓN */}
         <section className="cooperative-buses__edit-photos" aria-labelledby="bus-photos-title">
           <div>
             <h4 id="bus-photos-title">Fotos del bus</h4>
-            <p>Agrega o quita fotos JPG o PNG. Puedes guardar hasta 8 im?genes.</p>
+            <p>Agrega o quita fotos JPG o PNG. Puedes guardar hasta 8 imágenes.</p>
           </div>
+
           <label className="cooperative-buses__photo-upload">
             {savingPhotos ? 'Procesando fotos...' : 'Subir fotos'}
+
             <input
               type="file"
               accept="image/jpeg,image/png"
@@ -469,11 +685,13 @@ export function CooperativeBusesPage() {
               onChange={(event) => void addPhotos(event)}
             />
           </label>
+
           <div className="cooperative-buses__photo-grid" aria-live="polite">
             {editingPhotos.length ? (
               editingPhotos.map((photo) => (
                 <figure key={photo.id} className="cooperative-buses__photo">
                   <img src={photo.url} alt={`Foto ${photo.id} del bus`} />
+
                   <button
                     type="button"
                     disabled={savingPhotos}
@@ -485,7 +703,7 @@ export function CooperativeBusesPage() {
                 </figure>
               ))
             ) : (
-              <p>A?n no hay fotos cargadas para este bus.</p>
+              <p>Aún no hay fotos cargadas para este bus.</p>
             )}
           </div>
         </section>
@@ -499,6 +717,7 @@ export function CooperativeBusesPage() {
         </button>
       </form>
 
+      {/* FILTROS DEL LISTADO */}
       <div className="cooperative-buses__filters" hidden={showingEditor}>
         <label>
           Buscar por placa
@@ -535,6 +754,7 @@ export function CooperativeBusesPage() {
         </label>
       </div>
 
+      {/* TABLA DE BUSES */}
       {loading ? (
         <p role="status" hidden={showingEditor}>
           Cargando buses...
@@ -548,7 +768,8 @@ export function CooperativeBusesPage() {
               <tr>
                 <th>Número de disco</th>
                 <th>Placa</th>
-                <th>Marca / modelo</th>
+                <th>Chasis / modelo</th>
+                <th>Carrocería</th>
                 <th>Capacidad</th>
                 <th>Procedencia</th>
                 <th>Grupo</th>
@@ -562,13 +783,15 @@ export function CooperativeBusesPage() {
                 <tr key={bus.id}>
                   <td>{bus.number}</td>
                   <td>{bus.plate}</td>
+
                   <td>
-                    {bus.brand} {bus.model}
+                    {bus.chassisBrand} {bus.model}
                   </td>
+
+                  <td>{bus.bodyBrand}</td>
                   <td>{bus.capacity}</td>
                   <td>{bus.origin}</td>
                   <td>{bus.groupName}</td>
-
                   <td>{statusLabels[bus.status]}</td>
 
                   <td>
