@@ -133,8 +133,9 @@ class TemplateSeat(BaseModel):
     )
 
 
+
 class BusGroup(TenantModel):
-    """Grupo de buses utilizado para su organización y hojas de ruta."""
+    """Grupo de buses de una cooperativa."""
 
     __tablename__ = "bus_groups"
 
@@ -148,17 +149,30 @@ class BusGroup(TenantModel):
     )
 
     name: Mapped[str] = mapped_column(String(100))
+
     normalized_name: Mapped[str] = mapped_column(
         String(100),
         default="",
     )
-    description: Mapped[str | None] = mapped_column(String(255))
+
+    description: Mapped[str | None] = mapped_column(
+        String(255),
+    )
+
+    # Cantidad de buses de descanso configurada por grupo.
+    # Se mantiene el valor predeterminado definido en BusGroupCreate.
+    rest_buses_count: Mapped[int] = mapped_column(
+        default=1,
+        server_default="1",
+        nullable=False,
+    )
 
     @validates("name")
     def normalize_name(self, _key: str, value: str) -> str:
         normalized = " ".join(value.split())
         self.normalized_name = normalized.casefold()
         return normalized
+
 
 
 class Bus(TenantModel):

@@ -137,6 +137,25 @@ def init_db() -> None:
 
     ensure_bus_group_name_index(engine)
 
+
+    # Restaurar el campo de buses de descanso de cada grupo.
+    # La migración es aditiva y conserva los grupos existentes.
+    group_columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("bus_groups")
+    }
+
+    if "rest_buses_count" not in group_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE bus_groups "
+                    "ADD COLUMN rest_buses_count "
+                    "INTEGER NOT NULL DEFAULT 1"
+                )
+            )
+
+
     frequency_columns = {
         column["name"] for column in inspect(engine).get_columns("frequencies")
     }
