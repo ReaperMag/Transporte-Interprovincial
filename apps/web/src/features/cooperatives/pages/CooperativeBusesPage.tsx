@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { CooperativeBusCreateWizard } from '../components/CooperativeBusCreateWizard';
+import { VehicleBrandCombobox } from '../components/VehicleBrandCombobox';
 
 import {
   cleanPlate,
@@ -84,7 +85,7 @@ export function CooperativeBusesPage() {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
 
-  // Conservar los nombres de buses antiguos.
+  // Nombres históricos para los buses anteriores a la issue #63.
   const [historicalBrands, setHistoricalBrands] = useState({
     chassis: '',
     bodywork: '',
@@ -140,7 +141,7 @@ export function CooperativeBusesPage() {
   }, [load]);
 
   // ----------------------------------------------------
-  // ISSUE #63: CARGAR CATÁLOGOS GLOBALES
+  // ISSUE #63: CONSULTA DE CATÁLOGOS GLOBALES
   // ----------------------------------------------------
 
   useEffect(() => {
@@ -149,7 +150,9 @@ export function CooperativeBusesPage() {
     getCooperativeVehicleCatalog(controller.signal)
       .then(setCatalog)
       .catch((loadError: unknown) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          return;
+        }
 
         setCatalogError(
           loadError instanceof Error ? loadError.message : 'No fue posible cargar las marcas.',
@@ -164,10 +167,14 @@ export function CooperativeBusesPage() {
     return () => controller.abort();
   }, []);
 
+  // Actualizar solo la marca de chasis seleccionada.
+  // El campo brand se mantiene para compatibilidad.
   const chooseChassis = (value: string) => {
     const selected = catalog?.chassis.find((item) => item.id === Number(value));
 
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
 
     setForm((current) => ({
       ...current,
@@ -176,10 +183,13 @@ export function CooperativeBusesPage() {
     }));
   };
 
+  // Actualizar la marca de carrocería sin alterar el chasis.
   const chooseBodywork = (value: string) => {
     const selected = catalog?.bodyworks.find((item) => item.id === Number(value));
 
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
 
     setForm((current) => ({
       ...current,
@@ -241,7 +251,9 @@ export function CooperativeBusesPage() {
         templateId: form.templateId,
       };
 
-      if (editingId === null) return;
+      if (editingId === null) {
+        return;
+      }
 
       await updateCooperativeBus(editingId, input);
 
@@ -285,6 +297,8 @@ export function CooperativeBusesPage() {
     setEditingId(bus.id);
     setEditingPhotos(bus.photos ?? []);
 
+    // Preservar nombres incluso cuando no existe referencia
+    // a un elemento de los catálogos globales.
     setHistoricalBrands({
       chassis: bus.chassisBrand || bus.brand,
       bodywork: bus.bodyBrand,
@@ -297,7 +311,7 @@ export function CooperativeBusesPage() {
       plate: bus.plate,
       brand: bus.brand,
 
-      // Issue #63: recuperar las marcas registradas.
+      // Referencias de los catálogos globales.
       chassisBrandId: bus.chassisBrandId,
       bodyworkBrandId: bus.bodyworkBrandId,
 
@@ -316,7 +330,7 @@ export function CooperativeBusesPage() {
   };
 
   // ----------------------------------------------------
-  // ELIMINACIÓN DE BUSES
+  // ELIMINAR BUS
   // ----------------------------------------------------
 
   const remove = async (bus: CooperativeBus) => {
@@ -381,7 +395,9 @@ export function CooperativeBusesPage() {
   };
 
   const removePhoto = async (photo: CooperativeBusPhoto) => {
-    if (editingId === null) return;
+    if (editingId === null) {
+      return;
+    }
 
     setSavingPhotos(true);
     setError(null);
@@ -496,61 +512,37 @@ export function CooperativeBusesPage() {
           />
         </label>
 
-        {/* Issue #63: marca de chasis */}
-        <label>
-          Marca de chasis
-          <select
-            value={form.chassisBrandId ?? ''}
+        {/* Issue #63: combobox compacto de chasis */}
+        <div className="catalog-brand-field">
+          <span>Marca de chasis</span>
+
+          <VehicleBrandCombobox
+            label="Marca de chasis"
+            items={catalog?.chassis ?? []}
+            value={form.chassisBrandId ?? null}
+            historicalName={historicalBrands.chassis}
+            placeholder={catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de chasis'}
             disabled={catalogLoading || catalogError !== null || !catalog?.chassis.length}
-            onChange={(event) => chooseChassis(event.target.value)}
-          >
-            <option value="" disabled>
-              {catalogLoading
-                ? 'Cargando marcas...'
-                : `Sin vínculo actual (histórico: ${historicalBrands.chassis || 'No disponible'})`}
-            </option>
+            onChange={(id) => chooseChassis(String(id))}
+          />
+        </div>
 
-            {unavailableChassis && (
-              <option value={form.chassisBrandId ?? ''} disabled>
-                Marca eliminada del catálogo. Selecciona otra.
-              </option>
-            )}
+        {/* Issue #63: combobox compacto de carrocería */}
+        <div className="catalog-brand-field">
+          <span>Marca de carrocería</span>
 
-            {catalog?.chassis.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {/* Issue #63: marca de carrocería */}
-        <label>
-          Marca de carrocería
-          <select
-            value={form.bodyworkBrandId ?? ''}
+          <VehicleBrandCombobox
+            label="Marca de carrocería"
+            items={catalog?.bodyworks ?? []}
+            value={form.bodyworkBrandId ?? null}
+            historicalName={historicalBrands.bodywork}
+            placeholder={
+              catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de carrocería'
+            }
             disabled={catalogLoading || catalogError !== null || !catalog?.bodyworks.length}
-            onChange={(event) => chooseBodywork(event.target.value)}
-          >
-            <option value="" disabled>
-              {catalogLoading
-                ? 'Cargando marcas...'
-                : `Sin vínculo actual (histórico: ${historicalBrands.bodywork || 'No disponible'})`}
-            </option>
-
-            {unavailableBodywork && (
-              <option value={form.bodyworkBrandId ?? ''} disabled>
-                Marca eliminada del catálogo. Selecciona otra.
-              </option>
-            )}
-
-            {catalog?.bodyworks.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={(id) => chooseBodywork(String(id))}
+          />
+        </div>
 
         <label>
           Modelo
@@ -671,6 +663,7 @@ export function CooperativeBusesPage() {
         <section className="cooperative-buses__edit-photos" aria-labelledby="bus-photos-title">
           <div>
             <h4 id="bus-photos-title">Fotos del bus</h4>
+
             <p>Agrega o quita fotos JPG o PNG. Puedes guardar hasta 8 imágenes.</p>
           </div>
 

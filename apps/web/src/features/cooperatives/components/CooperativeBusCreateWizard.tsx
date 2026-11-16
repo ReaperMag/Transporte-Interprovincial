@@ -13,6 +13,7 @@ import {
   type CooperativeVehicleCatalog,
 } from '../services/cooperativeVehicleCatalog.service';
 import { BusFloorplanEditor } from './BusFloorplanEditor';
+import { VehicleBrandCombobox } from './VehicleBrandCombobox';
 import {
   cleanPlate,
   digitsError,
@@ -46,7 +47,6 @@ const createInitialMetadata = (): Metadata => ({
   groupId: 0,
 });
 
-// El bus empieza sin asientos: se generan a petición del usuario.
 const createInitialTemplate = (): BusTemplate => ({
   id: 'new-template',
   name: 'Plantilla personalizada',
@@ -85,14 +85,14 @@ export function CooperativeBusCreateWizard({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [metadataError, setMetadataError] = useState<string | null>(null);
 
-  // Issue #63: marcas obtenidas del catálogo global.
+  // Issue #63: catálogos globales de chasis y carrocería.
   const [catalog, setCatalog] = useState<CooperativeVehicleCatalog | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
 
   const previewUrls = useRef(new Set<string>());
 
-  // Limpiar las URL temporales de las fotografías.
+  // Liberar las URL temporales de las fotografías.
   useEffect(
     () => () => {
       previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
@@ -100,13 +100,15 @@ export function CooperativeBusCreateWizard({
     [],
   );
 
-  // Cargar las plantillas ya creadas por la cooperativa.
+  // Cargar las plantillas existentes de la cooperativa.
   useEffect(() => {
     let active = true;
 
     getCooperativeBusTemplates()
       .then((items) => {
-        if (active) setSavedTemplates(items);
+        if (active) {
+          setSavedTemplates(items);
+        }
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -118,7 +120,9 @@ export function CooperativeBusCreateWizard({
         }
       })
       .finally(() => {
-        if (active) setTemplatesLoading(false);
+        if (active) {
+          setTemplatesLoading(false);
+        }
       });
 
     return () => {
@@ -126,14 +130,16 @@ export function CooperativeBusCreateWizard({
     };
   }, []);
 
-  // Issue #63: cargar las marcas de chasis y carrocería.
+  // Obtener los catálogos administrativos mediante el endpoint de Cooperativa.
   useEffect(() => {
     const controller = new AbortController();
 
     getCooperativeVehicleCatalog(controller.signal)
       .then(setCatalog)
       .catch((loadError: unknown) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          return;
+        }
 
         setCatalogError(
           loadError instanceof Error ? loadError.message : 'No fue posible cargar las marcas.',
@@ -148,20 +154,21 @@ export function CooperativeBusCreateWizard({
     return () => controller.abort();
   }, []);
 
+  // Al seleccionar un chasis se conserva el campo brand
+  // que el backend utiliza por compatibilidad.
   const chooseChassis = (value: string) => {
     const selected = catalog?.chassis.find((item) => item.id === Number(value));
 
     setMetadata((current) => ({
       ...current,
       chassisBrandId: selected?.id ?? null,
-
-      // La API mantiene el campo brand por compatibilidad.
       brand: selected?.name ?? '',
     }));
 
     setMetadataError(null);
   };
 
+  // La carrocería se selecciona independientemente del chasis.
   const chooseBodywork = (value: string) => {
     const selected = catalog?.bodyworks.find((item) => item.id === Number(value));
 
@@ -183,7 +190,9 @@ export function CooperativeBusCreateWizard({
 
     const saved = savedTemplates.find((item) => item.id === Number(value));
 
-    if (!saved) return;
+    if (!saved) {
+      return;
+    }
 
     setSelectedTemplateId(saved.id);
     setFloorplanGenerated(true);
@@ -214,7 +223,9 @@ export function CooperativeBusCreateWizard({
   };
 
   const changeStructure = (changes: Partial<Pick<BusTemplate, 'floors' | 'hasBathroom'>>) => {
-    if (selectedTemplateId !== null) return;
+    if (selectedTemplateId !== null) {
+      return;
+    }
 
     setTemplate((current) => ({
       ...current,
@@ -235,7 +246,7 @@ export function CooperativeBusCreateWizard({
     template.seats.length > 0 &&
     (selectedTemplateId !== null || (floorplanGenerated && Boolean(template.name.trim())));
 
-  // Paso 1: validar los datos antes de mostrar los asientos.
+  // Paso 1: validar datos y marcas antes del plano.
   const continueToFloorplan = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -251,12 +262,14 @@ export function CooperativeBusCreateWizard({
 
     setMetadataError(validationError);
 
-    if (validationError) return;
+    if (validationError) {
+      return;
+    }
 
     setStep(2);
   };
 
-  // Paso 3: preparar el registro completo.
+  // Paso 3: preparar todos los datos para crear el bus.
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -316,7 +329,6 @@ export function CooperativeBusCreateWizard({
     const additions = selected.map((file) => {
       const previewUrl = URL.createObjectURL(file);
       previewUrls.current.add(previewUrl);
-
       return { file, previewUrl };
     });
 
@@ -335,7 +347,9 @@ export function CooperativeBusCreateWizard({
       <header className="bus-create-wizard__header">
         <div>
           <p className="cooperative-buses__eyebrow">Administración de flota</p>
+
           <h2 id="bus-create-title">Nuevo bus</h2>
+
           <p>Registra los datos del vehículo y configura su distribución de asientos.</p>
         </div>
 
@@ -408,47 +422,35 @@ export function CooperativeBusCreateWizard({
             />
           </label>
 
-          {/* Issue #63: marca de chasis del catálogo global */}
-          <label>
-            Marca de chasis
-            <select
-              required
-              value={metadata.chassisBrandId ?? ''}
+          {/* Issue #63: selector compacto de marca de chasis */}
+          <div className="catalog-brand-field">
+            <span>Marca de chasis</span>
+
+            <VehicleBrandCombobox
+              label="Marca de chasis"
+              items={catalog?.chassis ?? []}
+              value={metadata.chassisBrandId ?? null}
+              placeholder={catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de chasis'}
               disabled={catalogLoading || catalogError !== null || !catalog?.chassis.length}
-              onChange={(event) => chooseChassis(event.target.value)}
-            >
-              <option value="" disabled>
-                {catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de chasis'}
-              </option>
+              onChange={(id) => chooseChassis(String(id))}
+            />
+          </div>
 
-              {catalog?.chassis.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {/* Issue #63: selector compacto de carrocería */}
+          <div className="catalog-brand-field">
+            <span>Marca de carrocería</span>
 
-          {/* Issue #63: carrocería del catálogo global */}
-          <label>
-            Marca de carrocería
-            <select
-              required
-              value={metadata.bodyworkBrandId ?? ''}
+            <VehicleBrandCombobox
+              label="Marca de carrocería"
+              items={catalog?.bodyworks ?? []}
+              value={metadata.bodyworkBrandId ?? null}
+              placeholder={
+                catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de carrocería'
+              }
               disabled={catalogLoading || catalogError !== null || !catalog?.bodyworks.length}
-              onChange={(event) => chooseBodywork(event.target.value)}
-            >
-              <option value="" disabled>
-                {catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de carrocería'}
-              </option>
-
-              {catalog?.bodyworks.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(id) => chooseBodywork(String(id))}
+            />
+          </div>
 
           <label>
             Modelo
