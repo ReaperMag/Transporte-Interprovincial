@@ -8,7 +8,12 @@ import {
   type CooperativeBusTemplate,
 } from '../services/bus.service';
 import type { CooperativeBusGroup } from '../services/busGroup.service';
+import {
+  getCooperativeVehicleCatalog,
+  type CooperativeVehicleCatalog,
+} from '../services/cooperativeVehicleCatalog.service';
 import { BusFloorplanEditor } from './BusFloorplanEditor';
+import { VehicleBrandCombobox } from './VehicleBrandCombobox';
 import {
   cleanPlate,
   digitsError,
@@ -32,6 +37,8 @@ const createInitialMetadata = (): Metadata => ({
   number: '',
   plate: '',
   brand: '',
+  chassisBrandId: null,
+  bodyworkBrandId: null,
   model: '',
   year: new Date().getFullYear(),
   capacity: 0,
@@ -40,7 +47,6 @@ const createInitialMetadata = (): Metadata => ({
   groupId: 0,
 });
 
-// El bus empieza sin asientos: se generan a petición del usuario.
 const createInitialTemplate = (): BusTemplate => ({
   id: 'new-template',
   name: 'Plantilla personalizada',
@@ -67,16 +73,26 @@ export function CooperativeBusCreateWizard({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [metadata, setMetadata] = useState(createInitialMetadata);
   const [template, setTemplate] = useState(createInitialTemplate);
+
   const [floorplanGenerated, setFloorplanGenerated] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<CooperativeBusTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
+
   const [photos, setPhotos] = useState<Array<{ file: File; previewUrl: string }>>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [metadataError, setMetadataError] = useState<string | null>(null);
+
+  // Issue #63: catálogos globales de chasis y carrocería.
+  const [catalog, setCatalog] = useState<CooperativeVehicleCatalog | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
   const previewUrls = useRef(new Set<string>());
 
+  // Liberar las URL temporales de las fotografías.
   useEffect(
     () => () => {
       previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
@@ -84,11 +100,15 @@ export function CooperativeBusCreateWizard({
     [],
   );
 
+  // Cargar las plantillas existentes de la cooperativa.
   useEffect(() => {
     let active = true;
+
     getCooperativeBusTemplates()
       .then((items) => {
-        if (active) setSavedTemplates(items);
+        if (active) {
+          setSavedTemplates(items);
+        }
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -100,12 +120,65 @@ export function CooperativeBusCreateWizard({
         }
       })
       .finally(() => {
-        if (active) setTemplatesLoading(false);
+        if (active) {
+          setTemplatesLoading(false);
+        }
       });
+
     return () => {
       active = false;
     };
   }, []);
+
+  // Obtener los catálogos administrativos mediante el endpoint de Cooperativa.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getCooperativeVehicleCatalog(controller.signal)
+      .then(setCatalog)
+      .catch((loadError: unknown) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setCatalogError(
+          loadError instanceof Error ? loadError.message : 'No fue posible cargar las marcas.',
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCatalogLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  // Al seleccionar un chasis se conserva el campo brand
+  // que el backend utiliza por compatibilidad.
+  const chooseChassis = (value: string) => {
+    const selected = catalog?.chassis.find((item) => item.id === Number(value));
+
+    setMetadata((current) => ({
+      ...current,
+      chassisBrandId: selected?.id ?? null,
+      brand: selected?.name ?? '',
+    }));
+
+    setMetadataError(null);
+  };
+
+  // La carrocería se selecciona independientemente del chasis.
+  const chooseBodywork = (value: string) => {
+    const selected = catalog?.bodyworks.find((item) => item.id === Number(value));
+
+    setMetadata((current) => ({
+      ...current,
+      bodyworkBrandId: selected?.id ?? null,
+    }));
+
+    setMetadataError(null);
+  };
 
   const chooseTemplate = (value: string) => {
     if (!value) {
@@ -114,10 +187,16 @@ export function CooperativeBusCreateWizard({
       setFloorplanGenerated(false);
       return;
     }
+
     const saved = savedTemplates.find((item) => item.id === Number(value));
-    if (!saved) return;
+
+    if (!saved) {
+      return;
+    }
+
     setSelectedTemplateId(saved.id);
     setFloorplanGenerated(true);
+
     setTemplate({
       id: String(saved.id),
       name: saved.name,
@@ -125,48 +204,80 @@ export function CooperativeBusCreateWizard({
       hasBathroom: saved.hasBathroom,
       rows: saved.rows,
       columns: saved.columns,
-      seats: saved.seats.map((seat) => ({ ...seat, id: String(seat.id) })),
+      seats: saved.seats.map((seat) => ({
+        ...seat,
+        id: String(seat.id),
+      })),
     });
   };
 
   const change = <K extends keyof Metadata>(field: K, value: Metadata[K]) => {
-    setMetadata((current) => ({ ...current, [field]: value }));
+    setMetadata((current) => ({
+      ...current,
+      [field]: value,
+    }));
+
     if (field === 'capacity' && selectedTemplateId === null) {
       setFloorplanGenerated(false);
     }
   };
 
   const changeStructure = (changes: Partial<Pick<BusTemplate, 'floors' | 'hasBathroom'>>) => {
-    if (selectedTemplateId !== null) return;
-    setTemplate((current) => ({ ...current, ...changes }));
+    if (selectedTemplateId !== null) {
+      return;
+    }
+
+    setTemplate((current) => ({
+      ...current,
+      ...changes,
+    }));
+
     setFloorplanGenerated(false);
   };
 
   const validCapacity =
     Number.isInteger(metadata.capacity) && metadata.capacity >= 1 && metadata.capacity <= 200;
+
   const overCapacity = template.seats.length > metadata.capacity;
+
   const canContinueFromFloorplan =
     validCapacity &&
     !overCapacity &&
     template.seats.length > 0 &&
     (selectedTemplateId !== null || (floorplanGenerated && Boolean(template.name.trim())));
 
+  // Paso 1: validar datos y marcas antes del plano.
   const continueToFloorplan = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const validationError = digitsError(metadata.number) ?? plateError(metadata.plate);
+
+    const validationError =
+      digitsError(metadata.number) ??
+      plateError(metadata.plate) ??
+      (catalogLoading || catalogError || !catalog
+        ? 'No se han podido cargar las marcas del catálogo global.'
+        : null) ??
+      (!metadata.chassisBrandId || !metadata.bodyworkBrandId
+        ? 'Selecciona una marca de chasis y una marca de carrocería.'
+        : null);
+
     setMetadataError(validationError);
+
     if (validationError) {
       return;
     }
+
     setStep(2);
   };
 
+  // Paso 3: preparar todos los datos para crear el bus.
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (!canContinueFromFloorplan) {
       setStep(2);
       return;
     }
+
     const input: CooperativeBusCreateInput =
       selectedTemplateId !== null
         ? {
@@ -193,6 +304,7 @@ export function CooperativeBusCreateWizard({
               })),
             },
           };
+
     void onCreate(
       input,
       photos.map(({ file }) => file),
@@ -208,6 +320,7 @@ export function CooperativeBusCreateWizard({
       setPhotoError('Solo se aceptan archivos JPG o PNG.');
       return;
     }
+
     if (photos.length + selected.length > 8) {
       setPhotoError('Puedes agregar hasta 8 fotos del bus.');
       return;
@@ -218,12 +331,14 @@ export function CooperativeBusCreateWizard({
       previewUrls.current.add(previewUrl);
       return { file, previewUrl };
     });
+
     setPhotos((current) => [...current, ...additions]);
   };
 
   const removePhoto = (previewUrl: string) => {
     URL.revokeObjectURL(previewUrl);
     previewUrls.current.delete(previewUrl);
+
     setPhotos((current) => current.filter((photo) => photo.previewUrl !== previewUrl));
   };
 
@@ -232,9 +347,12 @@ export function CooperativeBusCreateWizard({
       <header className="bus-create-wizard__header">
         <div>
           <p className="cooperative-buses__eyebrow">Administración de flota</p>
+
           <h2 id="bus-create-title">Nuevo bus</h2>
+
           <p>Registra los datos del vehículo y configura su distribución de asientos.</p>
         </div>
+
         <button type="button" className="bus-create-wizard__cancel" onClick={onCancel}>
           Cancelar
         </button>
@@ -247,12 +365,14 @@ export function CooperativeBusCreateWizard({
         >
           <span>1</span> Datos del bus
         </li>
+
         <li
           className={step === 2 ? 'bus-create-wizard__step--active' : ''}
           aria-current={step === 2 ? 'step' : undefined}
         >
           <span>2</span> Plano de asientos
         </li>
+
         <li
           className={step === 3 ? 'bus-create-wizard__step--active' : ''}
           aria-current={step === 3 ? 'step' : undefined}
@@ -270,6 +390,7 @@ export function CooperativeBusCreateWizard({
       {step === 1 ? (
         <form className="bus-create-wizard__metadata" onSubmit={continueToFloorplan}>
           <h3>Datos del bus</h3>
+
           {metadataError && (
             <p
               className="cooperative-buses__message cooperative-buses__message--error"
@@ -278,6 +399,7 @@ export function CooperativeBusCreateWizard({
               {metadataError}
             </p>
           )}
+
           <label>
             Número de disco
             <input
@@ -288,6 +410,7 @@ export function CooperativeBusCreateWizard({
               onChange={(event) => change('number', onlyDigits(event.target.value, 10))}
             />
           </label>
+
           <label>
             Placa
             <input
@@ -298,15 +421,37 @@ export function CooperativeBusCreateWizard({
               onChange={(event) => change('plate', cleanPlate(event.target.value))}
             />
           </label>
-          <label>
-            Marca
-            <input
-              required
-              maxLength={50}
-              value={metadata.brand}
-              onChange={(event) => change('brand', event.target.value)}
+
+          {/* Issue #63: selector compacto de marca de chasis */}
+          <div className="catalog-brand-field">
+            <span>Marca de chasis</span>
+
+            <VehicleBrandCombobox
+              label="Marca de chasis"
+              items={catalog?.chassis ?? []}
+              value={metadata.chassisBrandId ?? null}
+              placeholder={catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de chasis'}
+              disabled={catalogLoading || catalogError !== null || !catalog?.chassis.length}
+              onChange={(id) => chooseChassis(String(id))}
             />
-          </label>
+          </div>
+
+          {/* Issue #63: selector compacto de carrocería */}
+          <div className="catalog-brand-field">
+            <span>Marca de carrocería</span>
+
+            <VehicleBrandCombobox
+              label="Marca de carrocería"
+              items={catalog?.bodyworks ?? []}
+              value={metadata.bodyworkBrandId ?? null}
+              placeholder={
+                catalogLoading ? 'Cargando marcas...' : 'Selecciona una marca de carrocería'
+              }
+              disabled={catalogLoading || catalogError !== null || !catalog?.bodyworks.length}
+              onChange={(id) => chooseBodywork(String(id))}
+            />
+          </div>
+
           <label>
             Modelo
             <input
@@ -316,18 +461,20 @@ export function CooperativeBusCreateWizard({
               onChange={(event) => change('model', event.target.value)}
             />
           </label>
+
           <label>
             Año
             <input
               required
               type="number"
-              onKeyDown={preventNonNumericKeys}
               min={1950}
               max={new Date().getFullYear() + 1}
+              onKeyDown={preventNonNumericKeys}
               value={metadata.year}
               onChange={(event) => change('year', Number(event.target.value))}
             />
           </label>
+
           <label>
             Procedencia
             <select
@@ -338,6 +485,7 @@ export function CooperativeBusCreateWizard({
               <option value="importado">Importado</option>
             </select>
           </label>
+
           <label>
             Estado
             <select
@@ -351,6 +499,7 @@ export function CooperativeBusCreateWizard({
               ))}
             </select>
           </label>
+
           <label>
             Grupo
             <select
@@ -361,6 +510,7 @@ export function CooperativeBusCreateWizard({
               <option value="" disabled>
                 Selecciona un grupo
               </option>
+
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
@@ -368,13 +518,41 @@ export function CooperativeBusCreateWizard({
               ))}
             </select>
           </label>
+
           {groups.length === 0 && (
             <p className="bus-create-wizard__notice">
               Crea un grupo de buses antes de registrar un vehículo.
             </p>
           )}
+
+          {catalogError && (
+            <p
+              className="cooperative-buses__message cooperative-buses__message--error"
+              role="alert"
+            >
+              {catalogError}
+            </p>
+          )}
+
+          {!catalogLoading &&
+            catalog &&
+            (catalog.chassis.length === 0 || catalog.bodyworks.length === 0) && (
+              <p className="bus-create-wizard__notice" role="status">
+                Administración debe registrar marcas de chasis y carrocería antes de crear buses.
+              </p>
+            )}
+
           <div className="bus-create-wizard__actions">
-            <button type="submit" disabled={groups.length === 0}>
+            <button
+              type="submit"
+              disabled={
+                groups.length === 0 ||
+                catalogLoading ||
+                catalogError !== null ||
+                !catalog?.chassis.length ||
+                !catalog?.bodyworks.length
+              }
+            >
               Continuar al plano
             </button>
           </div>
@@ -382,6 +560,7 @@ export function CooperativeBusCreateWizard({
       ) : step === 2 ? (
         <div className="bus-create-wizard__floorplan">
           <h3>Diseño de asientos</h3>
+
           <p>
             Primero indica la capacidad y las características del bus. Después configura las
             dimensiones y pulsa «Generar plantilla» para crear el plano editable.
@@ -401,23 +580,33 @@ export function CooperativeBusCreateWizard({
                 onChange={(event) => change('capacity', Number(event.target.value))}
               />
             </label>
+
             <label>
               Pisos
               <select
                 value={template.floors}
                 disabled={selectedTemplateId !== null}
-                onChange={(event) => changeStructure({ floors: Number(event.target.value) })}
+                onChange={(event) =>
+                  changeStructure({
+                    floors: Number(event.target.value),
+                  })
+                }
               >
                 <option value={1}>1 piso</option>
                 <option value={2}>2 pisos</option>
               </select>
             </label>
+
             <label className="bus-create-wizard__bathroom-control">
               <input
                 type="checkbox"
                 checked={template.hasBathroom}
                 disabled={selectedTemplateId !== null}
-                onChange={(event) => changeStructure({ hasBathroom: event.target.checked })}
+                onChange={(event) =>
+                  changeStructure({
+                    hasBathroom: event.target.checked,
+                  })
+                }
               />
               Incluir baño
             </label>
@@ -437,6 +626,7 @@ export function CooperativeBusCreateWizard({
               disabled={templatesLoading || !validCapacity}
             >
               <option value="">Crear una estructura nueva</option>
+
               {savedTemplates.map((saved) => (
                 <option key={saved.id} value={saved.id}>
                   {saved.name} - {saved.floors} piso(s) - {saved.seats.length} asientos
@@ -444,6 +634,7 @@ export function CooperativeBusCreateWizard({
               ))}
             </select>
           </label>
+
           {templatesError && (
             <p className="bus-create-wizard__template-error" role="alert">
               {templatesError}
@@ -470,6 +661,7 @@ export function CooperativeBusCreateWizard({
                 generated
                 readOnly
               />
+
               <p>Se reutilizará esta plantilla guardada sin modificarla.</p>
             </div>
           )}
@@ -479,8 +671,8 @@ export function CooperativeBusCreateWizard({
               className="cooperative-buses__message cooperative-buses__message--error"
               role="alert"
             >
-              Esta plantilla tiene {template.seats.length} asientos, pero el bus admite
-              {` ${metadata.capacity}`}. Elige una plantilla menor o aumenta su capacidad.
+              Esta plantilla tiene {template.seats.length} asientos, pero el bus admite{' '}
+              {metadata.capacity}. Elige una plantilla menor o aumenta su capacidad.
             </p>
           )}
 
@@ -488,6 +680,7 @@ export function CooperativeBusCreateWizard({
             <button type="button" className="bus-create-wizard__back" onClick={() => setStep(1)}>
               Volver a datos
             </button>
+
             <button type="button" disabled={!canContinueFromFloorplan} onClick={() => setStep(3)}>
               Continuar a fotos
             </button>
@@ -496,22 +689,28 @@ export function CooperativeBusCreateWizard({
       ) : (
         <form className="bus-create-wizard__photos" onSubmit={submit}>
           <h3>Fotos del bus (opcional)</h3>
+
           <p>Agrega hasta 8 fotos para mostrar el vehículo. Puedes omitir este paso.</p>
+
           <label className="bus-create-wizard__photo-picker">
             Seleccionar fotos
             <input type="file" accept="image/jpeg,image/png" multiple onChange={addPhotos} />
           </label>
+
           {photoError && (
             <p className="bus-create-wizard__photo-error" role="alert">
               {photoError}
             </p>
           )}
+
           <div className="bus-create-wizard__photo-panel" aria-label="Fotos seleccionadas del bus">
             {photos.length ? (
               photos.map(({ file, previewUrl }) => (
                 <figure className="bus-create-wizard__photo" key={previewUrl}>
                   <img src={previewUrl} alt={`Vista previa: ${file.name}`} />
+
                   <figcaption>{file.name}</figcaption>
+
                   <button
                     type="button"
                     onClick={() => removePhoto(previewUrl)}
@@ -525,10 +724,12 @@ export function CooperativeBusCreateWizard({
               <p>Aún no has agregado fotos. La carga es opcional.</p>
             )}
           </div>
+
           <div className="bus-create-wizard__actions">
             <button type="button" className="bus-create-wizard__back" onClick={() => setStep(2)}>
               Volver al plano
             </button>
+
             <button type="submit" disabled={saving}>
               {saving
                 ? 'Guardando...'

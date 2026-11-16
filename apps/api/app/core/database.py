@@ -66,6 +66,30 @@ def import_models() -> None:
     for module in MODEL_MODULES:
         import_module(module)
 
+def ensure_bus_catalog_columns(db_engine: Engine) -> None:
+    """Issue #63: agrega referencias sin eliminar buses existentes."""
+
+    bus_columns = {
+        column["name"]
+        for column in inspect(db_engine).get_columns("buses")
+    }
+
+    catalog_references = {
+        "chassis_brand_id": (
+            "INTEGER REFERENCES chassis_brands(id) ON DELETE SET NULL"
+        ),
+        "bodywork_brand_id": (
+            "INTEGER REFERENCES bodywork_brands(id) ON DELETE SET NULL"
+        ),
+    }
+
+    with db_engine.begin() as connection:
+        for column, definition in catalog_references.items():
+            if column not in bus_columns:
+                connection.execute(
+                    text(f"ALTER TABLE buses ADD COLUMN {column} {definition}")
+                )
+
 
 def init_db() -> None:
     """Crea las tablas que aún no existen y aplica cambios aditivos de esquema."""
@@ -85,6 +109,8 @@ def init_db() -> None:
                     connection.execute(
                         text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
                     )
+    # Issue #63: referencias a catálogos globales.
+    ensure_bus_catalog_columns(engine)
 
     # Catálogo geográfico incorporado desde develop.
     from app.modules.routes.geographic_schema import ensure_geographic_schema
@@ -110,6 +136,25 @@ def init_db() -> None:
     from app.modules.buses.group_schema import ensure_bus_group_name_index
 
     ensure_bus_group_name_index(engine)
+
+
+    # Restaurar el campo de buses de descanso de cada grupo.
+    # La migración es aditiva y conserva los grupos existentes.
+    group_columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("bus_groups")
+    }
+
+    if "rest_buses_count" not in group_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE bus_groups "
+                    "ADD COLUMN rest_buses_count "
+                    "INTEGER NOT NULL DEFAULT 1"
+                )
+            )
+
 
     frequency_columns = {
         column["name"] for column in inspect(engine).get_columns("frequencies")

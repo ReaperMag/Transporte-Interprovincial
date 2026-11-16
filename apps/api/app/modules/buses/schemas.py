@@ -1,3 +1,4 @@
+
 from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
@@ -13,6 +14,7 @@ from pydantic import (
 
 from app.core.validators import validate_digits, validate_plate
 from app.modules.buses.models import BusOrigin, BusStatus, SeatType
+
 
 def to_camel(value: str) -> str:
     first, *rest = value.split("_")
@@ -32,6 +34,10 @@ GroupName = Annotated[str, StringConstraints(min_length=1, max_length=100)]
 GroupDescription = Annotated[str, StringConstraints(max_length=255)]
 
 
+# =====================================================
+# GRUPOS DE BUSES
+# =====================================================
+
 class BusGroupCreate(BusGroupSchema):
     name: GroupName
     description: GroupDescription | None = None
@@ -41,8 +47,10 @@ class BusGroupCreate(BusGroupSchema):
     @classmethod
     def normalize_name(cls, value: str) -> str:
         normalized = " ".join(value.split())
+
         if not normalized:
             raise ValueError("El nombre del grupo es obligatorio.")
+
         return normalized
 
     @field_validator("description")
@@ -54,16 +62,23 @@ class BusGroupCreate(BusGroupSchema):
 class BusGroupUpdate(BusGroupSchema):
     name: GroupName | None = None
     description: GroupDescription | None = None
-    rest_buses_count: int | None = Field(default=None, ge=0, le=50)
+    rest_buses_count: int | None = Field(
+        default=None,
+        ge=0,
+        le=50,
+    )
 
     @field_validator("name")
     @classmethod
     def normalize_name(cls, value: str | None) -> str | None:
         if value is None:
             raise ValueError("El nombre del grupo no puede ser nulo.")
+
         normalized = " ".join(value.split())
+
         if not normalized:
             raise ValueError("El nombre del grupo es obligatorio.")
+
         return normalized
 
     @field_validator("description")
@@ -80,14 +95,35 @@ class BusGroupRead(BusGroupSchema):
     rest_buses_count: int
 
 
-BusText = Annotated[str, StringConstraints(min_length=1, max_length=50)]
-BusPlate = Annotated[str, StringConstraints(min_length=3, max_length=10)]
-BusNumber = Annotated[str, StringConstraints(min_length=1, max_length=10)]
+# =====================================================
+# TIPOS DE DATOS Y VALIDACIONES GENERALES
+# =====================================================
+
+BusText = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=50),
+]
+
+# Issue #63: permite nombres de marcas de hasta 100 caracteres.
+BusBrandText = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=100),
+]
+
+BusPlate = Annotated[
+    str,
+    StringConstraints(min_length=3, max_length=10),
+]
+
+BusNumber = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=10),
+]
 
 
 # =====================================================
 # CATÁLOGO DE TIPOS DE ASIENTO POR COOPERATIVA
-# Issue #54 - Integrante 3
+# ISSUE #54 - INTEGRANTE 3
 # =====================================================
 
 SeatTypeName = Annotated[
@@ -130,9 +166,7 @@ class CooperativeSeatTypeUpdate(BusGroupSchema):
     @classmethod
     def normalize_name(cls, value: str | None) -> str:
         if value is None:
-            raise ValueError(
-                "El nombre no puede ser nulo."
-            )
+            raise ValueError("El nombre no puede ser nulo.")
 
         normalized = " ".join(value.split())
 
@@ -150,16 +184,21 @@ class CooperativeSeatTypeRead(BusGroupSchema):
     percentage: Decimal
 
 
+# =====================================================
+# PLANTILLAS DE ASIENTOS
+# ISSUES #54 Y #59
+# =====================================================
+
 class BusTemplateSeatCreate(BusGroupSchema):
     number: int = Field(ge=1, le=200)
     floor: int = Field(ge=1, le=2)
     row: int = Field(ge=1, le=50)
     column: int = Field(ge=1, le=10)
 
-    # Tipo anterior, conservado por compatibilidad.
+    # Tipo anterior conservado por compatibilidad.
     seat_type: SeatType = SeatType.NORMAL
 
-    # Nuevo tipo configurable del catálogo.
+    # Tipo personalizado del catálogo de Cooperativa.
     seat_type_id: int | None = Field(
         default=None,
         gt=0,
@@ -167,61 +206,132 @@ class BusTemplateSeatCreate(BusGroupSchema):
 
 
 class BusTemplateCreate(BusGroupSchema):
-    name: Annotated[str, StringConstraints(min_length=1, max_length=100)]
+    name: Annotated[
+        str,
+        StringConstraints(min_length=1, max_length=100),
+    ]
+
     floors: Literal[1, 2]
     has_bathroom: bool
     rows: int = Field(ge=1, le=50)
     columns: int = Field(ge=1, le=10)
-    seats: list[BusTemplateSeatCreate] = Field(min_length=1, max_length=200)
+
+    seats: list[BusTemplateSeatCreate] = Field(
+        min_length=1,
+        max_length=200,
+    )
 
     @field_validator("name")
     @classmethod
     def normalize_name(cls, value: str) -> str:
         normalized = " ".join(value.split())
+
         if not normalized:
-            raise ValueError("El nombre de la plantilla es obligatorio.")
+            raise ValueError(
+                "El nombre de la plantilla es obligatorio."
+            )
+
         return normalized
 
     @model_validator(mode="after")
     def validate_seat_layout(self) -> "BusTemplateCreate":
         numbers: set[int] = set()
         positions: set[tuple[int, int, int]] = set()
+
         for seat in self.seats:
             if seat.floor > self.floors:
-                raise ValueError("El piso de un asiento no existe en la plantilla.")
+                raise ValueError(
+                    "El piso de un asiento no existe en la plantilla."
+                )
+
             if seat.row > self.rows or seat.column > self.columns:
-                raise ValueError("La posición de un asiento excede la cuadrícula.")
+                raise ValueError(
+                    "La posición de un asiento excede la cuadrícula."
+                )
+
             if seat.number in numbers:
-                raise ValueError("Los números de asiento no pueden repetirse.")
-            position = (seat.floor, seat.row, seat.column)
+                raise ValueError(
+                    "Los números de asiento no pueden repetirse."
+                )
+
+            position = (
+                seat.floor,
+                seat.row,
+                seat.column,
+            )
+
             if position in positions:
-                raise ValueError("La posición de un asiento no puede repetirse.")
+                raise ValueError(
+                    "La posición de un asiento no puede repetirse."
+                )
+
             numbers.add(seat.number)
             positions.add(position)
+
         return self
 
+
+# =====================================================
+# CREACIÓN DE BUSES
+# ISSUES #59 Y #63
+# =====================================================
 
 class BusCreate(BusGroupSchema):
     number: BusNumber
     plate: BusPlate
+
     template_id: int | None = Field(
         default=None,
         gt=0,
         validation_alias="templateId",
         serialization_alias="templateId",
     )
-    template: BusTemplateCreate | None = None
-    brand: BusText
-    model: BusText
-    year: int = Field(ge=1950, le=date.today().year + 1)
-    passenger_capacity: int = Field(
-        ge=1, le=200, validation_alias="capacity", serialization_alias="capacity"
-    )
-    floors: Literal[1, 2] | None = None
-    origin: BusOrigin
-    status: BusStatus = BusStatus.OPERATIONAL
-    group_id: int = Field(validation_alias="groupId", serialization_alias="groupId")
 
+    template: BusTemplateCreate | None = None
+
+    # Datos generales.
+    brand: BusBrandText
+    model: BusText
+
+    # Issue #63: identificadores de los catálogos globales.
+    # Opcionales para conservar compatibilidad con registros
+    # y consumidores anteriores.
+    chassis_brand_id: int | None = Field(
+        default=None,
+        gt=0,
+    )
+
+    bodywork_brand_id: int | None = Field(
+        default=None,
+        gt=0,
+    )
+
+    year: int = Field(
+        ge=1950,
+        le=date.today().year + 1,
+    )
+
+    passenger_capacity: int = Field(
+        ge=1,
+        le=200,
+        validation_alias="capacity",
+        serialization_alias="capacity",
+    )
+
+    floors: Literal[1, 2] | None = None
+
+    origin: BusOrigin
+
+    status: BusStatus = BusStatus.OPERATIONAL
+
+    group_id: int = Field(
+        validation_alias="groupId",
+        serialization_alias="groupId",
+    )
+
+    # -------------------------------------------------
+    # VALIDAR PLANTILLA Y CAPACIDAD - ISSUE #59
+    # -------------------------------------------------
 
     @model_validator(mode="after")
     def validate_template_choice(self) -> "BusCreate":
@@ -231,12 +341,14 @@ class BusCreate(BusGroupSchema):
             )
 
         if self.template is not None:
-            if self.floors is not None and self.floors != self.template.floors:
+            if (
+                self.floors is not None
+                and self.floors != self.template.floors
+            ):
                 raise ValueError(
                     "Los pisos del bus deben coincidir con los de la plantilla."
                 )
 
-            # Issue #59: controlar la capacidad máxima del bus.
             total_asientos = len(self.template.seats)
 
             if total_asientos > self.passenger_capacity:
@@ -253,89 +365,160 @@ class BusCreate(BusGroupSchema):
 
         return self
 
+    # -------------------------------------------------
+    # VALIDACIONES GENERALES
+    # -------------------------------------------------
 
     @field_validator("brand", "model")
     @classmethod
     def normalize_text(cls, value: str) -> str:
         normalized = " ".join(value.split())
+
         if not normalized:
             raise ValueError("El campo es obligatorio.")
+
         return normalized
 
     @field_validator("plate")
     @classmethod
     def normalize_plate(cls, value: str) -> str:
         normalized = " ".join(value.split()).upper()
+
         if not normalized:
             raise ValueError("La placa es obligatoria.")
+
         return validate_plate(normalized)
 
     @field_validator("number")
     @classmethod
     def normalize_number(cls, value: str) -> str:
         normalized = " ".join(value.split())
+
         if not normalized:
-            raise ValueError("El número de disco es obligatorio.")
+            raise ValueError(
+                "El número de disco es obligatorio."
+            )
+
         return validate_digits(normalized)
 
+
+# =====================================================
+# ACTUALIZACIÓN DE BUSES
+# ISSUE #63
+# =====================================================
 
 class BusUpdate(BusGroupSchema):
     number: BusNumber | None = None
     plate: BusPlate | None = None
-    brand: BusText | None = None
+
+    brand: BusBrandText | None = None
     model: BusText | None = None
-    year: int | None = Field(default=None, ge=1950, le=date.today().year + 1)
-    passenger_capacity: int | None = Field(
-        default=None, ge=1, le=200, validation_alias="capacity", serialization_alias="capacity"
+
+    # Issue #63: actualizar marcas de forma independiente.
+    chassis_brand_id: int | None = Field(
+        default=None,
+        gt=0,
     )
+
+    bodywork_brand_id: int | None = Field(
+        default=None,
+        gt=0,
+    )
+
+    year: int | None = Field(
+        default=None,
+        ge=1950,
+        le=date.today().year + 1,
+    )
+
+    passenger_capacity: int | None = Field(
+        default=None,
+        ge=1,
+        le=200,
+        validation_alias="capacity",
+        serialization_alias="capacity",
+    )
+
     floors: Literal[1, 2] | None = None
     origin: BusOrigin | None = None
     status: BusStatus | None = None
+
     group_id: int | None = Field(
-        default=None, validation_alias="groupId", serialization_alias="groupId"
+        default=None,
+        validation_alias="groupId",
+        serialization_alias="groupId",
     )
+
     template_id: int | None = Field(
-    default=None,
-    gt=0,
-    validation_alias="templateId",
-    serialization_alias="templateId"
-)
+        default=None,
+        gt=0,
+        validation_alias="templateId",
+        serialization_alias="templateId",
+    )
 
     @field_validator("template_id")
     @classmethod
     def validate_template_id(cls, value: int | None) -> int:
         if value is None:
-            raise ValueError("La plantilla del bus no puede ser nula.")
+            raise ValueError(
+                "La plantilla del bus no puede ser nula."
+            )
+
         return value
 
     @field_validator("brand", "model")
     @classmethod
-    def normalize_update_text(cls, value: str | None) -> str | None:
+    def normalize_update_text(
+        cls,
+        value: str | None,
+    ) -> str | None:
         if value is None:
             return None
+
         normalized = " ".join(value.split())
+
         if not normalized:
-            raise ValueError("El campo no puede estar vacío.")
+            raise ValueError(
+                "El campo no puede estar vacío."
+            )
+
         return normalized
 
     @field_validator("plate")
     @classmethod
-    def normalize_update_plate(cls, value: str | None) -> str | None:
+    def normalize_update_plate(
+        cls,
+        value: str | None,
+    ) -> str | None:
         if value is None:
             return None
-        return validate_plate(" ".join(value.split()).upper())
+
+        return validate_plate(
+            " ".join(value.split()).upper()
+        )
 
     @field_validator("number")
     @classmethod
-    def normalize_update_number(cls, value: str | None) -> str | None:
+    def normalize_update_number(
+        cls,
+        value: str | None,
+    ) -> str | None:
         if value is None:
             return None
+
         normalized = " ".join(value.split())
+
         if not normalized:
-            raise ValueError("El número de disco no puede estar vacío.")
+            raise ValueError(
+                "El número de disco no puede estar vacío."
+            )
+
         return validate_digits(normalized)
 
 
+# =====================================================
+# RESPUESTAS DE PLANTILLAS
+# =====================================================
 
 class BusTemplateSeatRead(BusGroupSchema):
     id: int
@@ -344,12 +527,11 @@ class BusTemplateSeatRead(BusGroupSchema):
     row: int
     column: int
 
-    # Tipo anterior, conservado por compatibilidad.
+    # Tipo de asiento anterior.
     seat_type: SeatType
 
-    # Tipo configurable asociado al catálogo.
+    # Tipo de asiento personalizado.
     seat_type_id: int | None = None
-
 
 
 class BusTemplateRead(BusGroupSchema):
@@ -367,21 +549,51 @@ class BusPhotoRead(BusGroupSchema):
     url: str
 
 
+# =====================================================
+# RESPUESTA DE BUSES
+# ISSUE #63
+# =====================================================
+
 class BusRead(BusGroupSchema):
     id: int
     number: str
     plate: str
+
     brand: str
     model: str
     year: int
-    passenger_capacity: int = Field(serialization_alias="capacity")
+
+    passenger_capacity: int = Field(
+        serialization_alias="capacity",
+    )
+
     floors: Literal[1, 2]
     origin: BusOrigin
     status: BusStatus
-    group_id: int = Field(serialization_alias="groupId")
-    group_name: str = Field(serialization_alias="groupName")
-    template_id: int = Field(serialization_alias="templateId")
-    photos: list[BusPhotoRead] = Field(default_factory=list)
+
+    group_id: int = Field(
+        serialization_alias="groupId",
+    )
+
+    group_name: str = Field(
+        serialization_alias="groupName",
+    )
+
+    template_id: int = Field(
+        serialization_alias="templateId",
+    )
+
+    # Issue #63: identificadores opcionales.
+    chassis_brand_id: int | None = None
+    bodywork_brand_id: int | None = None
+
+    # Nombres históricos que se conservan.
+    chassis_brand: str
+    body_brand: str
+
+    photos: list[BusPhotoRead] = Field(
+        default_factory=list,
+    )
 
 
 class BusStatusUpdate(BusGroupSchema):

@@ -6,10 +6,15 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
-from app.modules.buses.models import BusGroup, BusTemplate, TemplateSeat
+from app.modules.buses.models import Bus, BusGroup, BusTemplate, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
 from app.modules.roles_permissions.seed import COOPERATIVE_ADMIN_ROLE, ensure_default_roles
 from app.modules.staff.models import Staff, StaffPosition
+from app.modules.vehicle_catalog.models import BodyworkBrand, ChassisBrand
+from app.modules.vehicle_catalog.service import (
+    delete_item,
+    ensure_vehicle_catalog,
+)
 
 
 PASSWORD = "ClaveCooperativa123!"
@@ -1131,3 +1136,319 @@ def test_bus_update_validates_capacity_and_template(test_environment):
 
     assert valid_template.status_code == 200, valid_template.text
     assert valid_template.json()["templateId"] == large_template_id
+
+
+# ==========================================================
+# ISSUE #63 - INTEGRACIÓN DE CATÁLOGOS GLOBALES EN BUSES
+# ==========================================================
+
+
+def _catalog_test_context(test_environment, email: str):
+    client, engine = test_environment
+
+    cooperative = create_cooperative(
+        engine,
+        name="Cooperativa de catálogos",
+        email=email,
+    )
+
+    group_id = create_group(
+        engine,
+        cooperative.id,
+        "Interprovinciales",
+    )
+
+    template_id = create_template(engine, cooperative.id)
+
+    with Session(engine) as db:
+        ensure_vehicle_catalog(db)
+
+        chassis = db.scalar(
+            select(ChassisBrand).order_by(ChassisBrand.id)
+        )
+        bodywork = db.scalar(
+            select(BodyworkBrand).order_by(BodyworkBrand.id)
+        )
+
+        assert chassis is not None
+        assert bodywork is not None
+
+        chassis_id = chassis.id
+        bodywork_id = bodywork.id
+
+    assert login(client, email).status_code == 200
+
+    return client, engine, group_id, template_id, chassis_id, bodywork_id
+
+
+def test_bus_saves_independent_chassis_and_bodywork(test_environment):
+    client, engine, group_id, template_id, chassis_id, bodywork_id = (
+        _catalog_test_context(
+            test_environment,
+            "issue63-create@example.com",
+        )
+    )
+
+    response = client.post(
+        BUSES_URL,
+        json=bus_payload(
+            group_id,
+            template_id,
+            chassisBrandId=chassis_id,
+            bodyworkBrandId=bodywork_id,
+        ),
+        headers=HEADERS,
+    )
+
+    assert response.status_code == 201, response.text
+
+    data = response.json()
+
+    assert data["chassisBrandId"] == chassis_id
+    assert data["bodyworkBrandId"] == bodywork_id
+
+    with Session(engine) as db:
+        bus = db.get(Bus, data["id"])
+        chassis = db.get(ChassisBrand, chassis_id)
+        bodywork = db.get(BodyworkBrand, bodywork_id)
+
+        assert bus is not None
+        assert chassis is not None
+        assert bodywork is not None
+
+        assert bus.chassis_brand == chassis.name
+        assert bus.body_brand == bodywork.name
+        assert bus.brand == chassis.name
+
+    listed = client.get(BUSES_URL)
+
+    assert listed.status_code == 200
+    assert listed.json()[0]["chassisBrandId"] == chassis_id
+    assert listed.json()[0]["bodyworkBrandId"] == bodywork_id
+
+
+def test_bus_rejects_invalid_catalog_references(test_environment):
+    client, engine, group_id, template_id, chassis_id, _ = (
+        _catalog_test_context(
+            test_environment,
+            "issue63-invalid@example.com",
+        )
+    )
+
+    for invalid_data in (
+        {"chassisBrandId": 999999},
+        {"bodyworkBrandId": 999999},
+    ):
+        response = client.post(
+            BUSES_URL,
+            json=bus_payload(
+                group_id,
+                template_id,
+                **invalid_data,
+            ),
+            headers=HEADERS,
+        )
+
+        assert response.status_code == 422, response.text
+
+    created = client.post(
+        BUSES_URL,
+        json=bus_payload(
+            group_id,
+            template_id,
+            chassisBrandId=chassis_id,
+        ),
+        headers=HEADERS,
+    )
+
+    assert created.status_code == 201, created.text
+
+    bus_id = created.json()["id"]
+
+    for invalid_data in (
+        {"chassisBrandId": 999999},
+        {"bodyworkBrandId": 999999},
+    ):
+        response = client.patch(
+            f"{BUSES_URL}/{bus_id}",
+            json=invalid_data,
+            headers=HEADERS,
+        )
+
+        assert response.status_code == 422, response.text
+
+    assert client.get(BUSES_URL).json()[0]["chassisBrandId"] == chassis_id
+
+
+def test_legacy_bus_can_receive_catalog_references(test_environment):
+    client, engine, group_id, template_id, chassis_id, bodywork_id = (
+        _catalog_test_context(
+            test_environment,
+            "issue63-legacy@example.com",
+        )
+    )
+
+    created = client.post(
+        BUSES_URL,
+        json=bus_payload(group_id, template_id),
+        headers=HEADERS,
+    )
+
+    assert created.status_code == 201, created.text
+
+    bus_id = created.json()["id"]
+
+    assert created.json()["chassisBrandId"] is None
+    assert created.json()["bodyworkBrandId"] is None
+    assert created.json()["brand"] == "Hino"
+
+    updated = client.patch(
+        f"{BUSES_URL}/{bus_id}",
+        json={
+            "chassisBrandId": chassis_id,
+            "bodyworkBrandId": bodywork_id,
+        },
+        headers=HEADERS,
+    )
+
+    assert updated.status_code == 200, updated.text
+
+    data = updated.json()
+
+    assert data["chassisBrandId"] == chassis_id
+    assert data["bodyworkBrandId"] == bodywork_id
+
+    # Los demás campos del vehículo deben conservarse.
+    assert data["model"] == "AK"
+    assert data["capacity"] == 42
+    assert data["templateId"] == template_id
+
+
+def test_deleting_catalog_preserves_bus_brand_names(test_environment):
+    client, engine, group_id, template_id, chassis_id, bodywork_id = (
+        _catalog_test_context(
+            test_environment,
+            "issue63-deletion@example.com",
+        )
+    )
+
+    created = client.post(
+        BUSES_URL,
+        json=bus_payload(
+            group_id,
+            template_id,
+            chassisBrandId=chassis_id,
+            bodyworkBrandId=bodywork_id,
+        ),
+        headers=HEADERS,
+    )
+
+    assert created.status_code == 201, created.text
+
+    data = created.json()
+
+    previous_chassis = data["chassisBrand"]
+    previous_bodywork = data["bodyBrand"]
+
+    # Usamos el servicio existente de Administración.
+    with Session(engine) as db:
+        delete_item(db, ChassisBrand, chassis_id)
+        delete_item(db, BodyworkBrand, bodywork_id)
+
+    listed = client.get(BUSES_URL)
+
+    assert listed.status_code == 200, listed.text
+    assert len(listed.json()) == 1
+
+    bus = listed.json()[0]
+
+    assert bus["chassisBrandId"] is None
+    assert bus["bodyworkBrandId"] is None
+
+    assert bus["chassisBrand"] == previous_chassis
+    assert bus["bodyBrand"] == previous_bodywork
+
+
+def test_legacy_brand_update_clears_catalog_reference(test_environment):
+    client, engine, group_id, template_id, chassis_id, _ = (
+        _catalog_test_context(
+            test_environment,
+            "issue63-compatibility@example.com",
+        )
+    )
+
+    created = client.post(
+        BUSES_URL,
+        json=bus_payload(
+            group_id,
+            template_id,
+            chassisBrandId=chassis_id,
+        ),
+        headers=HEADERS,
+    )
+
+    assert created.status_code == 201, created.text
+
+    updated = client.patch(
+        f"{BUSES_URL}/{created.json()['id']}",
+        json={"brand": "Marca antigua editada"},
+        headers=HEADERS,
+    )
+
+    assert updated.status_code == 200, updated.text
+
+    data = updated.json()
+
+    assert data["brand"] == "Marca antigua editada"
+    assert data["chassisBrand"] == "Marca antigua editada"
+    assert data["chassisBrandId"] is None
+
+
+def test_bus_accepts_long_catalog_names(test_environment):
+    client, engine, group_id, template_id, _, _ = (
+        _catalog_test_context(
+            test_environment,
+            "issue63-long-names@example.com",
+        )
+    )
+
+    chassis_name = "Chasis " + "A" * 80
+    bodywork_name = "Carrocería " + "B" * 125
+
+    with Session(engine) as db:
+        chassis = ChassisBrand(
+            name=chassis_name,
+            normalized_name=chassis_name.casefold(),
+            image_url=None,
+            origin_country=None,
+        )
+
+        bodywork = BodyworkBrand(
+            name=bodywork_name,
+            normalized_name=bodywork_name.casefold(),
+            image_url=None,
+            location=None,
+        )
+
+        db.add_all([chassis, bodywork])
+        db.commit()
+
+        chassis_id = chassis.id
+        bodywork_id = bodywork.id
+
+    created = client.post(
+        BUSES_URL,
+        json=bus_payload(
+            group_id,
+            template_id,
+            brand=chassis_name,
+            chassisBrandId=chassis_id,
+            bodyworkBrandId=bodywork_id,
+        ),
+        headers=HEADERS,
+    )
+
+    assert created.status_code == 201, created.text
+
+    assert created.json()["chassisBrand"] == chassis_name
+    assert created.json()["bodyBrand"] == bodywork_name

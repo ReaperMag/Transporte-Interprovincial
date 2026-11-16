@@ -32,12 +32,21 @@ export interface CooperativeBus {
   model: string;
   year: number;
   capacity: number;
-  floors: number;
+  floors: 1 | 2;
   origin: BusOrigin;
   status: BusStatus;
   groupId: number;
   groupName: string;
   templateId: number;
+
+  // Issue #63: referencias a los catálogos globales.
+  chassisBrandId: number | null;
+  bodyworkBrandId: number | null;
+
+  // Nombres históricos conservados en el backend.
+  chassisBrand: string;
+  bodyBrand: string;
+
   photos: CooperativeBusPhoto[];
 }
 
@@ -46,9 +55,14 @@ export interface BusInput {
   plate: string;
   brand: string;
   model: string;
+
+  // Opcionales para compatibilidad con otros consumidores.
+  chassisBrandId?: number | null;
+  bodyworkBrandId?: number | null;
+
   year: number;
   capacity: number;
-  floors: 2;
+  floors: 1 | 2;
   origin: BusOrigin;
   status: BusStatus;
   groupId: number;
@@ -58,6 +72,7 @@ export interface BusInput {
 export interface CooperativeBusCreateInput extends Omit<BusInput, 'floors' | 'templateId'> {
   floors: number;
   templateId?: number;
+
   template?: {
     name: string;
     floors: number;
@@ -84,7 +99,9 @@ async function errorMessage(response: Response): Promise<string> {
     if (typeof body === 'object' && body !== null && 'detail' in body) {
       const detail = body.detail;
 
-      if (typeof detail === 'string') return detail;
+      if (typeof detail === 'string') {
+        return detail;
+      }
 
       if (Array.isArray(detail)) {
         return detail
@@ -96,7 +113,7 @@ async function errorMessage(response: Response): Promise<string> {
       }
     }
   } catch {
-    // Use the standard message when the server does not return JSON.
+    // Mostrar el mensaje general si no llega JSON válido.
   }
 
   return 'No fue posible completar la operación con los buses.';
@@ -132,9 +149,17 @@ export function getCooperativeBuses(filters?: {
 }): Promise<CooperativeBus[]> {
   const params = new URLSearchParams();
 
-  if (filters?.plate) params.set('plate', filters.plate);
-  if (filters?.groupId) params.set('groupId', String(filters.groupId));
-  if (filters?.status) params.set('status', filters.status);
+  if (filters?.plate) {
+    params.set('plate', filters.plate);
+  }
+
+  if (filters?.groupId) {
+    params.set('groupId', String(filters.groupId));
+  }
+
+  if (filters?.status) {
+    params.set('status', filters.status);
+  }
 
   const query = params.toString();
 
@@ -147,14 +172,25 @@ function busCreatePayload(input: CooperativeBusCreateInput) {
     plate: input.plate,
     brand: input.brand,
     model: input.model,
+
+    // Issue #63: enviar referencias seleccionadas.
+    ...(input.chassisBrandId != null ? { chassisBrandId: input.chassisBrandId } : {}),
+
+    ...(input.bodyworkBrandId != null ? { bodyworkBrandId: input.bodyworkBrandId } : {}),
+
     year: input.year,
     capacity: input.capacity,
     floors: input.floors,
     origin: input.origin,
     status: input.status,
     groupId: input.groupId,
+
+    // Conservar la creación con plantilla nueva
+    // o la reutilización de una plantilla existente.
     ...(input.templateId !== undefined
-      ? { templateId: input.templateId }
+      ? {
+          templateId: input.templateId,
+        }
       : input.template
         ? {
             template: {
@@ -186,14 +222,20 @@ export function createCooperativeBus(
   if (!photos.length) {
     return request<CooperativeBus>(busesUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(busCreatePayload(input)),
     });
   }
 
   const formData = new FormData();
+
   formData.set('payload', JSON.stringify(busCreatePayload(input)));
-  photos.forEach((photo) => formData.append('photos', photo));
+
+  photos.forEach((photo) => {
+    formData.append('photos', photo);
+  });
 
   return request<CooperativeBus>(`${busesUrl}/with-photos`, {
     method: 'POST',
@@ -211,14 +253,23 @@ export function updateCooperativeBus(
 ): Promise<CooperativeBus> {
   return request<CooperativeBus>(`${busesUrl}/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(input),
   });
 }
 
-export function addCooperativeBusPhotos(id: number, photos: File[]): Promise<CooperativeBusPhoto[]> {
+export function addCooperativeBusPhotos(
+  id: number,
+  photos: File[],
+): Promise<CooperativeBusPhoto[]> {
   const formData = new FormData();
-  photos.forEach((photo) => formData.append('photos', photo));
+
+  photos.forEach((photo) => {
+    formData.append('photos', photo);
+  });
+
   return request<CooperativeBusPhoto[]>(`${busesUrl}/${id}/photos`, {
     method: 'POST',
     body: formData,
@@ -226,13 +277,17 @@ export function addCooperativeBusPhotos(id: number, photos: File[]): Promise<Coo
 }
 
 export function deleteCooperativeBusPhoto(id: number, photoId: number): Promise<void> {
-  return request<void>(`${busesUrl}/${id}/photos/${photoId}`, { method: 'DELETE' });
+  return request<void>(`${busesUrl}/${id}/photos/${photoId}`, {
+    method: 'DELETE',
+  });
 }
 
 export function updateCooperativeBusStatus(id: number, status: BusStatus): Promise<CooperativeBus> {
   return request<CooperativeBus>(`${busesUrl}/${id}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ status }),
   });
 }

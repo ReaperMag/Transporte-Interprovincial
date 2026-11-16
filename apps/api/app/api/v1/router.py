@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter
 
 from app.modules.auth.router import router as auth_router
@@ -23,6 +24,9 @@ from app.modules.schedules.cooperative_router import router as cooperative_sched
 from app.modules.staff.router import router as staff_router, staff_self_router
 from app.modules.tickets.router import router as tickets_router
 from app.modules.trips.router import router as trips_router
+from app.modules.vehicle_catalog.cooperative_router import (
+    router as cooperative_vehicle_catalog_router,
+)
 from app.modules.vehicle_catalog.router import router as vehicle_catalog_router
 
 
@@ -32,6 +36,10 @@ router.include_router(auth_router)
 router.include_router(cooperative_bus_groups_router)
 router.include_router(cooperative_buses_router)
 router.include_router(cooperative_seat_types_router)
+
+# Issue #63: consulta de catálogos globales desde Cooperativa.
+router.include_router(cooperative_vehicle_catalog_router)
+
 router.include_router(cooperative_routes_router)
 router.include_router(geographic_router)
 router.include_router(geographic_admin_router)

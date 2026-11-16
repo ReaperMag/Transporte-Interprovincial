@@ -43,6 +43,7 @@ def _require_cooperative_id(account: Account) -> int:
     return account.cooperative_id
 
 
+
 def _bus_read(bus) -> BusRead:
     if (
         bus.brand is None
@@ -57,22 +58,46 @@ def _bus_read(bus) -> BusRead:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="El bus tiene datos incompletos.",
         )
+
     return BusRead(
         id=bus.id,
         number=bus.number,
         plate=bus.plate,
+
+        # Campos originales, necesarios para mantener
+        # la compatibilidad con el sistema existente.
         brand=bus.brand,
         model=bus.model,
+
+        # Issue #63: referencias a los catálogos globales.
+        chassis_brand_id=bus.chassis_brand_id,
+        bodywork_brand_id=bus.bodywork_brand_id,
+
+        # Nombres históricos del chasis y carrocería.
+        chassis_brand=bus.chassis_brand,
+        body_brand=bus.body_brand,
+
+        # Información general del vehículo.
         year=bus.year,
         passenger_capacity=bus.passenger_capacity,
         floors=bus.floors,
         origin=bus.origin,
         status=bus.status,
+
+        # Grupo y plantilla.
         group_id=bus.group_id,
         template_id=bus.template_id,
         group_name=bus.group.name,
+
+        # Fotografías del bus.
         photos=[
-            BusPhotoRead(id=photo.id, url=f"/api/v1/cooperatives/me/buses/{bus.id}/photos/{photo.id}")
+            BusPhotoRead(
+                id=photo.id,
+                url=(
+                    f"/api/v1/cooperatives/me/buses/"
+                    f"{bus.id}/photos/{photo.id}"
+                ),
+            )
             for photo in bus.photos
         ],
     )
@@ -156,6 +181,11 @@ def create_cooperative_bus(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
         ) from exc
+    except bus_service.BusCatalogItemNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
 
 
     return _bus_read(bus)
@@ -215,6 +245,11 @@ def create_cooperative_bus_with_photos(
         ) from exc
 
     except bus_service.BusCapacityExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except bus_service.BusCatalogItemNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),
@@ -353,6 +388,11 @@ def edit_cooperative_bus(
             detail="La plantilla no existe o no pertenece a tu cooperativa.",
         ) from exc
     except bus_service.BusCapacityExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except bus_service.BusCatalogItemNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(exc),

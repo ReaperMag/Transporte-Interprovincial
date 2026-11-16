@@ -1,0 +1,169 @@
+.catalog-brand-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  color: #334155;
+  font-weight: 600;
+}
+
+.vehicle-brand-combobox {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.vehicle-brand-combobox button.vehicle-brand-combobox__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  box-sizing: border-box;
+
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vehicle-brand-combobox__value {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vehicle-brand-combobox__arrow {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.vehicle-brand-combobox button.vehicle-brand-combobox__trigger:focus-visible {
+  outline: 2px solid var(--coop-primary, #0e5a6b);
+  outline-offset: 2px;
+}
+
+.vehicle-brand-combobox button.vehicle-brand-combobox__trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Panel compacto que aparece junto al campo. */
+.vehicle-brand-combobox__panel {
+  position: absolute;
+  z-index: 1000;
+
+  top: calc(100% + 5px);
+  left: 0;
+
+  width: max(100%, 260px);
+  max-width: min(340px, 90vw);
+  box-sizing: border-box;
+
+  padding: 0.4rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.55rem;
+
+  background: #fff;
+  box-shadow: 0 8px 22px rgb(15 23 42 / 15%);
+}
+
+/* Abrir hacia arriba si falta espacio debajo. */
+.vehicle-brand-combobox__panel--above {
+  top: auto;
+  bottom: calc(100% + 5px);
+}
+
+/* Evitar desbordamiento por el lado derecho. */
+.vehicle-brand-combobox__panel--right {
+  left: auto;
+  right: 0;
+}
+
+.vehicle-brand-combobox input.vehicle-brand-combobox__search {
+  width: 100%;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+
+  margin-bottom: 0.35rem;
+  padding: 0.45rem 0.6rem;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 0.35rem;
+
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 400;
+}
+
+/*
+ * La lista ocupa como máximo 180 px.
+ * Las demás marcas se consultan mediante scroll interno.
+ */
+.vehicle-brand-combobox__options {
+  display: grid;
+  gap: 2px;
+
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+}
+
+.vehicle-brand-combobox button.vehicle-brand-combobox__option {
+  display: block;
+  width: 100%;
+  min-height: 2rem;
+  height: auto;
+
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-radius: 0.3rem;
+
+  background: transparent;
+  color: #334155;
+
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+
+  cursor: pointer;
+}
+
+.vehicle-brand-combobox button.vehicle-brand-combobox__option:hover,
+.vehicle-brand-combobox button.vehicle-brand-combobox__option--active {
+  background: #eaf4f6;
+  color: #0e5a6b;
+}
+
+.vehicle-brand-combobox button.vehicle-brand-combobox__option--selected {
+  font-weight: 700;
+}
+
+.vehicle-brand-combobox__empty {
+  margin: 0;
+  padding: 0.75rem 0.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .vehicle-brand-combobox__panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}
