@@ -35,7 +35,7 @@ export function OficinistaLayout() {
     setLogoutError(null);
     try {
       await logout();
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     } catch {
       setLogoutError('No fue posible cerrar sesión. Inténtalo nuevamente.');
     }

@@ -13,7 +13,7 @@ export function PassengerLayout() {
 
     try {
       await logout();
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     } catch {
       setError('No se pudo cerrar la sesión. Inténtalo nuevamente.');
     }
