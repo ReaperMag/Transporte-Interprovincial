@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Respon
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
+from sqlalchemy import func, select
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
@@ -20,8 +21,11 @@ from app.modules.buses.schemas import (
     BusStatusUpdate,
     BusTemplateRead,
     BusUpdate,
+    BusTemplateCreate,
+    BusTemplateSaveRead
 )
-
+from app.modules.buses import bus_service, repository, service, template_service
+from app.modules.buses.models import Bus, BusPhoto, BusStatus, BusTemplate
 
 cooperative_bus_groups_router = APIRouter(
     prefix="/cooperatives/me/groups",
@@ -124,18 +128,98 @@ def read_buses(
     ]
 
 
-@cooperative_buses_router.get("/templates", response_model=list[BusTemplateRead])
+@cooperative_buses_router.get(
+    "/templates",
+    response_model=list[BusTemplateRead],
+)
 def read_cooperative_bus_templates(
     db: Session = Depends(get_db),
     account: Account = Depends(require_cooperative_access),
 ) -> list[BusTemplateRead]:
+
+    cooperative_id = _require_cooperative_id(account)
+
     templates = (
         db.query(BusTemplate)
-        .filter(BusTemplate.cooperative_id == _require_cooperative_id(account))
+        .filter(
+            BusTemplate.cooperative_id == cooperative_id
+        )
         .order_by(BusTemplate.name, BusTemplate.id)
         .all()
     )
-    return [BusTemplateRead.model_validate(template) for template in templates]
+
+    # Consultar el número de buses por plantilla.
+    counts = dict(
+        db.execute(
+            select(
+                Bus.template_id,
+                func.count(Bus.id),
+            )
+            .where(
+                Bus.cooperative_id == cooperative_id
+            )
+            .group_by(Bus.template_id)
+        ).all()
+    )
+
+    return [
+        BusTemplateRead.model_validate(
+            template
+        ).model_copy(
+            update={
+                "bus_count": counts.get(template.id, 0)
+            }
+        )
+        for template in templates
+    ]
+
+
+@cooperative_buses_router.put(
+    "/templates/{template_id}",
+    response_model=BusTemplateSaveRead,
+)
+def update_cooperative_bus_template(
+    template_id: int,
+    payload: BusTemplateCreate,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> BusTemplateSaveRead:
+    cooperative_id = _require_cooperative_id(account)
+
+    try:
+        saved_template, copied = template_service.save_template(
+            db=db,
+            cooperative_id=cooperative_id,
+            template_id=template_id,
+            payload=payload,
+        )
+
+    except template_service.TemplateNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "La plantilla no existe o no pertenece "
+                "a tu cooperativa."
+            ),
+        ) from exc
+
+    except template_service.TemplateSeatTypeNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "Uno o más tipos de asiento no existen "
+                "o no pertenecen a tu cooperativa."
+            ),
+        ) from exc
+
+    return BusTemplateSaveRead(
+        template=BusTemplateRead.model_validate(
+            saved_template
+        ),
+        copied=copied,
+        source_template_id=template_id,
+    )
 
 
 @cooperative_buses_router.post("", response_model=BusRead, status_code=status.HTTP_201_CREATED)
