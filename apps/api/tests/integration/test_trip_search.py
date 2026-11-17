@@ -1,10 +1,33 @@
 from datetime import datetime, timedelta
 
 from app.modules.trips.service import ECUADOR_TIMEZONE
-from test_reservations import login, scenario  # noqa: F401
+from test_reservations import ORIGIN, login, passenger, reservation_payload, scenario  # noqa: F401
 
 
 SEARCH_URL = "/api/v1/trips/search"
+
+
+def test_guest_can_browse_and_filter_upcoming_trips(scenario):
+    client, _, data = scenario
+    response = client.get("/api/v1/trips/public/search")
+
+    assert response.status_code == 200
+    assert [trip["tripId"] for trip in response.json()] == [data["trip_id"]]
+    assert client.get("/api/v1/trips/public/cities").status_code == 200
+    assert client.get(
+        "/api/v1/trips/public/search",
+        params={"origin_city_id": data["loja"]},
+    ).json() == []
+    assert client.get(
+        "/api/v1/trips/public/search",
+        params={"origin_city_id": data["quito"], "destination_city_id": data["quito"]},
+    ).status_code == 422
+    assert client.get(SEARCH_URL).status_code == 401
+    assert client.post(
+        "/api/v1/reservations",
+        json=reservation_payload(data, "quito", "loja", [(3, passenger())]),
+        headers=ORIGIN,
+    ).status_code == 401
 
 
 def test_without_filters_lists_every_available_trip(scenario):
