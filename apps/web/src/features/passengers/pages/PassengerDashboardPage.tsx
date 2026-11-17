@@ -114,7 +114,7 @@ function isTripPast(trip: TripSearchResult): boolean {
   return !Number.isNaN(parsed) && parsed <= Date.now();
 }
 
-export function PassengerDashboardPage() {
+export function PassengerDashboardPage({ isPublic = false }: { isPublic?: boolean }) {
   const [profile, setProfile] = useState<PassengerProfile | null>(null);
   const [cities, setCities] = useState<TripCity[]>([]);
   const [trips, setTrips] = useState<TripSearchResult[]>([]);
@@ -127,7 +127,9 @@ export function PassengerDashboardPage() {
   const [tripsError, setTripsError] = useState<string | null>(null);
 
   const nextSevenDays = useMemo(() => generateNextSevenDays(), []);
-  const [selectedDay, setSelectedDay] = useState<string>(() => nextSevenDays[0]?.dateString ?? '');
+  const [selectedDay, setSelectedDay] = useState<string>(() =>
+    isPublic ? '' : (nextSevenDays[0]?.dateString ?? ''),
+  );
   const [originCityId, setOriginCityId] = useState('');
   const [destinationCityId, setDestinationCityId] = useState('');
   const [originProvince, setOriginProvince] = useState('');
@@ -182,8 +184,8 @@ export function PassengerDashboardPage() {
     async function init() {
       try {
         const [profileData, citiesData] = await Promise.all([
-          getPassengerProfile(),
-          getTripCities().catch((err) => {
+          isPublic ? Promise.resolve(null) : getPassengerProfile(),
+          getTripCities(isPublic).catch((err) => {
             if (active) {
               setCitiesError(
                 err instanceof Error ? err.message : 'Error al cargar las localidades.',
@@ -213,7 +215,7 @@ export function PassengerDashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isPublic]);
 
   // Cargar viajes de los siguientes 7 días (incluyendo salidas del día para bloquear las pasadas)
   useEffect(() => {
@@ -227,13 +229,16 @@ export function PassengerDashboardPage() {
       const endDate = nextSevenDays[nextSevenDays.length - 1]?.dateString;
 
       try {
-        const results = await searchPassengerTrips({
-          travelDate: startDate,
-          endDate,
-          includePast: true,
-          originCityId: originCityId ? Number(originCityId) : undefined,
-          destinationCityId: destinationCityId ? Number(destinationCityId) : undefined,
-        });
+        const results = await searchPassengerTrips(
+          {
+            travelDate: startDate,
+            endDate,
+            includePast: true,
+            originCityId: originCityId ? Number(originCityId) : undefined,
+            destinationCityId: destinationCityId ? Number(destinationCityId) : undefined,
+          },
+          isPublic,
+        );
 
         if (active) {
           setTrips(results);
@@ -256,7 +261,7 @@ export function PassengerDashboardPage() {
     return () => {
       active = false;
     };
-  }, [nextSevenDays, originCityId, destinationCityId]);
+  }, [nextSevenDays, originCityId, destinationCityId, isPublic]);
 
   // Filtrar viajes por la pestaña de día elegida (o todos)
   const displayedTrips = useMemo(() => {
@@ -285,37 +290,45 @@ export function PassengerDashboardPage() {
     <section className="passenger-dashboard" aria-label="Panel principal del pasajero">
       <header className="passenger-dashboard__header">
         <p className="passenger-dashboard__eyebrow">TRANSPORTE INTERPROVINCIAL</p>
-        <h1>¡Bienvenido{fullName ? `, ${fullName}` : ''}!</h1>
+        <h1>
+          {isPublic
+            ? 'Tu próximo viaje comienza aquí'
+            : `¡Bienvenido${fullName ? `, ${fullName}` : ''}!`}
+        </h1>
         <p>
-          Consulta los viajes programados de los <strong>próximos 7 días</strong> y adquiere tus
-          boletos con selección de asiento en tiempo real.
+          Consulta rutas, horarios y tarifas para los <strong>próximos 7 días</strong>.{' '}
+          {isPublic
+            ? 'Encuentra tu viaje e inicia sesión o crea una cuenta para reservar tu asiento.'
+            : 'Adquiere tus boletos con selección de asiento en tiempo real.'}
         </p>
       </header>
 
       {/* Barra de accesos directos rápidos */}
-      <div className="passenger-dashboard__quick-links">
-        <Link to="/pasajero/reservas" className="passenger-dashboard__quick-link">
-          <span>📋</span>
-          <div>
-            <strong>Mis Reservas</strong>
-            <small>Revisar reservas y pagos pendientes</small>
-          </div>
-        </Link>
-        <Link to="/pasajero/boletos" className="passenger-dashboard__quick-link">
-          <span>🎟️</span>
-          <div>
-            <strong>Mis Boletos</strong>
-            <small>Ver boletos emitidos y códigos QR</small>
-          </div>
-        </Link>
-        <Link to="/pasajero/perfil" className="passenger-dashboard__quick-link">
-          <span>👤</span>
-          <div>
-            <strong>Mi Perfil</strong>
-            <small>Cédula, correo y categoría</small>
-          </div>
-        </Link>
-      </div>
+      {!isPublic && (
+        <div className="passenger-dashboard__quick-links">
+          <Link to="/pasajero/reservas" className="passenger-dashboard__quick-link">
+            <span>📋</span>
+            <div>
+              <strong>Mis Reservas</strong>
+              <small>Revisar reservas y pagos pendientes</small>
+            </div>
+          </Link>
+          <Link to="/pasajero/boletos" className="passenger-dashboard__quick-link">
+            <span>🎟️</span>
+            <div>
+              <strong>Mis Boletos</strong>
+              <small>Ver boletos emitidos y códigos QR</small>
+            </div>
+          </Link>
+          <Link to="/pasajero/perfil" className="passenger-dashboard__quick-link">
+            <span>👤</span>
+            <div>
+              <strong>Mi Perfil</strong>
+              <small>Cédula, correo y categoría</small>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* Sección principal de Rutas y Salidas */}
       <section className="passenger-dashboard__routes-section" aria-labelledby="routes-heading">
@@ -340,7 +353,7 @@ export function PassengerDashboardPage() {
               search={originSearch}
               value={originCityId}
               excludedCityId={destinationCityId}
-              disabled={isLoadingCities || isLoadingTrips}
+              disabled={isLoadingCities || isLoadingTrips || Boolean(citiesError)}
               onProvinceChange={(value) => {
                 setOriginProvince(value);
                 setOriginCanton('');
@@ -372,7 +385,7 @@ export function PassengerDashboardPage() {
               search={destinationSearch}
               value={destinationCityId}
               excludedCityId={originCityId}
-              disabled={isLoadingCities || isLoadingTrips}
+              disabled={isLoadingCities || isLoadingTrips || Boolean(citiesError)}
               onProvinceChange={(value) => {
                 setDestinationProvince(value);
                 setDestinationCanton('');
@@ -422,7 +435,7 @@ export function PassengerDashboardPage() {
               >
                 <span className="passenger-dashboard__day-name">{day.dayName}</span>
                 <span className="passenger-dashboard__day-date">{day.formattedDate}</span>
-                {!isLoadingTrips && (
+                {!isLoadingTrips && !tripsError && (
                   <span className="passenger-dashboard__day-badge">{tripCount}</span>
                 )}
               </button>
@@ -440,7 +453,7 @@ export function PassengerDashboardPage() {
           >
             <span className="passenger-dashboard__day-name">Todos</span>
             <span className="passenger-dashboard__day-date">7 días</span>
-            {!isLoadingTrips && (
+            {!isLoadingTrips && !tripsError && (
               <span className="passenger-dashboard__day-badge">{trips.length}</span>
             )}
           </button>
@@ -574,7 +587,11 @@ export function PassengerDashboardPage() {
                     ) : (
                       <div className="passenger-trip-card__action-box">
                         <Link
-                          to={`/pasajero/viajes/${trip.tripId}/asientos?origen=${trip.originCityId}&destino=${trip.destinationCityId}`}
+                          to={
+                            isPublic
+                              ? '/login'
+                              : `/pasajero/viajes/${trip.tripId}/asientos?origen=${trip.originCityId}&destino=${trip.destinationCityId}`
+                          }
                           className="passenger-trip-card__button passenger-trip-card__button--primary"
                         >
                           Comprar / Reservar boleto
