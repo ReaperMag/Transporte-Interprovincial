@@ -1,3 +1,4 @@
+body:has(.signup-page) { margin: 0; }
 .signup-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(280px, .85fr) minmax(400px, 1fr); align-items: stretch; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
 .signup-page__intro { display: flex; flex-direction: column; justify-content: center; padding: clamp(32px, 7vw, 96px); background: #0e5a6b; color: #f5f4f0; }
 .signup-page__brand { margin: 0 0 72px; color: #f0c76b; font-size: .75rem; font-weight: 800; letter-spacing: .13em; }

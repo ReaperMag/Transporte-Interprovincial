@@ -1,3 +1,4 @@
+body:has(.login-page) { margin: 0; }
 .login-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(280px, .85fr) minmax(360px, 1fr); align-items: stretch; background: #f5f4f0; color: #14212b; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
 .login-page__intro { display: flex; flex-direction: column; justify-content: center; padding: clamp(32px, 7vw, 96px); background: #14212b; color: #f5f4f0; }
 .login-page__brand { margin: 0 0 72px; color: #d99a1e; font-size: .75rem; font-weight: 800; letter-spacing: .13em; }
