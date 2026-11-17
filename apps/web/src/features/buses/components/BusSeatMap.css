@@ -110,6 +110,12 @@
   transform: translateY(-2px);
 }
 
+.bus-seat-map__seat--readonly,
+.bus-seat-map__seat--readonly:hover {
+  cursor: default;
+  transform: none;
+}
+
 .bus-seat-map__seat--vip {
   border-color: #d6b56d;
   background: #fef3c7;

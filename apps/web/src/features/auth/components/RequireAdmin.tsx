@@ -9,7 +9,11 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
     return <p role="status">Verificando sesión...</p>;
   }
 
-  if (account?.accountType !== 'super_admin') {
+  if (!account) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (account.accountType !== 'super_admin') {
     return <Navigate to="/login" replace />;
   }
 

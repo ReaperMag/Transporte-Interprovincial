@@ -34,6 +34,15 @@ class TripSeatsResponse(BaseModel):
     seats: list[SeatAvailability]
 
 
+class PublicTripFare(BaseModel):
+    seatType: SeatType
+    price: Decimal
+
+
+class PublicTripSeatsResponse(TripSeatsResponse):
+    fares: list[PublicTripFare]
+
+
 class ReservationPassengerInput(BaseModel):
     # Solo cédulas ecuatorianas, con su dígito verificador.
     idNumber: Cedula

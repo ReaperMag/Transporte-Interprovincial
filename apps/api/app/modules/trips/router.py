@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -35,6 +35,33 @@ def require_passenger(
         )
 
     return account
+
+
+@router.get("/public/cities", response_model=list[CityOption])
+def list_public_cities(db: Annotated[Session, Depends(get_db)]):
+    return service.get_cities(db)
+
+
+@router.get("/public/search", response_model=list[TripSearchResult])
+def search_public_trips(
+    db: Annotated[Session, Depends(get_db)],
+    origin_city_id: Annotated[int | None, Query(gt=0)] = None,
+    destination_city_id: Annotated[int | None, Query(gt=0)] = None,
+):
+    if origin_city_id is not None and origin_city_id == destination_city_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El origen y el destino deben ser diferentes.",
+        )
+    today = datetime.now(service.ECUADOR_TIMEZONE).date()
+    return service.search_trips(
+        db=db,
+        origin_city_id=origin_city_id,
+        destination_city_id=destination_city_id,
+        travel_date=today,
+        end_date=today + timedelta(days=6),
+        include_past=True,
+    )
 
 
 @router.get(

@@ -10,7 +10,7 @@ export function RequireCooperative({ children }: { children: ReactNode }) {
   }
 
   if (!account) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (account.accountType === 'super_admin') {

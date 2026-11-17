@@ -82,6 +82,7 @@ solicitud.
 
 | Método | Ruta | Quién la usa | Operación |
 | --- | --- | --- | --- |
+| `GET` | `/public/trips/{trip_id}/seats` | Público | Mapa de asientos y tarifas del tramo, sin datos de pasajeros |
 | `GET` | `/trips/{trip_id}/seats` | Pasajero y oficinista | Mapa de asientos del viaje con su disponibilidad para un tramo (`origin_city_id` y `destination_city_id`) |
 | `POST` | `/` | Pasajero | Reservar asientos para el pasajero y sus acompañantes |
 | `POST` | `/office` | Oficinista | Reservar asientos en la oficina |
@@ -93,6 +94,8 @@ Reglas principales:
 
 - Solo se reservan viajes programados, con salida futura y de una cooperativa
   activa.
+- La consulta pública es de solo lectura y exige iniciar sesión para reservar;
+  solo muestra viajes activos con hoja publicada cuando exista.
 - En las rutas con paradas, un asiento se ocupa solo en el tramo comprado. Si
   alguien viaja de Quito a Latacunga, el mismo asiento sigue libre de Latacunga
   a Loja. En una ruta directa solo se vende desde la ciudad de origen.

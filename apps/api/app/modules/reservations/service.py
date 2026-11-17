@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.buses.models import Bus, BusTemplate, TemplateSeat
@@ -20,12 +20,14 @@ from app.modules.reservations.schemas import (
     ReservationPassengerInput,
     ReservationRead,
     ReservationSeatRead,
+    PublicTripFare,
+    PublicTripSeatsResponse,
     SeatAvailability,
     TripSeatsResponse,
 )
 from app.modules.sales.models import Payment, PaymentMethod, PaymentStatus
 from app.modules.routes.models import Fare, Route, RouteType
-from app.modules.schedules.models import Frequency
+from app.modules.schedules.models import Frequency, RouteSheet, RouteSheetStatus
 from app.modules.staff.models import Staff
 from app.modules.tickets.models import SaleChannel, Ticket, TicketStatus
 from app.modules.trips.models import Trip, TripStatus
@@ -243,6 +245,11 @@ def get_occupied_seat_ids(
         .where(
             Reservation.trip_id == trip.id,
             Reservation.status.in_(ACTIVE_STATUSES),
+            or_(
+                Reservation.status != ReservationStatus.PENDING_PAYMENT,
+                Reservation.expires_at.is_(None),
+                Reservation.expires_at > now_local(),
+            ),
         )
     ).all()
 
@@ -279,12 +286,15 @@ def get_trip_seats(
     trip_id: int,
     origin_city_id: int,
     destination_city_id: int,
+    *,
+    release_expired: bool = True,
 ) -> TripSeatsResponse:
     """
     Devuelve el mapa de asientos del bus del viaje,
     indicando cuáles están libres para el tramo consultado.
     """
-    release_expired_reservations(db)
+    if release_expired:
+        release_expired_reservations(db)
 
     trip = get_bookable_trip(db, trip_id)
     segment = get_segment(trip.frequency.route, origin_city_id, destination_city_id)
@@ -316,6 +326,61 @@ def get_trip_seats(
             )
             for seat in seats
         ],
+    )
+
+
+def get_public_trip_seats(
+    db: Session,
+    trip_id: int,
+    origin_city_id: int,
+    destination_city_id: int,
+) -> PublicTripSeatsResponse:
+    visible_trip = db.scalar(
+        select(Trip.id)
+        .join(Frequency, Trip.frequency_id == Frequency.id)
+        .join(Route, Frequency.route_id == Route.id)
+        .join(Bus, Trip.bus_id == Bus.id)
+        .outerjoin(
+            RouteSheet,
+            and_(
+                Trip.route_sheet_id == RouteSheet.id,
+                RouteSheet.cooperative_id == Trip.cooperative_id,
+            ),
+        )
+        .where(
+            Trip.id == trip_id,
+            Trip.cooperative_id == Frequency.cooperative_id,
+            Trip.cooperative_id == Route.cooperative_id,
+            Trip.cooperative_id == Bus.cooperative_id,
+            Frequency.is_active.is_(True),
+            Route.is_active.is_(True),
+            Bus.is_active.is_(True),
+            or_(
+                Trip.route_sheet_id.is_(None),
+                RouteSheet.status == RouteSheetStatus.PUBLISHED,
+            ),
+        )
+    )
+    if visible_trip is None:
+        raise TripNotFoundError("El viaje no existe o ya no está disponible.")
+
+    availability = get_trip_seats(
+        db, trip_id, origin_city_id, destination_city_id, release_expired=False
+    )
+    fares = db.scalars(
+        select(Fare)
+        .join(Frequency, Frequency.route_id == Fare.route_id)
+        .join(Trip, Trip.frequency_id == Frequency.id)
+        .where(
+            Trip.id == trip_id,
+            Fare.origin_city_id == origin_city_id,
+            Fare.destination_city_id == destination_city_id,
+        )
+        .order_by(Fare.seat_type)
+    ).all()
+    return PublicTripSeatsResponse(
+        **availability.model_dump(),
+        fares=[PublicTripFare(seatType=fare.seat_type, price=fare.price) for fare in fares],
     )
 
 

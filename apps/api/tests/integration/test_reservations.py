@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
-from app.modules.buses.models import Bus, BusTemplate, SeatType, TemplateSeat
+from app.modules.buses.models import Bus, BusGroup, BusTemplate, SeatType, TemplateSeat
 from app.modules.cooperatives.models import Cooperative
 from app.modules.passengers.models import Passenger, PassengerCategory
 from app.modules.reservations.models import Reservation, ReservationStatus
 from app.modules.roles_permissions.seed import COOPERATIVE_CLERK_ROLE, ensure_default_roles
 from app.modules.routes.models import City, Fare, Route, RouteStop, RouteType
-from app.modules.schedules.models import Frequency
+from app.modules.schedules.models import Frequency, RouteSheet
 from app.modules.staff.models import Staff, StaffPosition
 from app.modules.trips.models import Trip
 from app.modules.trips.service import ECUADOR_TIMEZONE
@@ -236,6 +236,94 @@ def test_all_seats_are_available_before_any_reservation(scenario):
         3: True,
         4: True,
     }
+
+
+def test_public_seat_map_shows_segment_availability_and_fares_without_passenger_data(scenario):
+    client, _, data = scenario
+    login(client, "ana@example.com")
+    response = client.post(
+        "/api/v1/reservations",
+        json=reservation_payload(data, "quito", "latacunga", [(4, passenger())]),
+        headers=ORIGIN,
+    )
+    assert response.status_code == 201
+    client.cookies.clear()
+
+    url = f"/api/v1/reservations/public/trips/{data['trip_id']}/seats"
+    overlap = client.get(
+        url, params={"origin_city_id": data["quito"], "destination_city_id": data["ambato"]}
+    )
+    assert overlap.status_code == 200
+    assert overlap.headers["cache-control"] == "no-store"
+    body = overlap.json()
+    assert set(body) == {
+        "tripId", "originCityId", "destinationCityId", "busTemplateId",
+        "floors", "rows", "columns", "seats", "fares",
+    }
+    assert all(
+        set(seat) == {"seatId", "number", "floor", "row", "column", "seatType", "isAvailable"}
+        for seat in body["seats"]
+    )
+    assert {seat["number"]: seat["isAvailable"] for seat in body["seats"]}[4] is False
+    assert {fare["seatType"]: Decimal(fare["price"]) for fare in body["fares"]} == {
+        "normal": Decimal("6.00"),
+        "vip": Decimal("8.00"),
+    }
+
+    non_overlap = client.get(
+        url, params={"origin_city_id": data["latacunga"], "destination_city_id": data["loja"]}
+    )
+    assert non_overlap.status_code == 200
+    assert {seat["number"]: seat["isAvailable"] for seat in non_overlap.json()["seats"]}[4] is True
+    assert client.post("/api/v1/reservations", json={}).status_code == 401
+
+
+def test_public_seat_map_does_not_modify_expired_reservations(scenario):
+    client, engine, data = scenario
+    login(client, "ana@example.com")
+    response = client.post(
+        "/api/v1/reservations",
+        json=reservation_payload(data, "quito", "loja", [(1, passenger())]),
+        headers=ORIGIN,
+    )
+    assert response.status_code == 201
+    reservation_id = response.json()["id"]
+    with Session(engine) as db:
+        reservation = db.get(Reservation, reservation_id)
+        reservation.expires_at = datetime.now(ECUADOR_TIMEZONE) - timedelta(minutes=1)
+        db.commit()
+    client.cookies.clear()
+    response = client.get(
+        f"/api/v1/reservations/public/trips/{data['trip_id']}/seats",
+        params={"origin_city_id": data["quito"], "destination_city_id": data["loja"]},
+    )
+    assert response.status_code == 200
+    assert {seat["number"]: seat["isAvailable"] for seat in response.json()["seats"]}[1] is True
+    with Session(engine) as db:
+        assert db.get(Reservation, reservation_id).status == ReservationStatus.PENDING_PAYMENT
+
+
+def test_public_seat_map_rejects_unpublished_and_invalid_trips(scenario):
+    client, engine, data = scenario
+    url = f"/api/v1/reservations/public/trips/{data['trip_id']}/seats"
+    params = {"origin_city_id": data["loja"], "destination_city_id": data["quito"]}
+    assert client.get(url, params=params).status_code == 422
+    with Session(engine) as db:
+        trip = db.get(Trip, data["trip_id"])
+        group = BusGroup(cooperative_id=trip.cooperative_id, name="Prueba")
+        db.add(group)
+        db.flush()
+        sheet = RouteSheet(
+            cooperative_id=trip.cooperative_id,
+            bus_group_id=group.id,
+            service_date=trip.departure_at.date(),
+        )
+        db.add(sheet)
+        db.flush()
+        trip.route_sheet_id = sheet.id
+        db.commit()
+    params = {"origin_city_id": data["quito"], "destination_city_id": data["loja"]}
+    assert client.get(url, params=params).status_code == 404
 
 
 def test_passenger_searches_trip_and_selects_a_fareable_seat(scenario):

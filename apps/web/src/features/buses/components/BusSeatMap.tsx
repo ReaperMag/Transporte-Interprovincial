@@ -12,6 +12,7 @@ interface BusSeatMapProps {
   unavailableSeatIds?: ReadonlySet<string>;
   /** Bloquea los asientos libres, por ejemplo al llegar al máximo. */
   isSeatDisabled?: (seat: TemplateSeat) => boolean;
+  readOnly?: boolean;
 }
 
 export function BusSeatMap({
@@ -22,6 +23,7 @@ export function BusSeatMap({
   onToggleSeat,
   unavailableSeatIds,
   isSeatDisabled,
+  readOnly = false,
 }: BusSeatMapProps) {
   const floorSeats = template.seats.filter((seat) => seat.floor === selectedFloor);
   const rowCount = Math.max(...floorSeats.map((seat) => seat.row));
@@ -72,6 +74,7 @@ export function BusSeatMap({
             const isDisabled = isUnavailable || (!isSelected && (isSeatDisabled?.(seat) ?? false));
             const seatClasses = [
               'bus-seat-map__seat',
+              readOnly ? 'bus-seat-map__seat--readonly' : '',
               seat.seatType === 'vip' ? 'bus-seat-map__seat--vip' : '',
               isSelected ? 'bus-seat-map__seat--selected' : '',
               isUnavailable ? 'bus-seat-map__seat--unavailable' : '',
@@ -79,6 +82,28 @@ export function BusSeatMap({
               .filter(Boolean)
               .join(' ');
 
+            const label = `Asiento ${seat.number}, ${seat.seatType === 'vip' ? 'VIP' : 'normal'}${
+              isUnavailable ? ', ocupado' : isSelected ? ', seleccionado' : ', disponible'
+            }`;
+            const content = (
+              <>
+                <span className="bus-seat-map__seat-number">{seat.number}</span>
+                {seat.seatType === 'vip' && <span className="bus-seat-map__vip-label">VIP</span>}
+              </>
+            );
+            if (readOnly) {
+              return (
+                <div
+                  className={seatClasses}
+                  key={seat.id}
+                  style={{ gridColumn: seat.column, gridRow: seat.row }}
+                  role="img"
+                  aria-label={label}
+                >
+                  {content}
+                </div>
+              );
+            }
             return (
               <button
                 className={seatClasses}
@@ -88,15 +113,12 @@ export function BusSeatMap({
                   gridColumn: seat.column,
                   gridRow: seat.row,
                 }}
-                aria-label={`Asiento ${seat.number}, ${seat.seatType === 'vip' ? 'VIP' : 'normal'}${
-                  isUnavailable ? ', ocupado' : isSelected ? ', seleccionado' : ''
-                }`}
+                aria-label={label}
                 aria-pressed={isSelected}
                 disabled={isDisabled}
                 onClick={() => onToggleSeat(seat)}
               >
-                <span className="bus-seat-map__seat-number">{seat.number}</span>
-                {seat.seatType === 'vip' && <span className="bus-seat-map__vip-label">VIP</span>}
+                {content}
               </button>
             );
           })}

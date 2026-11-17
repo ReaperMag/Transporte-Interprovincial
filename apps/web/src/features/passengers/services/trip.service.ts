@@ -55,8 +55,8 @@ function getErrorMessage(status: number, fallback: string): string {
   return fallback;
 }
 
-export async function getTripCities(): Promise<TripCity[]> {
-  const response = await fetch('/api/v1/trips/cities', {
+export async function getTripCities(isPublic = false): Promise<TripCity[]> {
+  const response = await fetch(`/api/v1/trips/${isPublic ? 'public/cities' : 'cities'}`, {
     credentials: 'include',
   });
 
@@ -69,6 +69,7 @@ export async function getTripCities(): Promise<TripCity[]> {
 
 export async function searchPassengerTrips(
   params: TripSearchParams = {},
+  isPublic = false,
 ): Promise<TripSearchResult[]> {
   const query = new URLSearchParams();
   if (params.originCityId) query.set('origin_city_id', String(params.originCityId));
@@ -81,9 +82,12 @@ export async function searchPassengerTrips(
     query.set('include_past', String(params.includePast));
   }
 
-  const response = await fetch(`/api/v1/trips/search?${query.toString()}`, {
-    credentials: 'include',
-  });
+  const response = await fetch(
+    `/api/v1/trips/${isPublic ? 'public/search' : 'search'}?${query.toString()}`,
+    {
+      credentials: 'include',
+    },
+  );
 
   if (!response.ok) {
     throw new Error(getErrorMessage(response.status, 'No se pudo realizar la búsqueda de viajes.'));
