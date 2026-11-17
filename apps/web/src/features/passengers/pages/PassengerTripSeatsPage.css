@@ -35,6 +35,47 @@
   background: #e5e7eb;
 }
 
+.passenger-trip-seats__login {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.public-seat-preview .passenger-trip-seats__swatch {
+  border-color: #bfdbfe;
+  background: #dbeafe;
+}
+
+.public-seat-preview .passenger-trip-seats__swatch--vip {
+  border-color: #d6b56d;
+  background: #fef3c7;
+}
+
+.public-seat-preview .passenger-trip-seats__swatch--unavailable {
+  border-color: #d1d5db;
+  background: #e5e7eb;
+}
+
+.public-seat-preview .bus-seat-map__seat {
+  border-color: #bfdbfe;
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.public-seat-preview .bus-seat-map__seat--vip {
+  border-color: #d6b56d;
+  background: #fef3c7;
+  color: #78350f;
+}
+
+.public-seat-preview .bus-seat-map__seat--unavailable {
+  border-color: #d1d5db;
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
 .passenger-trip-seats__payment-method {
   display: grid;
   gap: 0.75rem;

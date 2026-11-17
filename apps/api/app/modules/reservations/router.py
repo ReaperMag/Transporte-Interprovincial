@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
@@ -13,6 +13,7 @@ from app.modules.reservations.models import Reservation
 from app.modules.reservations.schemas import (
     ReservationCreate,
     ReservationRead,
+    PublicTripSeatsResponse,
     TripSeatsResponse,
 )
 from app.modules.staff.models import Staff
@@ -74,6 +75,25 @@ def ensure_can_access(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Reserva no encontrada.",
     )
+
+
+@router.get(
+    "/public/trips/{trip_id}/seats",
+    response_model=PublicTripSeatsResponse,
+)
+def get_public_trip_seats(
+    trip_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    response: Response,
+    origin_city_id: Annotated[int, Query(gt=0)],
+    destination_city_id: Annotated[int, Query(gt=0)],
+):
+    """Consulta pública de disponibilidad y tarifas sin datos de pasajeros."""
+    try:
+        response.headers["Cache-Control"] = "no-store"
+        return service.get_public_trip_seats(db, trip_id, origin_city_id, destination_city_id)
+    except service.ReservationError as exc:
+        raise_reservation_error(exc)
 
 
 @router.get(

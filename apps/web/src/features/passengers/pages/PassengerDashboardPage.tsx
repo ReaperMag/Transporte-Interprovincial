@@ -589,12 +589,12 @@ export function PassengerDashboardPage({ isPublic = false }: { isPublic?: boolea
                         <Link
                           to={
                             isPublic
-                              ? '/login'
+                              ? `/viajes/${trip.tripId}/asientos?origen=${trip.originCityId}&destino=${trip.destinationCityId}`
                               : `/pasajero/viajes/${trip.tripId}/asientos?origen=${trip.originCityId}&destino=${trip.destinationCityId}`
                           }
                           className="passenger-trip-card__button passenger-trip-card__button--primary"
                         >
-                          Comprar / Reservar boleto
+                          {isPublic ? 'Ver asientos y tarifas' : 'Comprar / Reservar boleto'}
                         </Link>
                       </div>
                     )}

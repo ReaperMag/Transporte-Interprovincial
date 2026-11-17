@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { LoginPage } from '../pages/LoginPage';
 import type { VerifyEmailLocationState } from '../pages/VerifyEmailPage';
 import { AuthApiError } from '../services/authApi';
@@ -11,6 +11,7 @@ export function LoginContainer() {
   const [error, setError] = useState<string | null>(null);
   const { refreshSession } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   async function handleLogin(credentials: LoginCredentials) {
     setIsLoading(true);
     setError(null);
@@ -25,7 +26,12 @@ export function LoginContainer() {
             ? '/cooperativa/panel'
             : account.accountType === 'oficinista'
               ? '/oficinista/panel'
-              : '/pasajero',
+              : typeof location.state?.returnTo === 'string' &&
+                  /^\/pasajero\/viajes\/\d+\/asientos\?origen=\d+&destino=\d+$/.test(
+                    location.state.returnTo,
+                  )
+                ? location.state.returnTo
+                : '/pasajero',
         { replace: true },
       );
     } catch (err) {
