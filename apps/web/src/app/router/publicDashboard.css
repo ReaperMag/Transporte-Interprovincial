@@ -70,15 +70,10 @@ body:has(.public-site) {
 }
 
 .public-site__links a {
-  padding: 12px 16px;
-  border: 1px solid #6d8b8d;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  padding: 12px 0;
   white-space: nowrap;
-  transition:
-    background-color 200ms ease,
-    border-color 200ms ease,
-    color 200ms ease;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
 }
 
 .public-site__account a {
@@ -100,10 +95,8 @@ body:has(.public-site) {
 }
 
 .public-site__links a:hover,
-.public-site__links a[aria-current='page'] {
-  border-color: #e8ba74;
-  background: rgba(240, 194, 125, 0.15);
-  color: #f7d6a4;
+.public-site__links a:focus-visible {
+  text-decoration: underline;
 }
 
 .public-site__account a:last-child:hover {
@@ -343,10 +336,6 @@ body:has(.public-site) {
     gap: 12px;
   }
 
-  .public-site__links a {
-    padding: 12px;
-  }
-
   .public-site__account {
     display: grid;
     width: 100%;
@@ -361,11 +350,5 @@ body:has(.public-site) {
 
   .public-dashboard {
     padding: 28px 16px 32px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .public-site__links a {
-    transition: none;
   }
 }
