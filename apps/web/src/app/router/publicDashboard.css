@@ -16,18 +16,19 @@ body:has(.public-site) {
 
 .public-site__nav {
   display: flex;
-  max-width: 1280px;
-  min-height: 76px;
+  max-width: 1600px;
+  min-height: 88px;
   align-items: center;
-  gap: 42px;
+  justify-content: space-between;
+  gap: 32px;
   margin: 0 auto;
-  padding: 12px 32px;
+  padding: 16px 24px;
   box-sizing: border-box;
 }
 
 .public-site__nav a {
   color: inherit;
-  font-size: 0.84rem;
+  font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
 }
@@ -57,22 +58,62 @@ body:has(.public-site) {
 .public-site__account {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 24px;
 }
 
 .public-site__account {
-  margin-left: auto;
-  gap: 16px;
+  gap: 12px;
+}
+
+.public-site__links {
+  gap: 36px;
+}
+
+.public-site__links a {
+  padding: 12px 16px;
+  border: 1px solid #6d8b8d;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
+}
+
+.public-site__account a {
+  padding: 12px 18px;
+  border: 1px solid #a6c5c6;
+  border-radius: 8px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .public-site__account a:last-child {
-  padding: 10px 15px;
-  border: 1px solid #a6c5c6;
-  border-radius: 8px;
+  border-color: #f0c27d;
+  background: #f0c27d;
+  color: #173a42;
 }
 
 .public-site__nav a:hover {
   color: #f0c992;
+}
+
+.public-site__links a:hover,
+.public-site__links a[aria-current='page'] {
+  border-color: #e8ba74;
+  background: rgba(240, 194, 125, 0.15);
+  color: #f7d6a4;
+}
+
+.public-site__account a:last-child:hover {
+  background: #f7d6a4;
+  color: #173a42;
+}
+
+.public-site__nav a:focus-visible {
+  outline: 2px solid #f0c27d;
+  outline-offset: 4px;
 }
 
 .public-home__hero {
@@ -85,12 +126,49 @@ body:has(.public-site) {
   color: #fff;
 }
 
+.public-home__hero-background,
+.public-home__hero-slide {
+  position: absolute;
+  inset: 0;
+}
+
+.public-home__hero-background {
+  z-index: 0;
+  pointer-events: none;
+}
+
+.public-home__hero-background::after {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 34, 41, 0.92) 0%,
+    rgba(10, 34, 41, 0.76) 40%,
+    rgba(10, 34, 41, 0.28) 100%
+  );
+  content: '';
+}
+
+.public-home__hero-slide {
+  background-position: center;
+  background-size: cover;
+  opacity: 0;
+  transition: opacity 0s linear 1.5s;
+}
+
+.public-home__hero-slide.is-active {
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 1.5s ease;
+}
+
 .public-home__hero-content {
   position: relative;
   z-index: 1;
   width: min(100%, 1280px);
   margin: 0 auto;
-  padding: 72px 32px;
+  padding: 72px 32px 100px;
   box-sizing: border-box;
 }
 
@@ -142,14 +220,6 @@ body:has(.public-site) {
 .public-home__secondary {
   border: 1px solid #b8d1cf;
   color: #fff;
-}
-
-.public-home__illustration {
-  position: absolute;
-  right: max(0px, calc((100% - 1350px) / 2));
-  bottom: 0;
-  width: min(55%, 660px);
-  height: auto;
 }
 
 .public-home__features {
@@ -220,16 +290,21 @@ body:has(.public-site) {
   padding: 40px 24px 48px;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1000px) {
   .public-site__nav {
     flex-wrap: wrap;
     gap: 16px 24px;
-    padding: 16px;
   }
 
   .public-site__links {
     order: 3;
     width: 100%;
+  }
+}
+
+@media (max-width: 800px) {
+  .public-site__nav {
+    padding: 16px 20px;
   }
 
   .public-home__hero {
@@ -237,13 +312,12 @@ body:has(.public-site) {
     align-items: flex-start;
   }
 
-  .public-home__hero-content {
-    padding: 50px 20px 245px;
+  .public-home__hero-background::after {
+    background: linear-gradient(90deg, rgba(10, 34, 41, 0.92), rgba(10, 34, 41, 0.7));
   }
 
-  .public-home__illustration {
-    width: min(90%, 500px);
-    opacity: 0.9;
+  .public-home__hero-content {
+    padding: 50px 20px 100px;
   }
 
   .public-home__features {
@@ -260,16 +334,38 @@ body:has(.public-site) {
 }
 
 @media (max-width: 480px) {
+  .public-site__nav {
+    gap: 12px;
+  }
+
+  .public-site__links {
+    order: 0;
+    gap: 12px;
+  }
+
+  .public-site__links a {
+    padding: 12px;
+  }
+
   .public-site__account {
-    flex-wrap: wrap;
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
   .public-site__account a {
-    font-size: 0.74rem;
+    padding: 12px 8px;
+    font-size: 0.9rem;
   }
 
   .public-dashboard {
     padding: 28px 16px 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-site__links a {
+    transition: none;
   }
 }

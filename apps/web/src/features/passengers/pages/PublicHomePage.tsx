@@ -1,4 +1,10 @@
-import { Link, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet } from 'react-router-dom';
+
+const heroImages = Array.from(
+  { length: 5 },
+  (_, index) => `${import.meta.env.BASE_URL}images/home-carousel/slide-${index + 1}.png`,
+);
 
 export function PublicLayout() {
   return (
@@ -12,8 +18,10 @@ export function PublicLayout() {
             </span>
           </Link>
           <div className="public-site__links">
-            <Link to="/">Inicio</Link>
-            <Link to="/viajes">Viajes disponibles</Link>
+            <NavLink to="/" end>
+              Inicio
+            </NavLink>
+            <NavLink to="/viajes">Viajes disponibles</NavLink>
           </div>
           <div className="public-site__account">
             <Link to="/login">Iniciar sesión</Link>
@@ -29,9 +37,28 @@ export function PublicLayout() {
 }
 
 export function PublicHomePage() {
+  const [activeImage, setActiveImage] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveImage((current) => (current + 1) % heroImages.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <div className="public-home">
       <section className="public-home__hero">
+        <div className="public-home__hero-background" aria-hidden="true">
+          {heroImages.map((image, index) => (
+            <div
+              key={image}
+              className={`public-home__hero-slide${index === activeImage ? ' is-active' : ''}`}
+              style={{ backgroundImage: `url("${image}")` }}
+            />
+          ))}
+        </div>
         <div className="public-home__hero-content">
           <p className="public-home__eyebrow">TRANSPORTE INTERPROVINCIAL</p>
           <h1>Tu próximo destino está más cerca</h1>
@@ -48,33 +75,6 @@ export function PublicHomePage() {
             </Link>
           </div>
         </div>
-        <svg
-          className="public-home__illustration"
-          viewBox="0 0 640 420"
-          fill="none"
-          aria-hidden="true"
-        >
-          <circle cx="448" cy="158" r="115" fill="#F0BE7E" opacity=".8" />
-          <path d="M0 307 140 179 226 249 344 115 640 338V420H0V307Z" fill="#27616B" />
-          <path d="M0 345 155 232 248 304 378 186 640 350V420H0V345Z" fill="#174854" />
-          <path d="M0 373C120 330 221 358 313 375c91 17 200-4 327-49v94H0v-47Z" fill="#D1D8C6" />
-          <path
-            d="M202 357h245l-23-76c-5-17-20-28-38-28H242c-15 0-27 10-30 24l-10 80Z"
-            fill="#F5E9D1"
-          />
-          <path d="M231 278c1-7 7-12 14-12h132c12 0 23 8 26 20l5 16H226l5-24Z" fill="#31727C" />
-          <path d="M317 266v36M218 320h204M209 341h222" stroke="#174854" strokeWidth="5" />
-          <circle cx="250" cy="357" r="20" fill="#192D36" />
-          <circle cx="390" cy="357" r="20" fill="#192D36" />
-          <circle cx="250" cy="357" r="8" fill="#E8E7DD" />
-          <circle cx="390" cy="357" r="8" fill="#E8E7DD" />
-          <path
-            d="M0 396c126-18 196-9 286 5 116 18 229 7 354-19"
-            stroke="#F7F1DE"
-            strokeWidth="5"
-            strokeDasharray="22 18"
-          />
-        </svg>
       </section>
 
       <section className="public-home__features" aria-labelledby="public-features-title">
