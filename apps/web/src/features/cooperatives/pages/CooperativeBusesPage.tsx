@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { CooperativeBusCreateWizard } from '../components/CooperativeBusCreateWizard';
+import { CooperativeBusTemplatesManager } from '../components/CooperativeBusTemplatesManager';
 import { VehicleBrandCombobox } from '../components/VehicleBrandCombobox';
 
 import {
@@ -70,6 +71,7 @@ export function CooperativeBusesPage() {
   const [editingPhotos, setEditingPhotos] = useState<CooperativeBusPhoto[]>([]);
   const [savingPhotos, setSavingPhotos] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [managingTemplates, setManagingTemplates] = useState(false);
 
   const [plateFilter, setPlateFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
@@ -106,7 +108,7 @@ export function CooperativeBusesPage() {
   const canSave =
     !saving && form.templateId !== null && !unavailableChassis && !unavailableBodywork;
 
-  const showingEditor = creating || editingId !== null;
+  const showingEditor = creating || editingId !== null || managingTemplates;
 
   // ----------------------------------------------------
   // CARGA DE BUSES Y GRUPOS
@@ -434,20 +436,37 @@ export function CooperativeBusesPage() {
           <p>Registra y controla los vehículos de tu cooperativa.</p>
         </div>
 
-        {editingId === null && (
-          <button
-            type="button"
-            className="cooperative-buses__create"
-            onClick={() => {
-              setError(null);
-              setSuccess(null);
-              setCreating(true);
-            }}
-          >
-            Nuevo bus
-          </button>
+        {editingId === null && !creating && !managingTemplates && (
+          <div className="cooperative-buses__header-actions">
+            <button
+              type="button"
+              className="cooperative-buses__templates-action"
+              onClick={() => {
+                setError(null);
+                setSuccess(null);
+                setManagingTemplates(true);
+              }}
+            >
+              Gestionar plantillas
+            </button>
+            <button
+              type="button"
+              className="cooperative-buses__create"
+              onClick={() => {
+                setError(null);
+                setSuccess(null);
+                setCreating(true);
+              }}
+            >
+              Nuevo bus
+            </button>
+          </div>
         )}
       </header>
+
+      {managingTemplates && (
+        <CooperativeBusTemplatesManager onClose={() => setManagingTemplates(false)} />
+      )}
 
       {creating && (
         <CooperativeBusCreateWizard
@@ -466,7 +485,7 @@ export function CooperativeBusesPage() {
         <p
           className="cooperative-buses__message cooperative-buses__message--error"
           role="alert"
-          hidden={creating}
+          hidden={showingEditor}
         >
           {error}
         </p>
@@ -476,7 +495,7 @@ export function CooperativeBusesPage() {
         <p
           className="cooperative-buses__message cooperative-buses__message--success"
           role="status"
-          hidden={creating}
+          hidden={showingEditor}
         >
           {success}
         </p>
