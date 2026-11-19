@@ -1,16 +1,14 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
-from sqlalchemy.orm import Session
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.permissions import require_cooperative_access, require_cooperative_admin
 from app.core.storage import InvalidUploadError, resolve_upload, save_upload
 from app.modules.accounts.models import Account
-from app.modules.buses import bus_service, repository, service
-from app.modules.buses.models import BusPhoto, BusStatus, BusTemplate
 from app.modules.buses.schemas import (
     BusCreate,
     BusGroupCreate,
@@ -22,7 +20,9 @@ from app.modules.buses.schemas import (
     BusTemplateRead,
     BusUpdate,
     BusTemplateCreate,
-    BusTemplateSaveRead
+    BusTemplateForBusUpdate,
+    BusTemplateForBusRead,
+    BusTemplateSaveRead,
 )
 from app.modules.buses import bus_service, repository, service, template_service
 from app.modules.buses.models import Bus, BusPhoto, BusStatus, BusTemplate
@@ -219,6 +219,45 @@ def update_cooperative_bus_template(
         ),
         copied=copied,
         source_template_id=template_id,
+    )
+
+
+@cooperative_buses_router.put(
+    "/{bus_id}/template", response_model=BusTemplateForBusRead
+)
+def update_bus_template(
+    bus_id: int,
+    payload: BusTemplateForBusUpdate,
+    db: Session = Depends(get_db),
+    account: Account = Depends(require_cooperative_access),
+    _: None = Depends(validate_request_origin),
+) -> BusTemplateForBusRead:
+    cooperative_id = _require_cooperative_id(account)
+    try:
+        template, copied, bus, original_id = template_service.save_bus_template(
+            db, cooperative_id, bus_id, payload.template, payload.capacity
+        )
+    except (
+        template_service.TemplateBusNotFoundError,
+        template_service.TemplateNotFoundError,
+        template_service.TemplateSeatTypeNotFoundError,
+    ) as exc:
+        raise HTTPException(status_code=404, detail="Bus, plantilla o tipo de asiento no disponible.") from exc
+    except template_service.TemplateCapacityError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except template_service.TemplateBusNotEditableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except template_service.TemplateBusHasTripsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return BusTemplateForBusRead(
+        template=BusTemplateRead.model_validate(template),
+        copied=copied,
+        source_template_id=original_id,
+        bus_id=bus.id,
+        bus_template_id=bus.template_id,
+        capacity=bus.passenger_capacity,
+        floors=bus.floors,
     )
 
 

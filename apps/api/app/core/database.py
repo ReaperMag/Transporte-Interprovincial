@@ -95,6 +95,23 @@ def init_db() -> None:
     """Crea las tablas que aún no existen y aplica cambios aditivos de esquema."""
     import_models()
     Base.metadata.create_all(bind=engine)
+    # Issue #66: guardar la plantilla usada por cada viaje, independiente
+    # de posibles cambios posteriores en el bus. Migración aditiva.
+    trip_columns = {column["name"] for column in inspect(engine).get_columns("trips")}
+    if "template_id" not in trip_columns:
+        with engine.begin() as connection:
+            connection.execute(text(
+                "ALTER TABLE trips ADD COLUMN template_id INTEGER "
+                "REFERENCES bus_templates(id) ON DELETE RESTRICT"
+            ))
+    # Para los viajes ya existentes, se asigna el plano actual del bus como
+    # mejor referencia histórica disponible. No se borran registros.
+    with engine.begin() as connection:
+        connection.execute(text(
+            "UPDATE trips SET template_id = "
+            "(SELECT buses.template_id FROM buses WHERE buses.id = trips.bus_id) "
+            "WHERE template_id IS NULL"
+        ))
 
     catalog_columns = {
         "chassis_brands": ("image_url", "origin_country"),

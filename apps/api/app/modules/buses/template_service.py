@@ -1,10 +1,11 @@
 """Guardado seguro de plantillas de asientos - Issue #66."""
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.modules.buses.models import (
     Bus,
+    BusStatus,
     BusTemplate,
     CooperativeSeatType,
     TemplateSeat,
@@ -43,6 +44,8 @@ def save_template(
     cooperative_id: int,
     template_id: int,
     payload: BusTemplateCreate,
+    *,
+    commit: bool = True,
 ) -> tuple[BusTemplate, bool]:
     """
     Si la plantilla está libre, actualiza su contenido.
@@ -83,12 +86,17 @@ def save_template(
         if requested_type_ids != valid_type_ids:
             raise TemplateSeatTypeNotFoundError
 
-    # Determinar si la plantilla original está en uso.
-    copied = template_bus_count(
-        db,
-        cooperative_id,
-        template_id,
-    ) > 0
+    # Una plantilla referenciada por viajes históricos nunca debe modificarse,
+    # incluso si ya no está asociada a un bus.
+    from app.modules.trips.models import Trip
+
+    historical_trip = db.scalar(
+        select(Trip.id).where(Trip.template_id == template_id).limit(1)
+    )
+    copied = (
+        template_bus_count(db, cooperative_id, template_id) > 0
+        or historical_trip is not None
+    )
 
     try:
         if copied:
@@ -145,7 +153,10 @@ def save_template(
             ]
         )
 
-        db.commit()
+        if commit:
+            db.commit()
+        else:
+            db.flush()
 
     except Exception:
         db.rollback()
@@ -154,3 +165,140 @@ def save_template(
     db.refresh(target)
 
     return target, copied
+
+
+class TemplateBusNotFoundError(Exception):
+    """El bus no pertenece a la cooperativa autenticada."""
+
+
+class TemplateCapacityError(Exception):
+    """La capacidad seleccionada no admite el número de asientos."""
+
+
+class TemplateBusHasTripsError(Exception):
+    """No se puede modificar un plano con viajes pendientes o en curso."""
+
+
+class TemplateBusNotEditableError(Exception):
+    """Solo se editan buses en mantenimiento o fuera de servicio."""
+
+
+def _same_layout(template: BusTemplate, payload: BusTemplateCreate) -> bool:
+    """Distingue cambios de plano de cambios solo en capacidad del vehículo."""
+    if (
+        template.name != payload.name
+        or template.floors != payload.floors
+        or template.has_bathroom != payload.has_bathroom
+        or template.rows != payload.rows
+        or template.columns != payload.columns
+        or len(template.seats) != len(payload.seats)
+    ):
+        return False
+
+    old = sorted(
+        (
+            seat.number, seat.floor, seat.row, seat.column,
+            seat.seat_type, seat.seat_type_id,
+        )
+        for seat in template.seats
+    )
+    new = sorted(
+        (
+            seat.number, seat.floor, seat.row, seat.column,
+            seat.seat_type, seat.seat_type_id,
+        )
+        for seat in payload.seats
+    )
+    return old == new
+
+
+def save_bus_template(
+    db: Session,
+    cooperative_id: int,
+    bus_id: int,
+    payload: BusTemplateCreate,
+    capacity: int,
+) -> tuple[BusTemplate, bool, Bus, int]:
+    """Actualiza el bus y su plantilla atómicamente.
+
+    Las plantillas asociadas a buses se copian; el bus que se está
+    editando se reasigna a esa copia. Otros buses conservan la original.
+    """
+    from app.modules.trips.models import Trip, TripStatus
+
+    bus = db.scalar(
+        select(Bus).where(
+            Bus.id == bus_id,
+            Bus.cooperative_id == cooperative_id,
+        )
+    )
+    if bus is None:
+        raise TemplateBusNotFoundError
+
+    if bus.status not in (BusStatus.MAINTENANCE, BusStatus.OUT_OF_SERVICE):
+        raise TemplateBusNotEditableError(
+            "Solo puedes editar la plantilla cuando el bus esté "
+            "en mantenimiento o fuera de servicio."
+        )
+
+    original_id = bus.template_id
+    original = db.scalar(
+        select(BusTemplate).where(
+            BusTemplate.id == original_id,
+            BusTemplate.cooperative_id == cooperative_id,
+        )
+    )
+    if original is None:
+        raise TemplateNotFoundError
+
+    if len(payload.seats) > capacity:
+        raise TemplateCapacityError(
+            f"La plantilla contiene {len(payload.seats)} asientos y "
+            f"supera la capacidad de {capacity} pasajeros."
+        )
+
+    # Cambiar exclusivamente la capacidad no genera una copia inútil.
+    layout_changed = not _same_layout(original, payload)
+
+    if layout_changed:
+        # Scheduled or running trips can already hold reservations/tickets.
+        # Their seat arrangement must not be changed under an active assignment.
+        active_trip_id = db.scalar(
+            select(Trip.id).where(
+                Trip.bus_id == bus_id,
+                Trip.status.in_((TripStatus.SCHEDULED, TripStatus.IN_PROGRESS)),
+            ).limit(1)
+        )
+        if active_trip_id is not None:
+            raise TemplateBusHasTripsError(
+                "El bus tiene viajes programados o en curso. Reasigna o "
+                "finaliza esos viajes antes de cambiar su plano."
+            )
+
+    try:
+        if layout_changed:
+            # Retain the original layout for every previously registered trip,
+            # including FINISHED/CANCELLED trips without a snapshot yet.
+            db.execute(
+                update(Trip)
+                .where(Trip.bus_id == bus_id, Trip.template_id.is_(None))
+                .values(template_id=original_id)
+            )
+            target, copied = save_template(
+                db, cooperative_id, original_id, payload, commit=False
+            )
+            # La plantilla utilizada por este bus debe producir copia.
+            bus.template_id = target.id
+            bus.floors = target.floors
+        else:
+            target, copied = original, False
+
+        bus.passenger_capacity = capacity
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(bus)
+    db.refresh(target)
+    return target, copied, bus, original_id

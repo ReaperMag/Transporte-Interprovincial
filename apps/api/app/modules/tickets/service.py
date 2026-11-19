@@ -241,7 +241,7 @@ def change_ticket(
     if new_seat_id is not None and new_seat_id != seat.id:
         bus = db.get(Bus, trip.bus_id)
         new_seat = db.get(TemplateSeat, new_seat_id)
-        if new_seat is None or new_seat.template_id != bus.template_id:
+        if new_seat is None or new_seat.template_id != (trip.template_id or bus.template_id):
             raise TicketValidationError("El asiento no pertenece al bus de este viaje.")
 
         city_order = get_route_city_order(route)

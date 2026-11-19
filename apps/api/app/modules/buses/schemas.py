@@ -562,6 +562,20 @@ class BusTemplateSaveRead(BusGroupSchema):
     source_template_id: int
 
 
+class BusTemplateForBusUpdate(BusGroupSchema):
+    """La capacidad corresponde al bus, el plano a su plantilla."""
+
+    capacity: int = Field(ge=1, le=200)
+    template: BusTemplateCreate
+
+
+class BusTemplateForBusRead(BusTemplateSaveRead):
+    bus_id: int
+    bus_template_id: int
+    capacity: int
+    floors: Literal[1, 2]
+
+
 class BusPhotoRead(BusGroupSchema):
     id: int
     url: str
