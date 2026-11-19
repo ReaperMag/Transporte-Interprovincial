@@ -285,6 +285,43 @@ export function saveCooperativeBusTemplate(
   });
 }
 
+export interface CooperativeBusTemplateForBusResult extends CooperativeBusTemplateSaveResult {
+  busId: number;
+  busTemplateId: number;
+  capacity: number;
+  floors: 1 | 2;
+}
+
+/** Edita el plano desde el bus y asigna la copia en una sola transacción. */
+export function saveTemplateFromBus(
+  busId: number,
+  input: BusTemplate,
+  capacity: number,
+): Promise<CooperativeBusTemplateForBusResult> {
+  return request<CooperativeBusTemplateForBusResult>(`${busesUrl}/${busId}/template`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      capacity,
+      template: {
+        name: input.name.trim(),
+        floors: input.floors,
+        hasBathroom: input.hasBathroom,
+        rows: input.rows,
+        columns: input.columns,
+        seats: input.seats.map(({ number, floor, row, column, seatType, seatTypeId }) => ({
+          number,
+          floor,
+          row,
+          column,
+          seatType,
+          ...(seatTypeId != null ? { seatTypeId } : {}),
+        })),
+      },
+    }),
+  });
+}
+
 export function updateCooperativeBus(
   id: number,
   input: Partial<BusInput>,

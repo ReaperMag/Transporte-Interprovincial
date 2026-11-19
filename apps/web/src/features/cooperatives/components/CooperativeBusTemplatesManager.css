@@ -95,3 +95,23 @@
   border-color: #2563eb !important;
   color: #1d4ed8;
 }
+
+/* Acceso contextual al plano desde el formulario del vehículo. */
+.cooperative-buses__edit-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  grid-column: 1 / -1;
+}
+.cooperative-buses__edit-heading h3 {
+  margin: 0;
+}
+.cooperative-templates__current-template {
+  flex: 1 1 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: #334155;
+}
