@@ -837,12 +837,14 @@ def save_route_sheet(
             existing_trip = trips_by_frequency.get(frequency.id)
             if existing_trip is not None:
                 existing_trip.bus_id = bus.id
+                existing_trip.template_id = bus.template_id
             else:
                 db.add(
                     Trip(
                         cooperative_id=cooperative_id,
                         frequency_id=frequency.id,
                         bus_id=bus.id,
+                        template_id=bus.template_id,
                         route_sheet_id=sheet.id,
                         departure_at=_local_datetime(
                             payload.service_date,
@@ -858,6 +860,7 @@ def save_route_sheet(
                     cooperative_id=cooperative_id,
                     frequency_id=frequency.id,
                     bus_id=bus.id,
+                    template_id=bus.template_id,
                     route_sheet_id=sheet.id,
                     departure_at=_local_datetime(
                         payload.service_date,

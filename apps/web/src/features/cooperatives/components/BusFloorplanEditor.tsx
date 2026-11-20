@@ -41,12 +41,14 @@ function getLegacySeatType(name: string): SeatType {
   return name.trim().toLowerCase() === 'vip' ? 'vip' : 'normal';
 }
 
-// Issue #59: renumerar según la posición física, primero piso, luego fila y columna.
-// El identificador y el tipo de cada asiento se mantienen intactos.
-function renumberSeats(seats: TemplateSeat[]): TemplateSeat[] {
-  return [...seats]
-    .sort((a, b) => a.floor - b.floor || a.row - b.row || a.column - b.column)
-    .map((seat, index) => ({ ...seat, number: index + 1 }));
+// Mantiene los números existentes aunque se agreguen asientos a su izquierda.
+// Si se eliminó un asiento, su número queda disponible para uno nuevo.
+// La posición física nunca determina el número al editar manualmente.
+function nextAvailableSeatNumber(seats: TemplateSeat[]): number {
+  const usedNumbers = new Set(seats.map((seat) => seat.number));
+  let number = 1;
+  while (usedNumbers.has(number)) number += 1;
+  return number;
 }
 
 export function BusFloorplanEditor({
@@ -241,7 +243,7 @@ export function BusFloorplanEditor({
       return;
     }
 
-    const number = template.seats.length + 1;
+    const number = nextAvailableSeatNumber(template.seats);
 
     const seat: TemplateSeat = {
       id: `seat-${selectedFloor}-${row}-${column}-${number}`,
@@ -253,13 +255,16 @@ export function BusFloorplanEditor({
       seatTypeId,
     };
 
-    updateTemplate({}, renumberSeats([...template.seats, seat]));
+    updateTemplate({}, [...template.seats, seat]);
     setCapacityError(null);
     setSelectedSeatId(seat.id);
   };
 
   const removeSelectedSeat = () => {
-    updateTemplate({}, renumberSeats(template.seats.filter((seat) => seat.id !== selectedSeatId)));
+    updateTemplate(
+      {},
+      template.seats.filter((seat) => seat.id !== selectedSeatId),
+    );
 
     setCapacityError(null);
     setSelectedSeatId(null);
@@ -660,7 +665,8 @@ export function BusFloorplanEditor({
 
           <p className="bus-floorplan-editor__hint">
             Selecciona un espacio vacío para agregar un asiento. Elige un asiento para cambiar su
-            tipo o quitarlo.
+            tipo o quitarlo. Los asientos existentes conservarán su número aunque agregues otros a
+            su izquierda o derecha.
           </p>
         </>
       )}

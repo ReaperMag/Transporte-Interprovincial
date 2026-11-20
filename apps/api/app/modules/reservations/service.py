@@ -300,7 +300,7 @@ def get_trip_seats(
     segment = get_segment(trip.frequency.route, origin_city_id, destination_city_id)
     occupied = get_occupied_seat_ids(db, trip, segment)
 
-    template: BusTemplate = trip.bus.template
+    template: BusTemplate = trip.template or trip.bus.template
     seats = sorted(
         template.seats,
         key=lambda seat: (seat.floor, seat.number),
@@ -493,7 +493,7 @@ def create_reservation(
     segment = get_segment(route, payload.originCityId, payload.destinationCityId)
     occupied = get_occupied_seat_ids(db, trip, segment)
 
-    template_seats = {seat.id: seat for seat in trip.bus.template.seats}
+    template_seats = {seat.id: seat for seat in (trip.template or trip.bus.template).seats}
 
     reservation_seats: list[ReservationSeat] = []
     total = Decimal("0.00")

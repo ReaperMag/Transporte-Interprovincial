@@ -265,7 +265,7 @@ def search_trips(
         cap_statement = (
             select(Trip.id, func.count(TemplateSeat.id))
             .join(Bus, Trip.bus_id == Bus.id)
-            .join(TemplateSeat, TemplateSeat.template_id == Bus.template_id)
+            .join(TemplateSeat, TemplateSeat.template_id == func.coalesce(Trip.template_id, Bus.template_id))
             .where(Trip.id.in_(trip_ids))
             .group_by(Trip.id)
         )
@@ -337,7 +337,7 @@ def search_trips(
 
                 busId=bus.id,
                 busNumber=bus.number,
-                busTemplateId=bus.template_id,
+                busTemplateId=trip.template_id or bus.template_id,
 
                 isPast=departure_local <= current_time,
                 totalSeats=total_seats,

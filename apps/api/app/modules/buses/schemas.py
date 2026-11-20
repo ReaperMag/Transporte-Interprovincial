@@ -543,6 +543,38 @@ class BusTemplateRead(BusGroupSchema):
     columns: int
     seats: list[BusTemplateSeatRead]
 
+    # Issue #66: cantidad de buses vinculados.
+    # Se calcula desde el servicio, no se almacena
+    # como un contador duplicado en la base de datos.
+    bus_count: int = 0
+
+
+class BusTemplateSaveRead(BusGroupSchema):
+    """Resultado de actualizar o copiar una plantilla."""
+
+    template: BusTemplateRead
+
+    # True: se creó una copia porque la original estaba en uso.
+    # False: se actualizó directamente la plantilla existente.
+    copied: bool
+
+    # ID de la plantilla desde la cual se realizó la operación.
+    source_template_id: int
+
+
+class BusTemplateForBusUpdate(BusGroupSchema):
+    """La capacidad corresponde al bus, el plano a su plantilla."""
+
+    capacity: int = Field(ge=1, le=200)
+    template: BusTemplateCreate
+
+
+class BusTemplateForBusRead(BusTemplateSaveRead):
+    bus_id: int
+    bus_template_id: int
+    capacity: int
+    floors: Literal[1, 2]
+
 
 class BusPhotoRead(BusGroupSchema):
     id: int

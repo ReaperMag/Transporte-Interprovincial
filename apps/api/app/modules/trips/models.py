@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.modules.buses.models import Bus
+from app.modules.buses.models import Bus, BusTemplate
 from app.modules.schedules.models import Frequency, RouteSheet
 from app.shared.base_model import str_enum
 from app.shared.tenant_model import TenantModel
@@ -24,6 +24,11 @@ class Trip(TenantModel):
 
     frequency_id: Mapped[int] = mapped_column(ForeignKey("frequencies.id", ondelete="RESTRICT"))
     bus_id: Mapped[int] = mapped_column(ForeignKey("buses.id", ondelete="RESTRICT"))
+    # Issue #66: snapshot of the exact seat plan when the trip was assigned.
+    # Nullable only to support legacy rows until the additive migration backfills them.
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bus_templates.id", ondelete="RESTRICT"), nullable=True
+    )
     route_sheet_id: Mapped[int | None] = mapped_column(
         ForeignKey("route_sheets.id", ondelete="SET NULL")
     )
@@ -36,4 +41,5 @@ class Trip(TenantModel):
 
     frequency: Mapped[Frequency] = relationship()
     bus: Mapped[Bus] = relationship()
+    template: Mapped[BusTemplate | None] = relationship()
     route_sheet: Mapped[RouteSheet | None] = relationship(back_populates="trips")

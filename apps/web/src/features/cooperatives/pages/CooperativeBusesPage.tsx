@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { CooperativeBusCreateWizard } from '../components/CooperativeBusCreateWizard';
+import { CooperativeBusTemplatesManager } from '../components/CooperativeBusTemplatesManager';
 import { VehicleBrandCombobox } from '../components/VehicleBrandCombobox';
 
 import {
@@ -26,6 +27,7 @@ import {
   getCooperativeBuses,
   updateCooperativeBus,
   type BusInput,
+  type CooperativeBusTemplateForBusResult,
   type CooperativeBusCreateInput,
   type CooperativeBusPhoto,
   type CooperativeBus,
@@ -70,6 +72,8 @@ export function CooperativeBusesPage() {
   const [editingPhotos, setEditingPhotos] = useState<CooperativeBusPhoto[]>([]);
   const [savingPhotos, setSavingPhotos] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [managingTemplates, setManagingTemplates] = useState(false);
+  const [editingBusTemplate, setEditingBusTemplate] = useState(false);
 
   const [plateFilter, setPlateFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
@@ -106,7 +110,8 @@ export function CooperativeBusesPage() {
   const canSave =
     !saving && form.templateId !== null && !unavailableChassis && !unavailableBodywork;
 
-  const showingEditor = creating || editingId !== null;
+  const showingEditor = creating || editingId !== null || managingTemplates;
+  const editingBus = buses.find((bus) => bus.id === editingId);
 
   // ----------------------------------------------------
   // CARGA DE BUSES Y GRUPOS
@@ -211,6 +216,7 @@ export function CooperativeBusesPage() {
   const resetForm = () => {
     setForm(createInitialForm());
     setEditingId(null);
+    setEditingBusTemplate(false);
     setEditingPhotos([]);
 
     setHistoricalBrands({
@@ -246,9 +252,19 @@ export function CooperativeBusesPage() {
     setSuccess(null);
 
     try {
-      const input: BusInput = {
-        ...form,
-        templateId: form.templateId,
+      // La plantilla, los pisos y la capacidad se modifican únicamente
+      // desde «Editar plantilla». No reenviarlos aquí evita revertir la copia.
+      const input: Partial<BusInput> = {
+        number: form.number,
+        plate: form.plate,
+        brand: form.brand,
+        chassisBrandId: form.chassisBrandId,
+        bodyworkBrandId: form.bodyworkBrandId,
+        model: form.model,
+        year: form.year,
+        origin: form.origin,
+        status: form.status,
+        groupId: form.groupId,
       };
 
       if (editingId === null) {
@@ -295,6 +311,7 @@ export function CooperativeBusesPage() {
 
   const edit = (bus: CooperativeBus) => {
     setEditingId(bus.id);
+    setEditingBusTemplate(false);
     setEditingPhotos(bus.photos ?? []);
 
     // Preservar nombres incluso cuando no existe referencia
@@ -327,6 +344,17 @@ export function CooperativeBusesPage() {
 
     setError(null);
     setSuccess(null);
+  };
+
+  const onBusTemplateSaved = (result: CooperativeBusTemplateForBusResult) => {
+    // El backend ya guardó y asignó la nueva plantilla atómicamente.
+    setForm((current) => ({
+      ...current,
+      templateId: result.busTemplateId,
+      capacity: result.capacity,
+      floors: result.floors,
+    }));
+    void load();
   };
 
   // ----------------------------------------------------
@@ -434,20 +462,46 @@ export function CooperativeBusesPage() {
           <p>Registra y controla los vehículos de tu cooperativa.</p>
         </div>
 
-        {editingId === null && (
-          <button
-            type="button"
-            className="cooperative-buses__create"
-            onClick={() => {
-              setError(null);
-              setSuccess(null);
-              setCreating(true);
-            }}
-          >
-            Nuevo bus
-          </button>
+        {editingId === null && !creating && !managingTemplates && (
+          <div className="cooperative-buses__header-actions">
+            <button
+              type="button"
+              className="cooperative-buses__templates-action"
+              onClick={() => {
+                setError(null);
+                setSuccess(null);
+                setManagingTemplates(true);
+              }}
+            >
+              Gestionar plantillas
+            </button>
+            <button
+              type="button"
+              className="cooperative-buses__create"
+              onClick={() => {
+                setError(null);
+                setSuccess(null);
+                setCreating(true);
+              }}
+            >
+              Nuevo bus
+            </button>
+          </div>
         )}
       </header>
+
+      {managingTemplates && (
+        <CooperativeBusTemplatesManager onClose={() => setManagingTemplates(false)} />
+      )}
+
+      {editingBusTemplate && editingBus && (
+        <CooperativeBusTemplatesManager
+          key={editingBus.id}
+          bus={editingBus}
+          onBusSaved={onBusTemplateSaved}
+          onClose={() => setEditingBusTemplate(false)}
+        />
+      )}
 
       {creating && (
         <CooperativeBusCreateWizard
@@ -466,7 +520,7 @@ export function CooperativeBusesPage() {
         <p
           className="cooperative-buses__message cooperative-buses__message--error"
           role="alert"
-          hidden={creating}
+          hidden={showingEditor}
         >
           {error}
         </p>
@@ -476,7 +530,7 @@ export function CooperativeBusesPage() {
         <p
           className="cooperative-buses__message cooperative-buses__message--success"
           role="status"
-          hidden={creating}
+          hidden={showingEditor}
         >
           {success}
         </p>
@@ -486,9 +540,44 @@ export function CooperativeBusesPage() {
       <form
         className="cooperative-buses__form"
         onSubmit={(event) => void submit(event)}
-        hidden={editingId === null || creating}
+        hidden={editingId === null || creating || editingBusTemplate}
       >
-        <h3>Editar bus</h3>
+        <div className="cooperative-buses__edit-heading">
+          <h3>Editar bus</h3>
+          <div className="cooperative-buses__header-actions">
+            <div className="cooperative-buses__template-edit-control">
+              <span
+                className="cooperative-buses__template-edit-trigger"
+                tabIndex={editingBus?.status === 'operativo' ? 0 : undefined}
+                aria-describedby={
+  editingBus?.status === 'operativo'
+    ? 'cooperative-buses-template-tooltip'
+    : undefined
+}
+              >
+                <button
+                  type="button"
+                  disabled={!editingBus || editingBus.status === 'operativo'}
+                  onClick={() => setEditingBusTemplate(true)}
+                >
+                  Editar plantilla
+                </button>
+                {editingBus?.status === 'operativo' && (
+  <span
+    id="cooperative-buses-template-tooltip"
+    className="cooperative-buses__template-edit-tooltip"
+    role="tooltip"
+  >
+    Primero cambia el estado a Mantenimiento o Fuera de servicio y guarda el bus.
+  </span>
+)}
+              </span>
+            </div>
+            <button type="button" onClick={resetForm}>
+              Volver a buses
+            </button>
+          </div>
+        </div>
 
         <label>
           Número de disco
@@ -568,24 +657,6 @@ export function CooperativeBusesPage() {
         </label>
 
         <label>
-          Capacidad
-          <input
-            required
-            type="number"
-            min={1}
-            max={200}
-            onKeyDown={preventNonNumericKeys}
-            value={form.capacity}
-            onChange={(event) => change('capacity', Number(event.target.value))}
-          />
-        </label>
-
-        <label>
-          Pisos
-          <input value={form.floors} readOnly />
-        </label>
-
-        <label>
           Procedencia
           <select
             value={form.origin}
@@ -628,23 +699,6 @@ export function CooperativeBusesPage() {
             ))}
           </select>
         </label>
-
-        <label>
-          Plantilla de asientos
-          <input
-            readOnly
-            value={
-              form.templateId === null
-                ? 'Pendiente de integración'
-                : `Plantilla #${form.templateId}`
-            }
-            aria-describedby="bus-template-help"
-          />
-        </label>
-
-        <p id="bus-template-help" role="status">
-          Este bus conserva su plantilla asignada.
-        </p>
 
         {catalogError && (
           <p className="cooperative-buses__message cooperative-buses__message--error" role="alert">
