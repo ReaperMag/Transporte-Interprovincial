@@ -545,18 +545,34 @@ export function CooperativeBusesPage() {
         <div className="cooperative-buses__edit-heading">
           <h3>Editar bus</h3>
           <div className="cooperative-buses__header-actions">
-            <button
-              type="button"
-              disabled={!editingBus || editingBus.status === 'operativo'}
-              title={
-                editingBus?.status === 'operativo'
-                  ? 'Primero guarda el bus en mantenimiento o fuera de servicio.'
-                  : 'Editar la plantilla de este bus'
-              }
-              onClick={() => setEditingBusTemplate(true)}
-            >
-              Editar plantilla
-            </button>
+            <div className="cooperative-buses__template-edit-control">
+              <span
+                className="cooperative-buses__template-edit-trigger"
+                tabIndex={editingBus?.status === 'operativo' ? 0 : undefined}
+                aria-describedby={
+  editingBus?.status === 'operativo'
+    ? 'cooperative-buses-template-tooltip'
+    : undefined
+}
+              >
+                <button
+                  type="button"
+                  disabled={!editingBus || editingBus.status === 'operativo'}
+                  onClick={() => setEditingBusTemplate(true)}
+                >
+                  Editar plantilla
+                </button>
+                {editingBus?.status === 'operativo' && (
+  <span
+    id="cooperative-buses-template-tooltip"
+    className="cooperative-buses__template-edit-tooltip"
+    role="tooltip"
+  >
+    Primero cambia el estado a Mantenimiento o Fuera de servicio y guarda el bus.
+  </span>
+)}
+              </span>
+            </div>
             <button type="button" onClick={resetForm}>
               Volver a buses
             </button>

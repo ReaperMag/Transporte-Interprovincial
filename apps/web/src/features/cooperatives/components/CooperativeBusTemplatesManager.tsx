@@ -133,10 +133,8 @@ export function CooperativeBusTemplatesManager({
       return;
     }
 
-    const seats = draft.seats
-      .filter((seat) => seat.floor <= floors)
-      .sort((a, b) => a.floor - b.floor || a.row - b.row || a.column - b.column)
-      .map((seat, index) => ({ ...seat, number: index + 1 }));
+    // Al quitar un piso, los asientos restantes conservan su número.
+    const seats = draft.seats.filter((seat) => seat.floor <= floors);
 
     setDraft({ ...draft, floors, seats });
     setChanged(true);
@@ -364,11 +362,8 @@ export function CooperativeBusTemplatesManager({
           <div className="cooperative-templates__notice" role="status">
             {bus ? (
               <p>
-                Solo puedes guardar cambios cuando el bus está en mantenimiento
-                o fuera de servicio. Al modificar la distribución se creará una
-                copia para este bus; los viajes finalizados conservarán su
-                plantilla anterior. Si existen viajes pendientes o en curso,
-                primero deberán finalizarse o reasignarse.
+                Al guardar una distribución modificada se crea una copia para este bus.
+                La plantilla original permanece intacta.
               </p>
             ) : selected.busCount > 0 ? (
               <p>
@@ -418,6 +413,15 @@ export function CooperativeBusTemplatesManager({
             >
               Hay cambios de dimensiones sin aplicar. Pulsa «Generar plantilla»
               antes de guardar.
+            </p>
+          )}
+
+          {bus && (
+            <p className="cooperative-templates__future-notice" role="note">
+              <strong>Antes de guardar:</strong> la nueva plantilla se aplicará únicamente a los
+              viajes creados después de esta edición. Los viajes anteriores y los que estén en
+              curso conservarán la plantilla original. Si existen viajes pendientes o en curso,
+              primero deben finalizarse o reasignarse para permitir el cambio.
             </p>
           )}
 

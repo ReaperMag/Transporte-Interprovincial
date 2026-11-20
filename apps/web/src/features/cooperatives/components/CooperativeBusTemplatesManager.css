@@ -115,3 +115,68 @@
   gap: 0.3rem;
   color: #334155;
 }
+
+/* Ayuda junto al botón deshabilitado de edición de plantilla. */
+.cooperative-buses__template-edit-control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  max-width: 240px;
+}
+.cooperative-buses__template-edit-trigger {
+  position: relative;
+  display: inline-block;
+}
+.cooperative-buses__template-edit-trigger:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 0.4rem;
+}
+.cooperative-buses__template-edit-help {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #64748b;
+}
+.cooperative-buses__template-edit-tooltip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 20;
+  width: max-content;
+  max-width: min(280px, 75vw);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.4rem;
+  background: #fff;
+  color: #334155;
+  box-shadow: 0 6px 20px rgb(15 23 42 / 14%);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.cooperative-buses__template-edit-trigger:hover .cooperative-buses__template-edit-tooltip,
+.cooperative-buses__template-edit-trigger:focus-visible .cooperative-buses__template-edit-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+.cooperative-buses__template-edit-trigger > button:disabled {
+  pointer-events: none;
+}
+
+/* Mensaje antes de guardar cambios que afectarán futuros viajes. */
+.cooperative-templates__future-notice {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-left: 3px solid #2563eb;
+  border-radius: 0.35rem;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
