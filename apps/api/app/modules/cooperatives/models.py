@@ -38,6 +38,9 @@ class Cooperative(BaseModel):
     # Minutos que un asiento queda reservado antes de liberarse si no se sube el comprobante.
     # El proyecto pide de 3 a 5 minutos; cada cooperativa puede ajustarlo.
     reservation_timeout_minutes: Mapped[int] = mapped_column(default=5)
+    # Minutos que tiene el oficinista para revisar un comprobante subido.
+    # Si se cumplen sin revisión, la reserva se cancela y los asientos se liberan.
+    payment_review_timeout_minutes: Mapped[int] = mapped_column(default=30)
     is_active: Mapped[bool] = mapped_column(default=True)
 
     bank_accounts: Mapped[list["CooperativeBankAccount"]] = relationship(

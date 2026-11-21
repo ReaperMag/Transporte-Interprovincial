@@ -207,6 +207,15 @@ def init_db() -> None:
             connection.execute(
                 text("ALTER TABLE cooperatives ADD COLUMN description VARCHAR(1000)")
             )
+    # Issue #70: tiempo máximo para revisar el comprobante de pago.
+    if "payment_review_timeout_minutes" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE cooperatives ADD COLUMN payment_review_timeout_minutes "
+                    "INTEGER NOT NULL DEFAULT 30"
+                )
+            )
     account_columns = {
         column["name"] for column in inspect(engine).get_columns("accounts")
     }
