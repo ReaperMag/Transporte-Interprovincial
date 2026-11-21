@@ -147,3 +147,18 @@ def start_trip(
     except service.BusStaffTripError as exc:
         raise_trip_error(exc)
     return service.build_trip_detail(db, trip)
+
+
+@router.post("/{trip_id}/finish", response_model=BusStaffTripDetail)
+def finish_trip(
+    trip_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """Finaliza el viaje en curso con su hora de llegada."""
+    try:
+        trip = service.finish_trip(db, staff, trip_id)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)
+    return service.build_trip_detail(db, trip)

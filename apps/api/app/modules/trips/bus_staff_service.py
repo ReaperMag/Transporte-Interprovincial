@@ -414,3 +414,18 @@ def start_trip(db: Session, staff: Staff, trip_id: int) -> Trip:
     db.commit()
     db.refresh(trip)
     return trip
+
+
+def finish_trip(db: Session, staff: Staff, trip_id: int) -> Trip:
+    """Registra la llegada: el viaje en curso pasa a finalizado."""
+    trip = get_staff_trip(db, staff, trip_id)
+    if trip.status != TripStatus.IN_PROGRESS:
+        raise BusStaffTripConflictError("Solo se puede finalizar un viaje en curso.")
+
+    trip.status = TripStatus.FINISHED
+    trip.finished_at = now_local()
+    trip.finished_by_id = staff.id
+
+    db.commit()
+    db.refresh(trip)
+    return trip
