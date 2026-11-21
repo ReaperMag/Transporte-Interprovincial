@@ -202,7 +202,8 @@ def submit_receipt(
 
     Si algún asiento tiene una categoría con descuento, también sube la cédula
     o el carné de esa persona, salvo que ya lo haya subido antes. La reserva
-    pasa a revisión y deja de vencer mientras el oficinista la revisa.
+    pasa a revisión y el oficinista tiene el tiempo máximo de revisión de la
+    cooperativa para aprobarla o rechazarla.
     """
     if method == PaymentMethod.CASH:
         raise PaymentValidationError(
@@ -307,7 +308,12 @@ def submit_receipt(
             )
         )
 
+    cooperative = db.get(Cooperative, get_trip_cooperative_id(db, reservation))
     reservation.status = ReservationStatus.PAYMENT_REVIEW
+    reservation.review_expires_at = now_local() + timedelta(
+        minutes=cooperative.payment_review_timeout_minutes
+    )
+    reservation.review_alert_sent_at = None
 
     notify(
         db,
@@ -384,6 +390,7 @@ def approve_payment(db: Session, payment_id: int, staff: Staff) -> Payment:
 
     reservation.status = ReservationStatus.CONFIRMED
     reservation.expires_at = None
+    reservation.review_expires_at = None
 
     notify(
         db,
@@ -465,6 +472,8 @@ def reject_payment(
         )
         reservation.status = ReservationStatus.CANCELLED
         reservation.expires_at = None
+
+    reservation.review_expires_at = None
 
     if comment and comment.strip():
         message = f"{message} Comentario del oficinista: {comment.strip()}"

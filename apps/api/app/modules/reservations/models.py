@@ -12,7 +12,7 @@ from app.shared.base_model import BaseModel, str_enum
 
 class ReservationStatus(enum.StrEnum):
     PENDING_PAYMENT = "pending_payment"  # Asientos apartados hasta expires_at
-    PAYMENT_REVIEW = "payment_review"  # Comprobante subido, esperando al oficinista
+    PAYMENT_REVIEW = "payment_review"  # Comprobante subido, esperando al oficinista hasta review_expires_at
     CONFIRMED = "confirmed"  # Pago aprobado y boletos emitidos
     EXPIRED = "expired"  # Venció el tiempo y los asientos se liberaron
     CANCELLED = "cancelled"
@@ -33,6 +33,10 @@ class Reservation(BaseModel):
         str_enum(ReservationStatus), default=ReservationStatus.PENDING_PAYMENT
     )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Hora límite para que el oficinista revise el comprobante subido
+    review_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Cuándo se avisó a los oficinistas que el comprobante está por vencer
+    review_alert_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     total: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
 
     seats: Mapped[list["ReservationSeat"]] = relationship(
