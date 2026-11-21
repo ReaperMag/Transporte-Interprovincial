@@ -22,6 +22,7 @@ from app.modules.sales.onboard_schemas import (
     OnboardSaleCreate,
     OnboardSaleOptions,
     OnboardSaleRead,
+    OnboardSalesSummary,
     OnboardSeat,
     OnboardStop,
 )
@@ -204,4 +205,22 @@ def build_onboard_sale_read(db: Session, ticket: Ticket) -> OnboardSaleRead:
         price=ticket.price,
         soldByName=f"{seller.first_name} {seller.last_name}" if seller else None,
         soldAt=ticket.created_at,
+    )
+
+
+def list_onboard_sales(db: Session, staff: Staff, trip_id: int) -> OnboardSalesSummary:
+    """Pasajes vendidos a bordo en el viaje y el efectivo recaudado."""
+    trip = get_staff_trip(db, staff, trip_id)
+    tickets = db.scalars(
+        select(Ticket)
+        .where(
+            Ticket.trip_id == trip.id,
+            Ticket.channel == SaleChannel.ON_BOARD,
+            Ticket.status != TicketStatus.CANCELLED,
+        )
+        .order_by(Ticket.created_at, Ticket.id)
+    ).all()
+    return OnboardSalesSummary(
+        sales=[build_onboard_sale_read(db, ticket) for ticket in tickets],
+        total=sum((ticket.price for ticket in tickets), Decimal("0.00")),
     )

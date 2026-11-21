@@ -11,6 +11,7 @@ from app.modules.sales.onboard_schemas import (
     OnboardSaleCreate,
     OnboardSaleOptions,
     OnboardSaleRead,
+    OnboardSalesSummary,
 )
 from app.modules.staff.models import Staff
 from app.modules.trips.bus_staff_router import raise_trip_error
@@ -64,3 +65,16 @@ def create_onboard_sale(
     except BusStaffTripError as exc:
         raise_sale_error(exc)
     return service.build_onboard_sale_read(db, ticket)
+
+
+@router.get("/{trip_id}/onboard-sales", response_model=OnboardSalesSummary)
+def list_onboard_sales(
+    trip_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+):
+    """Ventas a bordo del viaje con el total cobrado en efectivo."""
+    try:
+        return service.list_onboard_sales(db, staff, trip_id)
+    except BusStaffTripError as exc:
+        raise_sale_error(exc)
