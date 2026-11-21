@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BoardingAlert } from '../components/BoardingAlert';
+import { OnboardSalePanel } from '../components/OnboardSalePanel';
 import { ProblemForm } from '../components/ProblemForm';
 import { QrScanner } from '../components/QrScanner';
 import {
@@ -294,6 +295,14 @@ export function PersonalBusTripPage() {
               </button>
             )}
           </div>
+        </section>
+      )}
+
+      {trip.status === 'in_progress' && (
+        <section className="oficinista-operations__card">
+          <h2>Venta a bordo</h2>
+          <p>Solo en efectivo, en los asientos libres del tramo.</p>
+          <OnboardSalePanel tripId={trip.id} />
         </section>
       )}
 
