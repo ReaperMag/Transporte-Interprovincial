@@ -7,7 +7,11 @@ from app.modules.buses.models import Bus, TemplateSeat
 from app.modules.notifications.models import NotificationEvent
 from app.modules.notifications.service import notify
 from app.modules.passengers.models import Passenger, PassengerCategory
-from app.modules.reservations.models import Reservation, ReservationStatus
+from app.modules.reservations.models import (
+    Reservation,
+    ReservationSeat,
+    ReservationStatus,
+)
 from app.modules.reservations.service import (
     as_local,
     now_local,
@@ -309,3 +313,78 @@ def validate_ticket(
         message="Boleto válido.",
         passenger=build_passenger(db, ticket),
     )
+
+
+CATEGORY_LABELS = {
+    PassengerCategory.MINOR: "menor de edad",
+    PassengerCategory.SENIOR: "tercera edad",
+    PassengerCategory.DISABILITY: "persona con discapacidad",
+}
+
+
+def get_ticket_to_verify(db: Session, staff: Staff, trip_id: int, ticket_id: int) -> Ticket:
+    """Boleto con descuento del viaje, todavía sin validar, durante el abordaje."""
+    trip = get_staff_trip(db, staff, trip_id)
+    ensure_boarding(trip)
+
+    ticket = db.get(Ticket, ticket_id)
+    if ticket is None or ticket.trip_id != trip.id:
+        raise BusStaffTicketNotFoundError("Boleto no encontrado en este viaje.")
+    if ticket.status != TicketStatus.ISSUED:
+        raise BusStaffTripConflictError(INVALID_TICKET_MESSAGES[ticket.status])
+    if ticket.passenger_category == PassengerCategory.REGULAR:
+        raise BusStaffTripConflictError("Este boleto no tiene categoría con descuento.")
+    return ticket
+
+
+def confirm_ticket_category(
+    db: Session, staff: Staff, trip_id: int, ticket_id: int
+) -> BusStaffPassenger:
+    """El documento corresponde a la categoría: el boleto queda usado."""
+    ticket = get_ticket_to_verify(db, staff, trip_id, ticket_id)
+    mark_boarded(ticket, staff)
+    db.commit()
+    db.refresh(ticket)
+    return build_passenger(db, ticket)
+
+
+def reject_ticket_category(
+    db: Session, staff: Staff, trip_id: int, ticket_id: int
+) -> BusStaffPassenger:
+    """
+    El documento no corresponde a la categoría: la persona no sube y el boleto
+    queda rechazado. En la oficina lo puede cambiar por uno de su categoría.
+    """
+    ticket = get_ticket_to_verify(db, staff, trip_id, ticket_id)
+    seat_number = db.get(TemplateSeat, ticket.seat_id).number
+    category = CATEGORY_LABELS[ticket.passenger_category]
+
+    ticket.status = TicketStatus.REJECTED
+    ticket.validated_at = now_local()
+    ticket.validated_by_id = staff.id
+    ticket.rejection_reason = f"La categoría {category} no corresponde."
+
+    reservation_seat = (
+        db.get(ReservationSeat, ticket.reservation_seat_id)
+        if ticket.reservation_seat_id
+        else None
+    )
+    reservation = (
+        db.get(Reservation, reservation_seat.reservation_id) if reservation_seat else None
+    )
+    notify(
+        db,
+        account_id=reservation.buyer_account_id if reservation else None,
+        event=NotificationEvent.TICKET_REJECTED,
+        title="Boleto rechazado al abordar",
+        message=(
+            f"El boleto del asiento {seat_number} se rechazó porque la categoría "
+            f"{category} no corresponde. Acércate a la oficina para cambiarlo por "
+            "un boleto de tu categoría."
+        ),
+        reservation_id=reservation.id if reservation else None,
+    )
+
+    db.commit()
+    db.refresh(ticket)
+    return build_passenger(db, ticket)

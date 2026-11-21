@@ -13,6 +13,7 @@ class TicketValidity(enum.StrEnum):
     VALID = "valid"  # Se puede usar para subir al bus
     USED = "used"  # Ya se validó al subir al bus
     CANCELLED = "cancelled"  # Se reemplazó por otro boleto o se anuló
+    REJECTED = "rejected"  # La categoría no correspondía; se cambia en la oficina
     EXPIRED = "expired"  # El viaje ya terminó o se canceló
 
 

@@ -9,6 +9,7 @@ from app.core.permissions import require_bus_staff
 from app.modules.staff.models import Staff
 from app.modules.trips import bus_staff_service as service
 from app.modules.trips.bus_staff_schemas import (
+    BusStaffPassenger,
     BusStaffTripDetail,
     BusStaffTripSummary,
     TicketValidationRequest,
@@ -90,5 +91,44 @@ def validate_ticket(
     """
     try:
         return service.validate_ticket(db, staff, trip_id, payload.code)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)
+
+
+@router.post(
+    "/{trip_id}/tickets/{ticket_id}/confirm-category",
+    response_model=BusStaffPassenger,
+)
+def confirm_ticket_category(
+    trip_id: int,
+    ticket_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """El documento corresponde a la categoría con descuento: la persona sube."""
+    try:
+        return service.confirm_ticket_category(db, staff, trip_id, ticket_id)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)
+
+
+@router.post(
+    "/{trip_id}/tickets/{ticket_id}/reject-category",
+    response_model=BusStaffPassenger,
+)
+def reject_ticket_category(
+    trip_id: int,
+    ticket_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """
+    La categoría no corresponde: el boleto queda rechazado, la persona no sube
+    y recibe el aviso de cambiarlo en la oficina.
+    """
+    try:
+        return service.reject_ticket_category(db, staff, trip_id, ticket_id)
     except service.BusStaffTripError as exc:
         raise_trip_error(exc)

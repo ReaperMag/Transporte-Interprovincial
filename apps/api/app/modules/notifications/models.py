@@ -18,6 +18,7 @@ class NotificationEvent(enum.StrEnum):
     PAYMENT_REVIEW_EXPIRED = "payment_review_expired"
     PAYMENT_REVIEW_DUE = "payment_review_due"
     TICKET_ISSUED = "ticket_issued"
+    TICKET_REJECTED = "ticket_rejected"
 
 
 class Notification(BaseModel):
