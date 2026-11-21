@@ -36,6 +36,8 @@ export interface PaymentRead {
   reviewedAt: string | null;
   createdAt: string;
   reservationStatus: string;
+  reviewExpiresAt: string | null;
+  departsSoon: boolean;
 }
 
 export interface PaymentDocumentInput {

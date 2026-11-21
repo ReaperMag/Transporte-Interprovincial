@@ -169,6 +169,9 @@ export function OficinistaPaymentsPage() {
                     <p>
                       Viaje #{payment.tripId} · {formatDate(payment.createdAt)}
                     </p>
+                    {payment.departsSoon && (
+                      <span className="oficinista-operations__badge">Sale pronto</span>
+                    )}
                   </div>
                   <strong>{formatMoney(payment.amount)}</strong>
                 </div>
@@ -185,6 +188,12 @@ export function OficinistaPaymentsPage() {
                     <dt>Documentos de descuento</dt>
                     <dd>{payment.documents.length}</dd>
                   </div>
+                  {payment.reviewExpiresAt && (
+                    <div>
+                      <dt>Revisar antes de</dt>
+                      <dd>{formatDate(payment.reviewExpiresAt)}</dd>
+                    </div>
+                  )}
                 </dl>
                 <div className="oficinista-operations__links">
                   {payment.hasReceipt ? (
