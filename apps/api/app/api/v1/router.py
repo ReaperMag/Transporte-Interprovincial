@@ -19,6 +19,7 @@ from app.modules.reservations.router import router as reservations_router
 from app.modules.routes.cooperative_router import router as cooperative_routes_router
 from app.modules.routes.geographic_admin_router import router as geographic_admin_router
 from app.modules.routes.geographic_router import router as geographic_router
+from app.modules.sales.onboard_router import router as onboard_sales_router
 from app.modules.sales.router import router as payments_router
 from app.modules.schedules.cooperative_router import router as cooperative_schedules_router
 from app.modules.staff.bus_staff_router import (
@@ -66,4 +67,5 @@ router.include_router(tickets_router)
 router.include_router(trips_router)
 router.include_router(bus_staff_trips_router)
 router.include_router(office_problems_router)
+router.include_router(onboard_sales_router)
 router.include_router(vehicle_catalog_router)
