@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.modules.buses.models import Bus, TemplateSeat
 from app.modules.passengers.models import Passenger
 from app.modules.reports.schemas import (
+    BusTripHistory,
+    BusTripHistoryItem,
     TripChannelTotals,
     TripPassengerCounts,
     TripReport,
@@ -125,3 +127,48 @@ def build_trip_report(db: Session, trip: Trip) -> TripReport:
         onboardSales=[build_onboard_sale(db, ticket) for ticket in onboard],
         problems=[build_problem_read(db, problem) for problem in list_trip_problems(db, trip)],
     )
+
+
+class BusNotFoundError(BusStaffTripError):
+    pass
+
+
+def get_cooperative_bus(db: Session, cooperative_id: int, bus_id: int) -> Bus:
+    bus = db.get(Bus, bus_id)
+    if bus is None or bus.cooperative_id != cooperative_id:
+        raise BusNotFoundError("Bus no encontrado.")
+    return bus
+
+
+def build_bus_history(db: Session, bus: Bus) -> BusTripHistory:
+    """
+    Viajes del bus desde que empezó su abordaje, del más reciente al más
+    antiguo. El historial queda en el bus aunque cambie el personal.
+    """
+    trips = db.scalars(
+        select(Trip)
+        .where(Trip.bus_id == bus.id, Trip.status.in_(REPORTABLE_STATUSES))
+        .order_by(Trip.departure_at.desc(), Trip.id.desc())
+    ).all()
+
+    items = []
+    for trip in trips:
+        report = build_trip_report(db, trip)
+        items.append(
+            BusTripHistoryItem(
+                tripId=trip.id,
+                status=trip.status,
+                originCityName=report.originCityName,
+                destinationCityName=report.destinationCityName,
+                scheduledDepartureAt=trip.departure_at,
+                startedAt=trip.started_at,
+                finishedAt=trip.finished_at,
+                durationMinutes=report.durationMinutes,
+                passengersBoarded=report.passengers.boarded,
+                onboardSales=report.passengers.onboardSales,
+                total=report.totals.total,
+                openProblems=sum(problem.resolvedAt is None for problem in report.problems),
+            )
+        )
+
+    return BusTripHistory(busId=bus.id, busNumber=bus.number, busPlate=bus.plate, trips=items)

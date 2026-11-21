@@ -62,3 +62,27 @@ class TripReport(BaseModel):
     totals: TripChannelTotals
     onboardSales: list[TripReportOnboardSale]
     problems: list[TripProblemRead]
+
+
+class BusTripHistoryItem(BaseModel):
+    """Resumen de un viaje en el historial del bus."""
+
+    tripId: int
+    status: TripStatus
+    originCityName: str
+    destinationCityName: str
+    scheduledDepartureAt: datetime
+    startedAt: datetime | None
+    finishedAt: datetime | None
+    durationMinutes: int | None
+    passengersBoarded: int
+    onboardSales: int
+    total: Decimal
+    openProblems: int
+
+
+class BusTripHistory(BaseModel):
+    busId: int
+    busNumber: str
+    busPlate: str
+    trips: list[BusTripHistoryItem]
