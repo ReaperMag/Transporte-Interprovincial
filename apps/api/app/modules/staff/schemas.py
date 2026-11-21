@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     BaseModel,
@@ -130,3 +130,62 @@ class StaffSelfRead(StaffSchema):
     cooperative_email: str | None
     cooperative_support_phone: str | None
     cooperative_support_email: str | None
+
+# ---------------------------------------------------------------------------
+# Personal del bus
+# ---------------------------------------------------------------------------
+
+# Conductor o controlador. Los dos tienen el mismo rol y los mismos permisos.
+BusStaffPosition = Literal["driver", "controller"]
+
+
+class BusStaffCreate(StaffSchema):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    first_name: NonEmptyName
+    last_name: NonEmptyName
+    id_number: Annotated[str, StringConstraints(strip_whitespace=True)]
+    email: EmailWithDomain
+    phone: Phone
+    position: BusStaffPosition = "driver"
+    assigned_bus_id: int
+    password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+    )
+    confirm_password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+    )
+
+    _validate_id_number = field_validator("id_number")(validate_cedula)
+    _validate_phone = field_validator("phone")(validate_office_phone)
+
+    @model_validator(mode="after")
+    def passwords_must_match(self) -> "BusStaffCreate":
+        if self.password != self.confirm_password:
+            raise ValueError("Las contraseñas no coinciden.")
+        return self
+
+
+class AssignedBusRead(StaffSchema):
+    id: int
+    number: str
+    plate: str
+
+
+class BusStaffRead(StaffSchema):
+    id: int
+    account_id: int
+    first_name: str
+    last_name: str
+    id_number: str
+    email: EmailStr
+    phone: str | None
+    position: str
+    is_active: bool
+    assigned_bus: AssignedBusRead | None
