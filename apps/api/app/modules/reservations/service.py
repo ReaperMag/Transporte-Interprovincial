@@ -189,9 +189,57 @@ def segments_overlap(first: tuple[int, int], second: tuple[int, int]) -> bool:
 # ---------------------------------------------------------------------------
 
 
+REVIEW_EXPIRED_MESSAGE = (
+    "El comprobante no se alcanzó a revisar a tiempo, así que la reserva se canceló "
+    "y los asientos se liberaron. Acércate a una oficina de la cooperativa con tu "
+    "comprobante para que te emitan el boleto o te devuelvan el dinero."
+)
+
+
+def cancel_expired_reviews(db: Session, current_time: datetime) -> int:
+    """
+    Cancela las reservas cuyo comprobante nadie revisó dentro del tiempo máximo.
+    El pago queda vencido y el pasajero recibe el aviso de ir a la oficina.
+    """
+    in_review = db.scalars(
+        select(Reservation).where(
+            Reservation.status == ReservationStatus.PAYMENT_REVIEW,
+            Reservation.review_expires_at.is_not(None),
+        )
+    ).all()
+
+    cancelled = 0
+    for reservation in in_review:
+        if as_local(reservation.review_expires_at) > current_time:
+            continue
+
+        reservation.status = ReservationStatus.CANCELLED
+        reservation.review_expires_at = None
+        for payment in db.scalars(
+            select(Payment).where(
+                Payment.reservation_id == reservation.id,
+                Payment.status == PaymentStatus.PENDING,
+            )
+        ).all():
+            payment.status = PaymentStatus.EXPIRED
+
+        notify(
+            db,
+            account_id=reservation.buyer_account_id,
+            event=NotificationEvent.PAYMENT_REVIEW_EXPIRED,
+            title="Comprobante sin revisar",
+            message=REVIEW_EXPIRED_MESSAGE,
+            reservation_id=reservation.id,
+        )
+        cancelled += 1
+
+    return cancelled
+
+
 def release_expired_reservations(db: Session) -> int:
     """
-    Marca como vencidas las reservas que no se pagaron a tiempo.
+    Marca como vencidas las reservas que no se pagaron a tiempo y cancela
+    las que tienen el comprobante sin revisar después del tiempo máximo.
     Sus asientos quedan libres para otros pasajeros.
     """
     current_time = now_local()
@@ -219,6 +267,8 @@ def release_expired_reservations(db: Session) -> int:
                 reservation_id=reservation.id,
             )
             expired += 1
+
+    expired += cancel_expired_reviews(db, current_time)
 
     if expired:
         db.commit()
