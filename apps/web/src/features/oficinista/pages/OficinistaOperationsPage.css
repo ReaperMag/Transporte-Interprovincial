@@ -170,6 +170,17 @@
 .oficinista-operations__item-heading > strong {
   white-space: nowrap;
 }
+.oficinista-operations__badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
 .oficinista-operations__details {
   display: flex;
   flex-wrap: wrap;

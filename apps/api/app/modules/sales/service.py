@@ -18,6 +18,7 @@ from app.modules.reservations.models import (
 )
 from app.modules.reservations.service import (
     ReservationNotFoundError,
+    as_local,
     get_reservation,
     now_local,
     release_expired_reservations,
@@ -202,7 +203,8 @@ def submit_receipt(
 
     Si algún asiento tiene una categoría con descuento, también sube la cédula
     o el carné de esa persona, salvo que ya lo haya subido antes. La reserva
-    pasa a revisión y deja de vencer mientras el oficinista la revisa.
+    pasa a revisión y el oficinista tiene el tiempo máximo de revisión de la
+    cooperativa para aprobarla o rechazarla.
     """
     if method == PaymentMethod.CASH:
         raise PaymentValidationError(
@@ -307,7 +309,12 @@ def submit_receipt(
             )
         )
 
+    cooperative = db.get(Cooperative, get_trip_cooperative_id(db, reservation))
     reservation.status = ReservationStatus.PAYMENT_REVIEW
+    reservation.review_expires_at = now_local() + timedelta(
+        minutes=cooperative.payment_review_timeout_minutes
+    )
+    reservation.review_alert_sent_at = None
 
     notify(
         db,
@@ -323,8 +330,18 @@ def submit_receipt(
     return payment
 
 
+# Viajes que salen dentro de este tiempo se marcan como "sale pronto".
+DEPARTS_SOON_WINDOW = timedelta(hours=1)
+
+
 def list_pending_payments(db: Session, staff: Staff) -> list[Payment]:
-    """Comprobantes por revisar de los viajes de la cooperativa del oficinista."""
+    """
+    Comprobantes por revisar de los viajes de la cooperativa del oficinista.
+    Primero se cancelan los que ya vencieron; el resto sale ordenado por el
+    viaje que parte antes.
+    """
+    release_expired_reservations(db)
+
     return list(
         db.scalars(
             select(Payment)
@@ -335,9 +352,15 @@ def list_pending_payments(db: Session, staff: Staff) -> list[Payment]:
                 Payment.receipt_url.is_not(None),
                 Trip.cooperative_id == staff.cooperative_id,
             )
-            .order_by(Payment.created_at, Payment.id)
+            .order_by(Trip.departure_at, Payment.created_at, Payment.id)
         ).all()
     )
+
+
+def departs_soon(trip: Trip) -> bool:
+    """El viaje sale en menos de una hora y todavía no ha salido."""
+    remaining = as_local(trip.departure_at) - now_local()
+    return timedelta(0) <= remaining <= DEPARTS_SOON_WINDOW
 
 
 def list_reservation_payments(db: Session, reservation: Reservation) -> list[Payment]:
@@ -384,6 +407,7 @@ def approve_payment(db: Session, payment_id: int, staff: Staff) -> Payment:
 
     reservation.status = ReservationStatus.CONFIRMED
     reservation.expires_at = None
+    reservation.review_expires_at = None
 
     notify(
         db,
@@ -466,6 +490,8 @@ def reject_payment(
         reservation.status = ReservationStatus.CANCELLED
         reservation.expires_at = None
 
+    reservation.review_expires_at = None
+
     if comment and comment.strip():
         message = f"{message} Comentario del oficinista: {comment.strip()}"
 
@@ -502,6 +528,11 @@ def get_document_reservation(db: Session, document: CategoryDocument) -> Reserva
 
 def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
     reservation = db.get(Reservation, payment.reservation_id)
+    trip = db.get(Trip, reservation.trip_id)
+    in_review = (
+        payment.status == PaymentStatus.PENDING
+        and reservation.status == ReservationStatus.PAYMENT_REVIEW
+    )
     seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}
     documents = db.scalars(
         select(CategoryDocument)
@@ -526,4 +557,6 @@ def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
         reviewedAt=payment.reviewed_at,
         createdAt=payment.created_at,
         reservationStatus=reservation.status,
+        reviewExpiresAt=reservation.review_expires_at if in_review else None,
+        departsSoon=in_review and departs_soon(trip),
     )

@@ -61,3 +61,7 @@ class PaymentRead(BaseModel):
     reviewedAt: datetime | None
     createdAt: datetime
     reservationStatus: ReservationStatus
+    # Hora límite para revisar el comprobante, solo mientras está en revisión
+    reviewExpiresAt: datetime | None = None
+    # El viaje sale en menos de una hora: conviene revisarlo primero
+    departsSoon: bool = False

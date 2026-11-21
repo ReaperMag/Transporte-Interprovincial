@@ -139,6 +139,8 @@ class CooperativeProfileUpdate(CooperativeSchema):
     tiktok_url: ProfileUrl | None = None
     website_url: ProfileUrl | None = None
     description: Description | None = None
+    # Entre 10 minutos y 2 horas para revisar cada comprobante.
+    payment_review_timeout_minutes: int | None = Field(default=None, ge=10, le=120)
 
     @field_validator(
         "logo_url",
@@ -150,6 +152,13 @@ class CooperativeProfileUpdate(CooperativeSchema):
     @classmethod
     def links_must_use_http(cls, value: str | None) -> str | None:
         return validate_http_url(value)
+
+    @field_validator("payment_review_timeout_minutes")
+    @classmethod
+    def review_timeout_cannot_be_null(cls, value: int | None) -> int:
+        if value is None:
+            raise ValueError("Indica el tiempo máximo de revisión en minutos.")
+        return value
 
 
 class CooperativeProfileRead(CooperativeSchema):
@@ -167,6 +176,7 @@ class CooperativeProfileRead(CooperativeSchema):
     tiktok_url: str | None
     website_url: str | None
     description: str | None
+    payment_review_timeout_minutes: int
 
 
 class CooperativeIdentity(CooperativeSchema):

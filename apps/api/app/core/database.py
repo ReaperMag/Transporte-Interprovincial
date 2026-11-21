@@ -207,6 +207,25 @@ def init_db() -> None:
             connection.execute(
                 text("ALTER TABLE cooperatives ADD COLUMN description VARCHAR(1000)")
             )
+    # Issue #70: tiempo máximo para revisar el comprobante de pago.
+    if "payment_review_timeout_minutes" not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE cooperatives ADD COLUMN payment_review_timeout_minutes "
+                    "INTEGER NOT NULL DEFAULT 30"
+                )
+            )
+    # Issue #70: hora límite de revisión del comprobante y aviso a oficinistas.
+    reservation_columns = {
+        column["name"] for column in inspect(engine).get_columns("reservations")
+    }
+    with engine.begin() as connection:
+        for column_name in ("review_expires_at", "review_alert_sent_at"):
+            if column_name not in reservation_columns:
+                connection.execute(
+                    text(f"ALTER TABLE reservations ADD COLUMN {column_name} DATETIME")
+                )
     account_columns = {
         column["name"] for column in inspect(engine).get_columns("accounts")
     }

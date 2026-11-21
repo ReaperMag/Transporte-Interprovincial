@@ -1,6 +1,6 @@
 export type OnlinePaymentMethod = 'deposit' | 'transfer';
 
-export type PaymentStatus = 'pending' | 'approved' | 'rejected';
+export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
 export interface PaymentInfo {
   bankName: string;
@@ -36,6 +36,8 @@ export interface PaymentRead {
   reviewedAt: string | null;
   createdAt: string;
   reservationStatus: string;
+  reviewExpiresAt: string | null;
+  departsSoon: boolean;
 }
 
 export interface PaymentDocumentInput {

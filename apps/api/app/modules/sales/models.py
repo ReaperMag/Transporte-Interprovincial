@@ -18,6 +18,7 @@ class PaymentStatus(enum.StrEnum):
     PENDING = "pending"  # Comprobante subido, falta la revisión del oficinista
     APPROVED = "approved"
     REJECTED = "rejected"
+    EXPIRED = "expired"  # Nadie lo revisó dentro del tiempo máximo de revisión
 
 
 class Payment(BaseModel):
