@@ -1,6 +1,6 @@
 import type { PassengerCategory } from './reservation.service';
 
-export type TicketValidity = 'valid' | 'used' | 'cancelled' | 'expired';
+export type TicketValidity = 'valid' | 'used' | 'cancelled' | 'expired' | 'rejected';
 
 export interface TicketRead {
   id: number;
