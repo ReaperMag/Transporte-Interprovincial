@@ -1,11 +1,11 @@
 from typing import Annotated, NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
-from app.core.permissions import require_bus_staff
+from app.core.permissions import require_bus_staff, require_office_staff
 from app.modules.staff.models import Staff
 from app.modules.trips import bus_staff_service as service
 from app.modules.trips.bus_staff_schemas import (
@@ -20,12 +20,16 @@ from app.modules.trips.bus_staff_schemas import (
 
 
 router = APIRouter(prefix="/bus-staff/trips", tags=["Personal del bus"])
+office_problems_router = APIRouter(
+    prefix="/cooperatives/me/trip-problems", tags=["Problemas de viajes"]
+)
 
 
 def raise_trip_error(exc: service.BusStaffTripError) -> NoReturn:
     status_codes = {
         service.BusStaffTripNotFoundError: status.HTTP_404_NOT_FOUND,
         service.BusStaffTicketNotFoundError: status.HTTP_404_NOT_FOUND,
+        service.TripProblemNotFoundError: status.HTTP_404_NOT_FOUND,
         service.BusStaffTripConflictError: status.HTTP_409_CONFLICT,
     }
     raise HTTPException(
@@ -181,6 +185,34 @@ def report_problem(
     """Reporta un problema del viaje; los oficinistas reciben el aviso."""
     try:
         problem = service.report_problem(db, staff, trip_id, payload)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)
+    return service.build_problem_read(db, problem)
+
+
+@office_problems_router.get("", response_model=list[TripProblemRead])
+def list_trip_problems(
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    only_open: Annotated[bool, Query(alias="onlyOpen")] = True,
+):
+    """Problemas reportados por el personal del bus; por defecto, los no atendidos."""
+    return [
+        service.build_problem_read(db, problem)
+        for problem in service.list_cooperative_problems(db, staff, only_open=only_open)
+    ]
+
+
+@office_problems_router.post("/{problem_id}/resolve", response_model=TripProblemRead)
+def resolve_trip_problem(
+    problem_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_office_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """Marca el problema como atendido."""
+    try:
+        problem = service.resolve_problem(db, staff, problem_id)
     except service.BusStaffTripError as exc:
         raise_trip_error(exc)
     return service.build_problem_read(db, problem)

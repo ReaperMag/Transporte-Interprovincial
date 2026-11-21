@@ -526,3 +526,38 @@ def report_problem(
     db.commit()
     db.refresh(problem)
     return problem
+
+
+class TripProblemNotFoundError(BusStaffTripError):
+    pass
+
+
+def list_cooperative_problems(
+    db: Session, staff: Staff, *, only_open: bool
+) -> list[TripProblem]:
+    """Problemas reportados en los viajes de la cooperativa, del más reciente al más antiguo."""
+    statement = (
+        select(TripProblem)
+        .join(Trip, TripProblem.trip_id == Trip.id)
+        .where(Trip.cooperative_id == staff.cooperative_id)
+        .order_by(TripProblem.created_at.desc(), TripProblem.id.desc())
+    )
+    if only_open:
+        statement = statement.where(TripProblem.resolved_at.is_(None))
+    return list(db.scalars(statement).all())
+
+
+def resolve_problem(db: Session, staff: Staff, problem_id: int) -> TripProblem:
+    """El oficinista marca el problema como atendido."""
+    problem = db.get(TripProblem, problem_id)
+    trip = db.get(Trip, problem.trip_id) if problem else None
+    if problem is None or trip.cooperative_id != staff.cooperative_id:
+        raise TripProblemNotFoundError("Problema no encontrado.")
+    if problem.resolved_at is not None:
+        raise BusStaffTripConflictError("El problema ya fue atendido.")
+
+    problem.resolved_at = now_local()
+    problem.resolved_by_id = staff.id
+    db.commit()
+    db.refresh(problem)
+    return problem
