@@ -39,6 +39,8 @@ function getPaymentStatusLabel(status: string, hasReceipt: boolean): string {
       return 'Aprobado';
     case 'rejected':
       return 'Rechazado';
+    case 'expired':
+      return 'Sin revisar a tiempo';
     default:
       return status;
   }
