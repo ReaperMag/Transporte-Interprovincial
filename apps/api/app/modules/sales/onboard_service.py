@@ -4,18 +4,31 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.buses.models import Bus, BusTemplate, TemplateSeat
+from app.modules.passengers.models import Passenger
+from app.modules.passengers.repository import get_passenger_by_id_number
 from app.modules.reservations.service import (
     FareNotFoundError,
     InvalidSegmentError,
+    calculate_discount,
     get_fare_price,
     get_occupied_seat_ids,
     get_route_city_order,
     get_segment,
+    now_local,
 )
 from app.modules.routes.models import City, Route
-from app.modules.sales.onboard_schemas import OnboardSaleOptions, OnboardSeat, OnboardStop
+from app.modules.sales.onboard_schemas import (
+    OnboardPassengerInput,
+    OnboardSaleCreate,
+    OnboardSaleOptions,
+    OnboardSaleRead,
+    OnboardSeat,
+    OnboardStop,
+)
 from app.modules.schedules.models import Frequency
 from app.modules.staff.models import Staff
+from app.modules.tickets.generator import generate_ticket_code
+from app.modules.tickets.models import SaleChannel, Ticket, TicketStatus
 from app.modules.trips.bus_staff_service import (
     BusStaffTripConflictError,
     BusStaffTripError,
@@ -108,3 +121,87 @@ def get_trip_seat(trip: Trip, seat_id: int) -> TemplateSeat:
     if seat is None:
         raise OnboardSaleValidationError("El asiento no pertenece al bus de este viaje.")
     return seat
+
+
+def get_or_create_onboard_passenger(db: Session, data: OnboardPassengerInput) -> Passenger:
+    """Reutiliza al pasajero por su cédula o lo registra sin cuenta."""
+    passenger = get_passenger_by_id_number(db, data.idNumber)
+    if passenger is None:
+        passenger = Passenger(
+            id_number=data.idNumber.upper(),
+            first_name=data.firstName,
+            last_name=data.lastName,
+            category=data.category,
+        )
+        db.add(passenger)
+        db.flush()
+    return passenger
+
+
+def create_onboard_sale(
+    db: Session, staff: Staff, trip_id: int, data: OnboardSaleCreate
+) -> Ticket:
+    """
+    Registra un pasaje vendido a bordo y cobrado en efectivo. El boleto queda
+    usado porque la persona ya está en el bus, y guarda quién lo vendió.
+    """
+    trip = get_selling_trip(db, staff, trip_id)
+    segment = trip_segment(trip, data.originCityId, data.destinationCityId)
+    seat = get_trip_seat(trip, data.seatId)
+
+    if seat.id in get_occupied_seat_ids(db, trip, segment):
+        raise BusStaffTripConflictError(f"El asiento {seat.number} está ocupado en ese tramo.")
+
+    price = data.price
+    if price is None:
+        base_price = suggested_price(db, trip, data.originCityId, data.destinationCityId, seat)
+        if base_price is None:
+            raise OnboardSaleValidationError(
+                "No hay una tarifa registrada para este tramo; escribe el precio."
+            )
+        price = base_price - calculate_discount(base_price, data.passenger.category)
+
+    passenger = get_or_create_onboard_passenger(db, data.passenger)
+    current_time = now_local()
+    ticket = Ticket(
+        code=generate_ticket_code(),
+        trip_id=trip.id,
+        seat_id=seat.id,
+        passenger_id=passenger.id,
+        reservation_seat_id=None,
+        channel=SaleChannel.ON_BOARD,
+        origin_city_id=data.originCityId,
+        destination_city_id=data.destinationCityId,
+        passenger_category=data.passenger.category,
+        price=price,
+        status=TicketStatus.USED,
+        sold_by_id=staff.id,
+        boarding_description=data.boardingDescription,
+        destination_description=data.destinationDescription,
+        validated_at=current_time,
+        validated_by_id=staff.id,
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
+def build_onboard_sale_read(db: Session, ticket: Ticket) -> OnboardSaleRead:
+    passenger = db.get(Passenger, ticket.passenger_id)
+    seller = db.get(Staff, ticket.sold_by_id) if ticket.sold_by_id else None
+    return OnboardSaleRead(
+        ticketId=ticket.id,
+        code=ticket.code,
+        seatNumber=db.get(TemplateSeat, ticket.seat_id).number,
+        passengerName=f"{passenger.first_name} {passenger.last_name}",
+        passengerIdNumber=passenger.id_number,
+        passengerCategory=ticket.passenger_category,
+        originCityName=db.get(City, ticket.origin_city_id).name,
+        destinationCityName=db.get(City, ticket.destination_city_id).name,
+        boardingDescription=ticket.boarding_description,
+        destinationDescription=ticket.destination_description,
+        price=ticket.price,
+        soldByName=f"{seller.first_name} {seller.last_name}" if seller else None,
+        soldAt=ticket.created_at,
+    )

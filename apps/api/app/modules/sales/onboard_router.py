@@ -1,12 +1,17 @@
 from typing import Annotated, NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.permissions import require_bus_staff
 from app.modules.sales import onboard_service as service
-from app.modules.sales.onboard_schemas import OnboardSaleOptions
+from app.modules.sales.onboard_schemas import (
+    OnboardSaleCreate,
+    OnboardSaleOptions,
+    OnboardSaleRead,
+)
 from app.modules.staff.models import Staff
 from app.modules.trips.bus_staff_router import raise_trip_error
 from app.modules.trips.bus_staff_service import BusStaffTripError
@@ -36,3 +41,26 @@ def read_onboard_sale_options(
         )
     except BusStaffTripError as exc:
         raise_sale_error(exc)
+
+
+@router.post(
+    "/{trip_id}/onboard-sales",
+    response_model=OnboardSaleRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_onboard_sale(
+    trip_id: int,
+    payload: OnboardSaleCreate,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """
+    Registra un pasaje vendido a bordo, cobrado en efectivo. Si no se envía el
+    precio, se cobra la tarifa del tramo con el descuento de la categoría.
+    """
+    try:
+        ticket = service.create_onboard_sale(db, staff, trip_id, payload)
+    except BusStaffTripError as exc:
+        raise_sale_error(exc)
+    return service.build_onboard_sale_read(db, ticket)
