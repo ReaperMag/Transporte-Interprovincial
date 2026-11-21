@@ -9,6 +9,7 @@ from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
 from app.modules.accounts.repository import create_account, get_account_by_email
 from app.modules.buses.models import Bus
+from app.modules.cooperatives.models import Cooperative
 from app.modules.roles_permissions.models import Role
 from app.modules.roles_permissions.seed import COOPERATIVE_BUS_STAFF_ROLE
 from app.modules.staff.models import Staff, StaffPosition
@@ -16,6 +17,7 @@ from app.modules.staff.schemas import (
     AssignedBusRead,
     BusStaffCreate,
     BusStaffRead,
+    BusStaffSelfRead,
     BusStaffUpdate,
 )
 
@@ -219,4 +221,25 @@ def to_bus_staff_read(db: Session, staff: Staff, email: str) -> BusStaffRead:
             if bus is not None
             else None
         ),
+    )
+
+
+def to_bus_staff_self_read(db: Session, staff: Staff) -> BusStaffSelfRead:
+    """Perfil propio del personal del bus con su cooperativa y su bus asignado."""
+    account = db.get(Account, staff.account_id)
+    cooperative = db.get(Cooperative, staff.cooperative_id)
+    profile = to_bus_staff_read(db, staff, account.email)
+    return BusStaffSelfRead(
+        first_name=staff.first_name,
+        last_name=staff.last_name,
+        id_number=staff.id_number,
+        email=account.email,
+        phone=staff.phone,
+        position=staff.position.value,
+        cooperative_id=cooperative.id,
+        cooperative_name=cooperative.name,
+        cooperative_logo_url=cooperative.logo_url,
+        cooperative_primary_color=cooperative.primary_color,
+        cooperative_secondary_color=cooperative.secondary_color,
+        assigned_bus=profile.assigned_bus,
     )

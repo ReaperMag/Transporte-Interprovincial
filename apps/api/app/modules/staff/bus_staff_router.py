@@ -5,13 +5,20 @@ from sqlalchemy.orm import Session
 
 from app.core.csrf import validate_request_origin
 from app.core.database import get_db
-from app.core.permissions import require_cooperative_admin
+from app.core.permissions import require_bus_staff, require_cooperative_admin
 from app.modules.accounts.models import Account
 from app.modules.staff import bus_staff_service as service
-from app.modules.staff.schemas import BusStaffCreate, BusStaffRead, BusStaffUpdate
+from app.modules.staff.models import Staff
+from app.modules.staff.schemas import (
+    BusStaffCreate,
+    BusStaffRead,
+    BusStaffSelfRead,
+    BusStaffUpdate,
+)
 
 
 router = APIRouter(prefix="/cooperatives/me/bus-staff", tags=["Personal del bus"])
+bus_staff_self_router = APIRouter(prefix="/bus-staff", tags=["Personal del bus"])
 
 
 def cooperative_id_of(account: Account) -> int:
@@ -105,3 +112,12 @@ def update_bus_staff(
     except service.BusStaffError as exc:
         raise_bus_staff_error(exc)
     return service.to_bus_staff_read(db, staff, email)
+
+
+@bus_staff_self_router.get("/me", response_model=BusStaffSelfRead)
+def read_my_bus_staff_profile(
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    db: Annotated[Session, Depends(get_db)],
+) -> BusStaffSelfRead:
+    """Datos del conductor o controlador que inició sesión y su bus asignado."""
+    return service.to_bus_staff_self_read(db, staff)

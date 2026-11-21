@@ -218,3 +218,20 @@ class BusStaffRead(StaffSchema):
     position: str
     is_active: bool
     assigned_bus: AssignedBusRead | None
+
+
+class BusStaffSelfRead(StaffSchema):
+    """Lo que ve el conductor o controlador de su propia cuenta."""
+
+    first_name: str
+    last_name: str
+    id_number: str
+    email: EmailStr
+    phone: str | None
+    position: str
+    cooperative_id: int
+    cooperative_name: str
+    cooperative_logo_url: str | None
+    cooperative_primary_color: str | None
+    cooperative_secondary_color: str | None
+    assigned_bus: AssignedBusRead | None

@@ -21,7 +21,10 @@ from app.modules.routes.geographic_admin_router import router as geographic_admi
 from app.modules.routes.geographic_router import router as geographic_router
 from app.modules.sales.router import router as payments_router
 from app.modules.schedules.cooperative_router import router as cooperative_schedules_router
-from app.modules.staff.bus_staff_router import router as bus_staff_router
+from app.modules.staff.bus_staff_router import (
+    bus_staff_self_router,
+    router as bus_staff_router,
+)
 from app.modules.staff.router import router as staff_router, staff_self_router
 from app.modules.tickets.router import router as tickets_router
 from app.modules.trips.router import router as trips_router
@@ -47,6 +50,7 @@ router.include_router(geographic_admin_router)
 router.include_router(cooperative_schedules_router)
 router.include_router(staff_router)
 router.include_router(bus_staff_router)
+router.include_router(bus_staff_self_router)
 router.include_router(staff_self_router)
 router.include_router(cooperative_router)
 router.include_router(cooperatives_router)
