@@ -129,3 +129,30 @@
   flex: 1;
   min-width: 160px;
 }
+.personal-bus__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #c8cfd0;
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+}
+.personal-bus__problems {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.personal-bus__problems li {
+  padding: 10px 12px;
+  border-left: 3px solid #d97706;
+  border-radius: 8px;
+  background: #fffbeb;
+}
+.personal-bus__problems li small {
+  display: block;
+  margin-top: 4px;
+  color: #5b6670;
+}

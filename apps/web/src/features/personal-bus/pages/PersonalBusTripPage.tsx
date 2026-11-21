@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ProblemForm } from '../components/ProblemForm';
 import { QrScanner } from '../components/QrScanner';
 import {
   confirmCategory,
@@ -10,7 +11,7 @@ import {
   startTrip,
   validateTicket,
 } from '../services/personalBus.service';
-import type { TripDetail, TripPassenger } from '../types/personalBus.types';
+import type { TripDetail, TripPassenger, TripProblem } from '../types/personalBus.types';
 import {
   CATEGORY_LABELS,
   TICKET_STATUS_LABELS,
@@ -39,6 +40,8 @@ export function PersonalBusTripPage() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [manualCode, setManualCode] = useState('');
   const [confirmingFinish, setConfirmingFinish] = useState(false);
+  const [showProblemForm, setShowProblemForm] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -64,6 +67,7 @@ export function PersonalBusTripPage() {
   const runAction = async (action: () => Promise<TripDetail>) => {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       setTrip(await action());
       setScanResult(null);
@@ -120,6 +124,14 @@ export function PersonalBusTripPage() {
     }
   };
 
+  const handleProblemReported = (problem: TripProblem) => {
+    setShowProblemForm(false);
+    setNotice('Problema enviado. La oficina recibió el aviso.');
+    setTrip((current) =>
+      current ? { ...current, problems: [...current.problems, problem] } : current,
+    );
+  };
+
   if (loading) return <p role="status">Cargando viaje...</p>;
   if (!trip) {
     return (
@@ -154,6 +166,12 @@ export function PersonalBusTripPage() {
       {error && (
         <p className="oficinista-operations__alert" role="alert">
           {error}
+        </p>
+      )}
+
+      {notice && (
+        <p className="oficinista-operations__notice" role="status">
+          {notice}
         </p>
       )}
 
@@ -264,6 +282,46 @@ export function PersonalBusTripPage() {
         <section className="oficinista-operations__card">
           <h2>Viaje finalizado</h2>
           <p>Llegada: {formatDateTime(trip.finishedAt)}</p>
+        </section>
+      )}
+
+      {trip.status !== 'finished' && trip.status !== 'cancelled' && (
+        <section className="oficinista-operations__card">
+          <div className="oficinista-operations__card-heading">
+            <div>
+              <h2>Problemas del viaje</h2>
+              <p>La oficina recibe un aviso con cada problema que reportes.</p>
+            </div>
+            {!showProblemForm && (
+              <button
+                type="button"
+                className="oficinista-operations__button--secondary"
+                onClick={() => setShowProblemForm(true)}
+              >
+                Reportar un problema
+              </button>
+            )}
+          </div>
+          {showProblemForm && (
+            <ProblemForm
+              tripId={trip.id}
+              onReported={handleProblemReported}
+              onCancel={() => setShowProblemForm(false)}
+            />
+          )}
+          {trip.problems.length > 0 && (
+            <ul className="personal-bus__problems">
+              {trip.problems.map((problem) => (
+                <li key={problem.id}>
+                  {problem.comment}
+                  <small>
+                    {formatDateTime(problem.reportedAt)} ·{' '}
+                    {problem.resolvedAt ? 'Atendido por la oficina' : 'Pendiente en la oficina'}
+                  </small>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
