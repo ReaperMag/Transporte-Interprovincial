@@ -42,6 +42,8 @@ function getValidityLabel(validity: TicketValidity): string {
       return 'Cancelado';
     case 'expired':
       return 'Vencido';
+    case 'rejected':
+      return 'Rechazado al abordar: cámbialo en la oficina';
     default:
       return validity;
   }

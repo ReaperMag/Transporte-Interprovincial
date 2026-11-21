@@ -27,6 +27,10 @@ from app.modules.staff.bus_staff_router import (
 )
 from app.modules.staff.router import router as staff_router, staff_self_router
 from app.modules.tickets.router import router as tickets_router
+from app.modules.trips.bus_staff_router import (
+    office_problems_router,
+    router as bus_staff_trips_router,
+)
 from app.modules.trips.router import router as trips_router
 from app.modules.vehicle_catalog.cooperative_router import (
     router as cooperative_vehicle_catalog_router,
@@ -60,4 +64,6 @@ router.include_router(payments_router)
 router.include_router(reservations_router)
 router.include_router(tickets_router)
 router.include_router(trips_router)
+router.include_router(bus_staff_trips_router)
+router.include_router(office_problems_router)
 router.include_router(vehicle_catalog_router)

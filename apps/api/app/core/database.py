@@ -216,6 +216,26 @@ def init_db() -> None:
                     "INTEGER NOT NULL DEFAULT 30"
                 )
             )
+    # Issue #74: abordaje del viaje y boletos rechazados por categoría.
+    trip_columns = {column["name"] for column in inspect(engine).get_columns("trips")}
+    with engine.begin() as connection:
+        if "boarding_started_at" not in trip_columns:
+            connection.execute(
+                text("ALTER TABLE trips ADD COLUMN boarding_started_at DATETIME")
+            )
+        if "boarding_started_by_id" not in trip_columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE trips ADD COLUMN boarding_started_by_id INTEGER "
+                    "REFERENCES staff(id) ON DELETE SET NULL"
+                )
+            )
+    ticket_columns = {column["name"] for column in inspect(engine).get_columns("tickets")}
+    if "rejection_reason" not in ticket_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE tickets ADD COLUMN rejection_reason VARCHAR(255)")
+            )
     # Issue #70: hora límite de revisión del comprobante y aviso a oficinistas.
     reservation_columns = {
         column["name"] for column in inspect(engine).get_columns("reservations")
