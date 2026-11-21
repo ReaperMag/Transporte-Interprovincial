@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.core.permissions import require_cooperative_admin
 from app.modules.accounts.models import Account
 from app.modules.staff import bus_staff_service as service
-from app.modules.staff.schemas import BusStaffCreate, BusStaffRead
+from app.modules.staff.schemas import BusStaffCreate, BusStaffRead, BusStaffUpdate
 
 
 router = APIRouter(prefix="/cooperatives/me/bus-staff", tags=["Personal del bus"])
@@ -79,6 +79,27 @@ def create_bus_staff(
         staff, email = service.create_bus_staff(
             db,
             cooperative_id=cooperative_id_of(account),
+            data=payload,
+        )
+    except service.BusStaffError as exc:
+        raise_bus_staff_error(exc)
+    return service.to_bus_staff_read(db, staff, email)
+
+
+@router.patch("/{bus_staff_id}", response_model=BusStaffRead)
+def update_bus_staff(
+    bus_staff_id: int,
+    payload: BusStaffUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(require_cooperative_admin)],
+    _: Annotated[None, Depends(validate_request_origin)],
+) -> BusStaffRead:
+    """Edita los datos, cambia el bus asignado o activa y desactiva la cuenta."""
+    try:
+        staff, email = service.update_bus_staff(
+            db,
+            cooperative_id=cooperative_id_of(account),
+            bus_staff_id=bus_staff_id,
             data=payload,
         )
     except service.BusStaffError as exc:

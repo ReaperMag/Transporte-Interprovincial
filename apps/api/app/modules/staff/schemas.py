@@ -172,6 +172,35 @@ class BusStaffCreate(StaffSchema):
         return self
 
 
+class BusStaffUpdate(StaffSchema):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    first_name: NonEmptyName | None = None
+    last_name: NonEmptyName | None = None
+    id_number: Annotated[str, StringConstraints(strip_whitespace=True)] | None = None
+    email: EmailWithDomain | None = None
+    phone: Phone | None = None
+    position: BusStaffPosition | None = None
+    assigned_bus_id: int | None = None
+    # Desactivar la cuenta conserva el historial; no se borra al trabajador.
+    is_active: bool | None = None
+
+    _validate_id_number = field_validator("id_number")(validate_cedula)
+    _validate_phone = field_validator("phone")(validate_office_phone)
+
+    @model_validator(mode="after")
+    def require_a_change(self) -> "BusStaffUpdate":
+        if not self.model_fields_set:
+            raise ValueError("Envía al menos un campo para actualizar.")
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("Los campos enviados no pueden ser nulos.")
+        return self
+
+
 class AssignedBusRead(StaffSchema):
     id: int
     number: str

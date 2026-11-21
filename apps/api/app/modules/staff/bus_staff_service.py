@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,12 @@ from app.modules.buses.models import Bus
 from app.modules.roles_permissions.models import Role
 from app.modules.roles_permissions.seed import COOPERATIVE_BUS_STAFF_ROLE
 from app.modules.staff.models import Staff, StaffPosition
-from app.modules.staff.schemas import AssignedBusRead, BusStaffCreate, BusStaffRead
+from app.modules.staff.schemas import (
+    AssignedBusRead,
+    BusStaffCreate,
+    BusStaffRead,
+    BusStaffUpdate,
+)
 
 
 class BusStaffError(Exception):
@@ -133,6 +138,68 @@ def get_bus_staff_member(
     if result is None:
         raise BusStaffNotFoundError("Personal del bus no encontrado.")
     return result
+
+
+def update_bus_staff(
+    db: Session,
+    *,
+    cooperative_id: int,
+    bus_staff_id: int,
+    data: BusStaffUpdate,
+) -> tuple[Staff, str]:
+    """
+    Edita los datos, el cargo o el bus asignado del personal del bus.
+    Desactivarlo también bloquea su cuenta, pero conserva su historial.
+    """
+    staff, _ = get_bus_staff_member(
+        db, cooperative_id=cooperative_id, bus_staff_id=bus_staff_id
+    )
+    account = db.get(Account, staff.account_id)
+    changes = data.model_dump(exclude_unset=True)
+
+    if "email" in changes:
+        normalized_email = str(changes["email"]).strip().lower()
+        if db.scalar(
+            select(Account.id).where(
+                func.lower(Account.email) == normalized_email,
+                Account.id != account.id,
+            )
+        ) is not None:
+            raise DuplicateBusStaffError("Ya existe una cuenta con ese correo.")
+        account.email = normalized_email
+
+    if "id_number" in changes and db.scalar(
+        select(Staff.id).where(
+            Staff.id_number == changes["id_number"],
+            Staff.id != staff.id,
+        )
+    ) is not None:
+        raise DuplicateBusStaffError("Ya existe un trabajador con esa cédula.")
+
+    if "assigned_bus_id" in changes:
+        get_assignable_bus(db, cooperative_id, changes["assigned_bus_id"])
+        staff.assigned_bus_id = changes["assigned_bus_id"]
+
+    if "position" in changes:
+        staff.position = StaffPosition(changes["position"])
+
+    if "is_active" in changes:
+        staff.is_active = changes["is_active"]
+        account.is_active = changes["is_active"]
+
+    for field in ("first_name", "last_name", "id_number", "phone"):
+        if field in changes:
+            setattr(staff, field, changes[field])
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise DuplicateBusStaffError(
+            "Ya existe una cuenta o trabajador con los datos proporcionados."
+        ) from exc
+    db.refresh(staff)
+    return staff, account.email
 
 
 def to_bus_staff_read(db: Session, staff: Staff, email: str) -> BusStaffRead:
