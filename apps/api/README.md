@@ -370,6 +370,25 @@ Reglas principales:
 - **Privacidad:** cada boleto lo ven quien lo compró, el pasajero a cuyo
   nombre está y el personal de oficina de la cooperativa del viaje.
 
+## Reportes de viaje
+
+El reporte de un viaje está disponible desde que empieza su abordaje. Muestra
+la ruta y el bus, el personal que inició el abordaje, el viaje y la llegada,
+los horarios programado y real con la duración, los pasajeros (boletos
+vendidos, abordaron, no se presentaron y rechazados por categoría), las ventas
+a bordo con quién las cobró, el total recaudado en línea, en oficina y a bordo,
+y los problemas reportados. No cuenta los boletos cancelados.
+
+- Personal del bus, solo para su bus asignado:
+  - `GET /api/v1/bus-staff/trips/{id}/report` y `GET .../report/pdf`.
+  - `GET /api/v1/bus-staff/history`: viajes del bus del más reciente al más
+    antiguo, con un resumen de cada uno.
+- Administrador y oficinista de la cooperativa, para todos sus buses:
+  - `GET /api/v1/cooperatives/me/trips/{id}/report` y `GET .../report/pdf`.
+  - `GET /api/v1/cooperatives/me/buses/{busId}/history`.
+
+El PDF se genera en el servidor con `fpdf2`.
+
 ## Control del viaje
 
 El personal del bus (conductor o controlador) controla los viajes de su bus
@@ -402,25 +421,6 @@ asignado desde `/api/v1/bus-staff/trips`:
 
 Cada acción guarda qué persona la hizo. Por ahora se asume que todos los
 pasajeros suben en el terminal de origen.
-
-## Reportes de viaje
-
-El reporte de un viaje está disponible desde que empieza su abordaje. Muestra
-la ruta y el bus, el personal que inició el abordaje, el viaje y la llegada,
-los horarios programado y real con la duración, los pasajeros (boletos
-vendidos, abordaron, no se presentaron y rechazados por categoría), las ventas
-a bordo con quién las cobró, el total recaudado en línea, en oficina y a bordo,
-y los problemas reportados. No cuenta los boletos cancelados.
-
-- Personal del bus, solo para su bus asignado:
-  - `GET /api/v1/bus-staff/trips/{id}/report` y `GET .../report/pdf`.
-  - `GET /api/v1/bus-staff/history`: viajes del bus del más reciente al más
-    antiguo, con un resumen de cada uno.
-- Administrador y oficinista de la cooperativa, para todos sus buses:
-  - `GET /api/v1/cooperatives/me/trips/{id}/report` y `GET .../report/pdf`.
-  - `GET /api/v1/cooperatives/me/buses/{busId}/history`.
-
-El PDF se genera en el servidor con `fpdf2`.
 
 ## Búsqueda de viajes
 
