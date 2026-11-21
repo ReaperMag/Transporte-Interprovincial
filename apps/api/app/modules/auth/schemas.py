@@ -54,7 +54,9 @@ class LoginResponse(BaseModel):
 
     accountId: int
     email: EmailStr
-    accountType: Literal["passenger", "cooperative", "oficinista", "super_admin"]
+    accountType: Literal[
+        "passenger", "cooperative", "oficinista", "personal_bus", "super_admin"
+    ]
 
 
 class EmailRequest(BaseModel):
