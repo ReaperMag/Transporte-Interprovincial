@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -241,3 +241,16 @@ def test_passenger_cannot_read_reports(finished_trip):
         f"/api/v1/cooperatives/me/trips/{data['trip_id']}/report"
     ).status_code == 403
     assert client.get(f"{TRIPS_URL}/{data['trip_id']}/report").status_code == 403
+
+
+def test_report_times_are_in_ecuador_local_time(finished_trip):
+    client, _, data = finished_trip
+    login(client, DRIVER)
+
+    report = client.get(f"{TRIPS_URL}/{data['trip_id']}/report").json()
+
+    reported_at = datetime.fromisoformat(report["problems"][0]["reportedAt"])
+    sold_at = datetime.fromisoformat(report["onboardSales"][0]["soldAt"])
+    for value in (reported_at, sold_at):
+        assert value.utcoffset() == timedelta(hours=-5)
+        assert abs(value - now()) < timedelta(minutes=5)

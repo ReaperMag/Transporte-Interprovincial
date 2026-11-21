@@ -23,6 +23,7 @@ from app.modules.trips.bus_staff_service import (
     build_problem_read,
     list_trip_problems,
     staff_name,
+    stored_utc_to_local,
 )
 from app.modules.trips.models import Trip, TripStatus
 
@@ -70,7 +71,7 @@ def build_onboard_sale(db: Session, ticket: Ticket) -> TripReportOnboardSale:
         destinationDescription=ticket.destination_description,
         price=ticket.price,
         soldByName=staff_name(db, ticket.sold_by_id),
-        soldAt=ticket.created_at,
+        soldAt=stored_utc_to_local(ticket.created_at),
     )
 
 
