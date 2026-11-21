@@ -12,6 +12,7 @@ from app.shared.tenant_model import TenantModel
 
 class TripStatus(enum.StrEnum):
     SCHEDULED = "scheduled"
+    BOARDING = "boarding"  # El personal del bus valida los boletos; la venta está cerrada
     IN_PROGRESS = "in_progress"
     FINISHED = "finished"
     CANCELLED = "cancelled"
@@ -34,6 +35,10 @@ class Trip(TenantModel):
     )
     departure_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     status: Mapped[TripStatus] = mapped_column(str_enum(TripStatus), default=TripStatus.SCHEDULED)
+    boarding_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    boarding_started_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("staff.id", ondelete="SET NULL")
+    )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_by_id: Mapped[int | None] = mapped_column(ForeignKey("staff.id", ondelete="SET NULL"))
