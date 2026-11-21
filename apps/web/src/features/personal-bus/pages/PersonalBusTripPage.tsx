@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { BoardingAlert } from '../components/BoardingAlert';
 import { ProblemForm } from '../components/ProblemForm';
 import { QrScanner } from '../components/QrScanner';
 import {
@@ -241,6 +242,24 @@ export function PersonalBusTripPage() {
         </section>
       )}
 
+      {trip.status === 'boarding' && trip.boardingStartedAt && (
+        <BoardingAlert
+          boardingStartedAt={trip.boardingStartedAt}
+          busy={busy}
+          onStartTrip={() => void runAction(() => startTrip(trip.id))}
+          onReportProblem={() => {
+            setShowProblemForm(true);
+            window.setTimeout(
+              () =>
+                document
+                  .getElementById('trip-problems')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+              0,
+            );
+          }}
+        />
+      )}
+
       {trip.status === 'in_progress' && (
         <section className="oficinista-operations__card">
           <h2>Viaje en curso</h2>
@@ -286,7 +305,7 @@ export function PersonalBusTripPage() {
       )}
 
       {trip.status !== 'finished' && trip.status !== 'cancelled' && (
-        <section className="oficinista-operations__card">
+        <section className="oficinista-operations__card" id="trip-problems">
           <div className="oficinista-operations__card-heading">
             <div>
               <h2>Problemas del viaje</h2>
