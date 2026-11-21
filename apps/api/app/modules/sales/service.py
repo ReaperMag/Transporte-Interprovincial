@@ -18,6 +18,7 @@ from app.modules.reservations.models import (
 )
 from app.modules.reservations.service import (
     ReservationNotFoundError,
+    as_local,
     get_reservation,
     now_local,
     release_expired_reservations,
@@ -329,8 +330,18 @@ def submit_receipt(
     return payment
 
 
+# Viajes que salen dentro de este tiempo se marcan como "sale pronto".
+DEPARTS_SOON_WINDOW = timedelta(hours=1)
+
+
 def list_pending_payments(db: Session, staff: Staff) -> list[Payment]:
-    """Comprobantes por revisar de los viajes de la cooperativa del oficinista."""
+    """
+    Comprobantes por revisar de los viajes de la cooperativa del oficinista.
+    Primero se cancelan los que ya vencieron; el resto sale ordenado por el
+    viaje que parte antes.
+    """
+    release_expired_reservations(db)
+
     return list(
         db.scalars(
             select(Payment)
@@ -341,9 +352,15 @@ def list_pending_payments(db: Session, staff: Staff) -> list[Payment]:
                 Payment.receipt_url.is_not(None),
                 Trip.cooperative_id == staff.cooperative_id,
             )
-            .order_by(Payment.created_at, Payment.id)
+            .order_by(Trip.departure_at, Payment.created_at, Payment.id)
         ).all()
     )
+
+
+def departs_soon(trip: Trip) -> bool:
+    """El viaje sale en menos de una hora y todavía no ha salido."""
+    remaining = as_local(trip.departure_at) - now_local()
+    return timedelta(0) <= remaining <= DEPARTS_SOON_WINDOW
 
 
 def list_reservation_payments(db: Session, reservation: Reservation) -> list[Payment]:
@@ -511,6 +528,11 @@ def get_document_reservation(db: Session, document: CategoryDocument) -> Reserva
 
 def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
     reservation = db.get(Reservation, payment.reservation_id)
+    trip = db.get(Trip, reservation.trip_id)
+    in_review = (
+        payment.status == PaymentStatus.PENDING
+        and reservation.status == ReservationStatus.PAYMENT_REVIEW
+    )
     seat_ids = {seat.id: seat.seat_id for seat in reservation.seats}
     documents = db.scalars(
         select(CategoryDocument)
@@ -535,4 +557,6 @@ def build_payment_read(db: Session, payment: Payment) -> PaymentRead:
         reviewedAt=payment.reviewed_at,
         createdAt=payment.created_at,
         reservationStatus=reservation.status,
+        reviewExpiresAt=reservation.review_expires_at if in_review else None,
+        departsSoon=in_review and departs_soon(trip),
     )
