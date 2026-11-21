@@ -3,6 +3,7 @@ from typing import Annotated, NoReturn
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.csrf import validate_request_origin
 from app.core.database import get_db
 from app.core.permissions import require_bus_staff
 from app.modules.staff.models import Staff
@@ -47,6 +48,24 @@ def read_my_trip(
     """Detalle del viaje con la lista de pasajeros y su estado de abordaje."""
     try:
         trip = service.get_staff_trip(db, staff, trip_id)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)
+    return service.build_trip_detail(db, trip)
+
+
+@router.post("/{trip_id}/boarding", response_model=BusStaffTripDetail)
+def start_boarding(
+    trip_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """
+    Inicia el abordaje desde 30 minutos antes de la salida. Se cierra la venta
+    y se cancelan las reservas sin pagar o con el comprobante sin revisar.
+    """
+    try:
+        trip = service.start_boarding(db, staff, trip_id)
     except service.BusStaffTripError as exc:
         raise_trip_error(exc)
     return service.build_trip_detail(db, trip)
