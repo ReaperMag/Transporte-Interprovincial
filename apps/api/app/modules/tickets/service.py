@@ -104,6 +104,9 @@ def get_ticket_validity(ticket: Ticket, trip: Trip, route: Route) -> TicketValid
     if ticket.status == TicketStatus.USED:
         return TicketValidity.USED
 
+    if ticket.status == TicketStatus.NO_SHOW:
+        return TicketValidity.EXPIRED
+
     if trip.status in (TripStatus.FINISHED, TripStatus.CANCELLED):
         return TicketValidity.EXPIRED
 
@@ -114,6 +117,9 @@ def get_ticket_validity(ticket: Ticket, trip: Trip, route: Route) -> TicketValid
     )
     if now_local() > as_local(trip.departure_at) + duration:
         return TicketValidity.EXPIRED
+
+    if ticket.status == TicketStatus.REJECTED:
+        return TicketValidity.REJECTED
 
     return TicketValidity.VALID
 
@@ -228,7 +234,11 @@ def change_ticket(
         raise TicketNotFoundError("Boleto no encontrado.")
 
     route = db.get(Route, db.get(Frequency, trip.frequency_id).route_id)
-    if get_ticket_validity(ticket, trip, route) != TicketValidity.VALID:
+    # Un boleto rechazado al abordar también se cambia por uno de la categoría correcta.
+    if get_ticket_validity(ticket, trip, route) not in (
+        TicketValidity.VALID,
+        TicketValidity.REJECTED,
+    ):
         raise TicketConflictError("Solo se pueden cambiar boletos vigentes.")
 
     reservation = get_ticket_reservation(db, ticket)

@@ -12,6 +12,10 @@ from app.shared.base_model import BaseModel, str_enum
 class TicketStatus(enum.StrEnum):
     ISSUED = "issued"
     USED = "used"  # Validado al subir al bus; ya no puede volver a usarse
+    # La categoría con descuento no corresponde: la persona no sube y puede
+    # cambiar el boleto en la oficina por uno de su categoría.
+    REJECTED = "rejected"
+    NO_SHOW = "no_show"  # No abordó antes de iniciar el viaje; su asiento se liberó
     CANCELLED = "cancelled"
 
 
@@ -50,5 +54,6 @@ class Ticket(BaseModel):
     destination_description: Mapped[str | None] = mapped_column(String(255))  # A dónde va
 
     # Validación al subir al bus
+    rejection_reason: Mapped[str | None] = mapped_column(String(255))
     validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     validated_by_id: Mapped[int | None] = mapped_column(ForeignKey("staff.id", ondelete="SET NULL"))

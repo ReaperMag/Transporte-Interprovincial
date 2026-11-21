@@ -342,6 +342,13 @@ def get_occupied_seat_ids(
     city_order = get_route_city_order(route)
     occupied: set[int] = set()
 
+    # Asientos de pasajeros que no abordaron: se liberan al iniciar el viaje.
+    no_show_seat_ids = select(Ticket.reservation_seat_id).where(
+        Ticket.trip_id == trip.id,
+        Ticket.status == TicketStatus.NO_SHOW,
+        Ticket.reservation_seat_id.is_not(None),
+    )
+
     reserved_seats = db.scalars(
         select(ReservationSeat)
         .join(Reservation, ReservationSeat.reservation_id == Reservation.id)
@@ -353,6 +360,7 @@ def get_occupied_seat_ids(
                 Reservation.expires_at.is_(None),
                 Reservation.expires_at > now_local(),
             ),
+            ReservationSeat.id.not_in(no_show_seat_ids),
         )
     ).all()
 
@@ -361,7 +369,7 @@ def get_occupied_seat_ids(
         select(Ticket).where(
             Ticket.trip_id == trip.id,
             Ticket.reservation_seat_id.is_(None),
-            Ticket.status != TicketStatus.CANCELLED,
+            Ticket.status.not_in((TicketStatus.CANCELLED, TicketStatus.NO_SHOW)),
         )
     ).all()
 

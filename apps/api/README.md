@@ -114,11 +114,9 @@ Reglas principales:
   (oficinista o administrador de la cooperativa) solo vende y gestiona viajes
   de su cooperativa.
 
-Pendiente para otras ramas:
-
-- **Chofer:** la verificación al subir al bus. La categoría declarada queda
-  guardada en cada asiento reservado y en cada boleto para cuando exista ese
-  módulo.
+- Al iniciar el abordaje se cierra la venta del viaje: solo se reservan viajes
+  en estado programado. La verificación de la categoría al subir al bus se
+  describe en «Control del viaje».
 
 ## Acceso administrativo
 
@@ -371,6 +369,39 @@ Reglas principales:
   devolución. El asiento nuevo debe estar libre en el tramo del pasajero.
 - **Privacidad:** cada boleto lo ven quien lo compró, el pasajero a cuyo
   nombre está y el personal de oficina de la cooperativa del viaje.
+
+## Control del viaje
+
+El personal del bus (conductor o controlador) controla los viajes de su bus
+asignado desde `/api/v1/bus-staff/trips`:
+
+- `GET /api/v1/bus-staff/trips` lista los viajes programados desde un día antes
+  y los que están en abordaje o en curso. `GET /{id}` muestra los pasajeros con
+  su estado y los problemas reportados.
+- `POST /{id}/boarding` inicia el abordaje desde 30 minutos antes de la salida.
+  Un bus solo puede tener un viaje en abordaje o en curso. Al iniciarlo se
+  cierra la venta y se cancelan las reservas sin pagar o con el comprobante en
+  revisión; cada pasajero recibe un aviso y, si ya había subido el comprobante,
+  se le indica que vaya a la oficina.
+- `POST /{id}/tickets/validate` recibe el código del QR o el escrito a mano.
+  Un boleto de tarifa normal queda usado. Uno con descuento devuelve
+  `needs_category_check` y el personal revisa la cédula o el carné:
+  - `POST /{id}/tickets/{ticketId}/confirm-category`: la persona sube.
+  - `POST /{id}/tickets/{ticketId}/reject-category`: el boleto queda
+    rechazado, la persona no sube y recibe el aviso de cambiarlo en la oficina
+    por uno de su categoría con `POST /api/v1/tickets/{id}/change`.
+- `POST /{id}/start` pone el viaje en curso. Los boletos de quienes no
+  abordaron, incluidos los rechazados, quedan como `no_show` y sus asientos se
+  liberan.
+- `POST /{id}/finish` finaliza el viaje en curso con su hora de llegada.
+- `POST /{id}/problems` reporta un problema con un comentario y un tipo
+  opcional (`delay`, `mechanical` u `other`). Los oficinistas de la cooperativa
+  reciben una notificación y un correo, ven los problemas en
+  `GET /api/v1/cooperatives/me/trip-problems` y los marcan como atendidos con
+  `POST /api/v1/cooperatives/me/trip-problems/{id}/resolve`.
+
+Cada acción guarda qué persona la hizo. Por ahora se asume que todos los
+pasajeros suben en el terminal de origen.
 
 ## Búsqueda de viajes
 
