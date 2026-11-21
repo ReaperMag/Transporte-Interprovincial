@@ -15,6 +15,7 @@ from app.modules.cooperatives.router import (
 )
 from app.modules.notifications.router import router as notifications_router
 from app.modules.passengers.router import router as passengers_router
+from app.modules.reports.router import bus_staff_router as bus_staff_reports_router
 from app.modules.reservations.router import router as reservations_router
 from app.modules.routes.cooperative_router import router as cooperative_routes_router
 from app.modules.routes.geographic_admin_router import router as geographic_admin_router
@@ -66,4 +67,5 @@ router.include_router(tickets_router)
 router.include_router(trips_router)
 router.include_router(bus_staff_trips_router)
 router.include_router(office_problems_router)
+router.include_router(bus_staff_reports_router)
 router.include_router(vehicle_catalog_router)
