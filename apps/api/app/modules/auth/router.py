@@ -39,7 +39,10 @@ from app.modules.auth.service import (
 )
 from app.modules.auth.verification import InvalidVerificationCodeError
 from app.modules.passengers.linking import PassengerLinkError
-from app.modules.roles_permissions.seed import COOPERATIVE_CLERK_ROLE
+from app.modules.roles_permissions.seed import (
+    COOPERATIVE_BUS_STAFF_ROLE,
+    COOPERATIVE_CLERK_ROLE,
+)
 
 from app.modules.login_attempts.service import (
     is_login_blocked,
@@ -61,6 +64,12 @@ def _account_type_for_response(account: Account) -> str:
         and account.role.code == COOPERATIVE_CLERK_ROLE
     ):
         return "oficinista"
+    if (
+        account.account_type == AccountType.COOPERATIVE
+        and account.role is not None
+        and account.role.code == COOPERATIVE_BUS_STAFF_ROLE
+    ):
+        return "personal_bus"
     return account.account_type.value
 
 

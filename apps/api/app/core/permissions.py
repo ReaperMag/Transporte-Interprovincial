@@ -10,6 +10,7 @@ from app.modules.accounts.models import Account, AccountType
 from app.modules.roles_permissions.models import Role
 from app.modules.roles_permissions.seed import (
     COOPERATIVE_ADMIN_ROLE,
+    COOPERATIVE_BUS_STAFF_ROLE,
     COOPERATIVE_CLERK_ROLE,
 )
 from app.modules.staff.models import Staff, StaffPosition
@@ -98,6 +99,40 @@ def require_office_staff(
 ) -> Staff:
     """Require office staff with an explicit role and matching Staff tenant."""
     staff = get_office_staff(db, account)
+    if staff is None:
+        raise _forbidden()
+    return staff
+
+# Cargos que puede tener el personal del bus. Ambos usan el mismo rol.
+BUS_STAFF_POSITIONS = (StaffPosition.DRIVER, StaffPosition.CONTROLLER)
+
+
+def get_bus_staff(db: Session, account: Account) -> Staff | None:
+    """Perfil activo del personal del bus de la cuenta autenticada."""
+    if (
+        account.account_type != AccountType.COOPERATIVE
+        or account.cooperative_id is None
+        or not _has_role(account, db, COOPERATIVE_BUS_STAFF_ROLE)
+    ):
+        return None
+
+    staff = db.scalar(select(Staff).where(Staff.account_id == account.id))
+    if (
+        staff is None
+        or not staff.is_active
+        or staff.position not in BUS_STAFF_POSITIONS
+        or staff.cooperative_id != account.cooperative_id
+    ):
+        return None
+    return staff
+
+
+def require_bus_staff(
+    db: Annotated[Session, Depends(get_db)],
+    account: Annotated[Account, Depends(get_current_account)],
+) -> Staff:
+    """Solo el personal del bus, con su perfil activo, entra a estas rutas."""
+    staff = get_bus_staff(db, account)
     if staff is None:
         raise _forbidden()
     return staff

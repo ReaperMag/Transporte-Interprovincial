@@ -9,7 +9,7 @@ import { useAuth } from '../context/useAuth';
 export function LoginContainer() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { refreshSession } = useAuth();
+  const { refreshSession, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   async function handleLogin(credentials: LoginCredentials) {
@@ -18,6 +18,12 @@ export function LoginContainer() {
 
     try {
       const account = await loginAccount(credentials);
+      if (account.accountType === 'personal_bus') {
+        // El panel del personal del bus llega en la sub-issue del frontend del chofer.
+        await logout();
+        setError('El panel del personal del bus todavía no está disponible.');
+        return;
+      }
       await refreshSession();
       navigate(
         account.accountType === 'super_admin'
