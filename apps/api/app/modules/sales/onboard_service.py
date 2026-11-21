@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -36,10 +37,18 @@ from app.modules.trips.bus_staff_service import (
     get_staff_trip,
 )
 from app.modules.trips.models import Trip, TripStatus
+from app.modules.trips.service import ECUADOR_TIMEZONE
 
 
 class OnboardSaleValidationError(BusStaffTripError):
     pass
+
+
+def stored_utc_to_local(value: datetime) -> datetime:
+    """created_at se guarda en UTC sin zona horaria; se muestra en hora de Ecuador."""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(ECUADOR_TIMEZONE)
 
 
 def get_selling_trip(db: Session, staff: Staff, trip_id: int) -> Trip:
@@ -204,7 +213,7 @@ def build_onboard_sale_read(db: Session, ticket: Ticket) -> OnboardSaleRead:
         destinationDescription=ticket.destination_description,
         price=ticket.price,
         soldByName=f"{seller.first_name} {seller.last_name}" if seller else None,
-        soldAt=ticket.created_at,
+        soldAt=stored_utc_to_local(ticket.created_at),
     )
 
 

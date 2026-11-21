@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -126,6 +127,8 @@ def test_onboard_sale_charges_the_suggested_fare_in_cash(trip_in_progress):
     assert body["originCityName"] == "Latacunga"
     assert body["boardingDescription"] == "Gasolinera de Salcedo"
     assert body["soldByName"] == "Carlos Conductor"
+    sold_at = datetime.fromisoformat(body["soldAt"])
+    assert sold_at.utcoffset() == timedelta(hours=-5)
     with Session(engine) as db:
         ticket = db.get(Ticket, body["ticketId"])
         assert ticket.channel == SaleChannel.ON_BOARD
