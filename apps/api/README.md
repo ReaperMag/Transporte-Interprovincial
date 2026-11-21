@@ -403,6 +403,27 @@ asignado desde `/api/v1/bus-staff/trips`:
 Cada acción guarda qué persona la hizo. Por ahora se asume que todos los
 pasajeros suben en el terminal de origen.
 
+### Venta a bordo
+
+Con el viaje en curso, el personal del bus vende pasajes a quienes suben en
+la vía, solo en efectivo:
+
+- `GET /api/v1/bus-staff/trips/{id}/onboard-sales/options` muestra las paradas
+  registradas de la ruta, los asientos libres del tramo y la tarifa sugerida
+  de cada asiento. El tramo se indica con `originCityId` y `destinationCityId`;
+  si no se envía, se usa el recorrido completo.
+- `POST /api/v1/bus-staff/trips/{id}/onboard-sales` registra la venta con los
+  datos del pasajero, el asiento, las paradas registradas más cercanas a donde
+  subió y a donde va, y la descripción de esos lugares. Si no se envía
+  `price`, se cobra la tarifa del tramo con el descuento de la categoría; si el
+  tramo no tiene tarifa, el precio es obligatorio. El boleto queda usado, con
+  canal `on_board` y la persona que lo vendió.
+- `GET /api/v1/bus-staff/trips/{id}/onboard-sales` lista las ventas a bordo
+  del viaje con el total cobrado.
+
+Se pueden vender los asientos libres del tramo, incluidos los que se
+liberaron porque el pasajero no abordó.
+
 ## Búsqueda de viajes
 
 `GET /api/v1/trips/search` lista los viajes programados que todavía no salen.
