@@ -313,6 +313,17 @@ export function PersonalBusTripPage() {
         </section>
       )}
 
+      {trip.status !== 'scheduled' && trip.status !== 'cancelled' && (
+        <div className="oficinista-operations__actions">
+          <Link
+            className="oficinista-operations__button--secondary"
+            to={`/personal-bus/viajes/${trip.id}/reporte`}
+          >
+            Ver reporte del viaje
+          </Link>
+        </div>
+      )}
+
       {trip.status !== 'finished' && trip.status !== 'cancelled' && (
         <section className="oficinista-operations__card" id="trip-problems">
           <div className="oficinista-operations__card-heading">
