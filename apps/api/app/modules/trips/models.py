@@ -1,12 +1,12 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.buses.models import Bus, BusTemplate
 from app.modules.schedules.models import Frequency, RouteSheet
-from app.shared.base_model import str_enum
+from app.shared.base_model import BaseModel, str_enum
 from app.shared.tenant_model import TenantModel
 
 
@@ -48,3 +48,27 @@ class Trip(TenantModel):
     bus: Mapped[Bus] = relationship()
     template: Mapped[BusTemplate | None] = relationship()
     route_sheet: Mapped[RouteSheet | None] = relationship(back_populates="trips")
+
+
+class TripProblemType(enum.StrEnum):
+    DELAY = "delay"  # Retraso
+    MECHANICAL = "mechanical"  # Falla mecánica
+    OTHER = "other"
+
+
+class TripProblem(BaseModel):
+    """Problema que el personal del bus reporta a la oficina durante un viaje."""
+
+    __tablename__ = "trip_problems"
+
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), index=True)
+    reported_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("staff.id", ondelete="SET NULL")
+    )
+    problem_type: Mapped[TripProblemType | None] = mapped_column(str_enum(TripProblemType))
+    comment: Mapped[str] = mapped_column(String(500))
+    # El oficinista lo marca como atendido cuando lo resuelve
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("staff.id", ondelete="SET NULL")
+    )

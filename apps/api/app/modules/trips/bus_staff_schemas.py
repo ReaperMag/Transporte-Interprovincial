@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.modules.passengers.models import PassengerCategory
 from app.modules.tickets.models import SaleChannel, TicketStatus
-from app.modules.trips.models import TripStatus
+from app.modules.trips.models import TripProblemType, TripStatus
 
 
 class BusStaffTripSummary(BaseModel):
@@ -39,11 +39,23 @@ class BusStaffPassenger(BaseModel):
     rejectionReason: str | None
 
 
+class TripProblemRead(BaseModel):
+    id: int
+    tripId: int
+    problemType: TripProblemType | None
+    comment: str
+    reportedByName: str | None
+    reportedAt: datetime
+    resolvedAt: datetime | None
+    resolvedByName: str | None
+
+
 class BusStaffTripDetail(BusStaffTripSummary):
     boardingStartedAt: datetime | None
     startedAt: datetime | None
     finishedAt: datetime | None
     passengers: list[BusStaffPassenger]
+    problems: list[TripProblemRead] = []
 
 
 class TicketValidationRequest(BaseModel):
@@ -58,3 +70,10 @@ class TicketValidationResult(BaseModel):
     result: Literal["boarded", "needs_category_check"]
     message: str
     passenger: BusStaffPassenger
+
+
+class TripProblemCreate(BaseModel):
+    """Problema que reporta el personal del bus: el comentario es obligatorio."""
+
+    comment: str = Field(min_length=3, max_length=500)
+    problemType: TripProblemType | None = None

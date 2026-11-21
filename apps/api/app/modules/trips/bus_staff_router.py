@@ -14,6 +14,8 @@ from app.modules.trips.bus_staff_schemas import (
     BusStaffTripSummary,
     TicketValidationRequest,
     TicketValidationResult,
+    TripProblemCreate,
+    TripProblemRead,
 )
 
 
@@ -162,3 +164,23 @@ def finish_trip(
     except service.BusStaffTripError as exc:
         raise_trip_error(exc)
     return service.build_trip_detail(db, trip)
+
+
+@router.post(
+    "/{trip_id}/problems",
+    response_model=TripProblemRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def report_problem(
+    trip_id: int,
+    payload: TripProblemCreate,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """Reporta un problema del viaje; los oficinistas reciben el aviso."""
+    try:
+        problem = service.report_problem(db, staff, trip_id, payload)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)
+    return service.build_problem_read(db, problem)

@@ -20,15 +20,18 @@ from app.modules.reservations.service import (
 from app.modules.routes.models import City, Route
 from app.modules.sales.models import Payment, PaymentStatus
 from app.modules.schedules.models import Frequency
-from app.modules.staff.models import Staff
+from app.modules.accounts.models import Account
+from app.modules.staff.models import Staff, StaffPosition
 from app.modules.tickets.models import Ticket, TicketStatus
 from app.modules.trips.bus_staff_schemas import (
     BusStaffPassenger,
     BusStaffTripDetail,
     BusStaffTripSummary,
     TicketValidationResult,
+    TripProblemCreate,
+    TripProblemRead,
 )
-from app.modules.trips.models import Trip, TripStatus
+from app.modules.trips.models import Trip, TripProblem, TripProblemType, TripStatus
 
 
 # El abordaje se puede iniciar desde este tiempo antes de la salida.
@@ -174,6 +177,7 @@ def build_trip_detail(db: Session, trip: Trip) -> BusStaffTripDetail:
         startedAt=trip.started_at,
         finishedAt=trip.finished_at,
         passengers=passengers,
+        problems=[build_problem_read(db, problem) for problem in list_trip_problems(db, trip)],
     )
 
 
@@ -429,3 +433,96 @@ def finish_trip(db: Session, staff: Staff, trip_id: int) -> Trip:
     db.commit()
     db.refresh(trip)
     return trip
+
+
+PROBLEM_TYPE_LABELS = {
+    TripProblemType.DELAY: "Retraso",
+    TripProblemType.MECHANICAL: "Falla mecánica",
+    TripProblemType.OTHER: "Otro",
+}
+
+# Se puede reportar un problema mientras el viaje no ha terminado.
+REPORTABLE_TRIP_STATUSES = OPEN_TRIP_STATUSES
+
+
+def staff_name(db: Session, staff_id: int | None) -> str | None:
+    staff = db.get(Staff, staff_id) if staff_id else None
+    return f"{staff.first_name} {staff.last_name}" if staff else None
+
+
+def build_problem_read(db: Session, problem: TripProblem) -> TripProblemRead:
+    return TripProblemRead(
+        id=problem.id,
+        tripId=problem.trip_id,
+        problemType=problem.problem_type,
+        comment=problem.comment,
+        reportedByName=staff_name(db, problem.reported_by_id),
+        reportedAt=problem.created_at,
+        resolvedAt=problem.resolved_at,
+        resolvedByName=staff_name(db, problem.resolved_by_id),
+    )
+
+
+def list_trip_problems(db: Session, trip: Trip) -> list[TripProblem]:
+    return list(
+        db.scalars(
+            select(TripProblem)
+            .where(TripProblem.trip_id == trip.id)
+            .order_by(TripProblem.created_at, TripProblem.id)
+        ).all()
+    )
+
+
+def list_clerk_account_ids(db: Session, cooperative_id: int) -> list[int]:
+    """Cuentas activas de los oficinistas de la cooperativa."""
+    return list(
+        db.scalars(
+            select(Staff.account_id)
+            .join(Account, Staff.account_id == Account.id)
+            .where(
+                Staff.cooperative_id == cooperative_id,
+                Staff.position == StaffPosition.CLERK,
+                Staff.is_active.is_(True),
+                Account.is_active.is_(True),
+            )
+        ).all()
+    )
+
+
+def report_problem(
+    db: Session, staff: Staff, trip_id: int, data: TripProblemCreate
+) -> TripProblem:
+    """
+    Guarda el problema en el viaje y avisa a los oficinistas de la cooperativa
+    por notificación y correo.
+    """
+    trip = get_staff_trip(db, staff, trip_id)
+    if trip.status not in REPORTABLE_TRIP_STATUSES:
+        raise BusStaffTripConflictError("El viaje ya terminó; no se pueden reportar problemas.")
+
+    problem = TripProblem(
+        trip_id=trip.id,
+        reported_by_id=staff.id,
+        problem_type=data.problemType,
+        comment=data.comment.strip(),
+    )
+    db.add(problem)
+
+    summary = build_trip_summary(db, trip)
+    kind = PROBLEM_TYPE_LABELS[data.problemType] if data.problemType else "Sin tipo"
+    for account_id in list_clerk_account_ids(db, trip.cooperative_id):
+        notify(
+            db,
+            account_id=account_id,
+            event=NotificationEvent.TRIP_PROBLEM_REPORTED,
+            title=f"Problema en el viaje del bus {summary.busNumber}",
+            message=(
+                f"{summary.originCityName} - {summary.destinationCityName}, salida "
+                f"{as_local(trip.departure_at):%d/%m/%Y %H:%M}. {kind}: "
+                f"{problem.comment} Reportado por {staff.first_name} {staff.last_name}."
+            ),
+        )
+
+    db.commit()
+    db.refresh(problem)
+    return problem
