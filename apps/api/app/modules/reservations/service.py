@@ -28,7 +28,8 @@ from app.modules.reservations.schemas import (
 from app.modules.sales.models import Payment, PaymentMethod, PaymentStatus
 from app.modules.routes.models import Fare, Route, RouteType
 from app.modules.schedules.models import Frequency, RouteSheet, RouteSheetStatus
-from app.modules.staff.models import Staff
+from app.modules.accounts.models import Account
+from app.modules.staff.models import Staff, StaffPosition
 from app.modules.tickets.models import SaleChannel, Ticket, TicketStatus
 from app.modules.trips.models import Trip, TripStatus
 from app.modules.trips.service import ECUADOR_TIMEZONE
@@ -236,6 +237,57 @@ def cancel_expired_reviews(db: Session, current_time: datetime) -> int:
     return cancelled
 
 
+def alert_clerks_about_due_reviews(db: Session, current_time: datetime) -> int:
+    """
+    Avisa a los oficinistas de la cooperativa cuando un comprobante llega a la
+    mitad de su tiempo de revisión. Cada reserva se avisa una sola vez.
+    """
+    in_review = db.scalars(
+        select(Reservation).where(
+            Reservation.status == ReservationStatus.PAYMENT_REVIEW,
+            Reservation.review_expires_at.is_not(None),
+            Reservation.review_alert_sent_at.is_(None),
+        )
+    ).all()
+
+    alerted = 0
+    for reservation in in_review:
+        trip = db.get(Trip, reservation.trip_id)
+        cooperative = db.get(Cooperative, trip.cooperative_id)
+        deadline = as_local(reservation.review_expires_at)
+        half_time = timedelta(minutes=cooperative.payment_review_timeout_minutes / 2)
+        if current_time < deadline - half_time:
+            continue
+
+        clerk_account_ids = db.scalars(
+            select(Staff.account_id)
+            .join(Account, Staff.account_id == Account.id)
+            .where(
+                Staff.cooperative_id == trip.cooperative_id,
+                Staff.position == StaffPosition.CLERK,
+                Staff.is_active.is_(True),
+                Account.is_active.is_(True),
+            )
+        ).all()
+        for account_id in clerk_account_ids:
+            notify(
+                db,
+                account_id=account_id,
+                event=NotificationEvent.PAYMENT_REVIEW_DUE,
+                title="Comprobante por vencer",
+                message=(
+                    f"El comprobante de la reserva #{reservation.id} vence a las "
+                    f"{deadline:%H:%M}. Revísalo antes de que la reserva se cancele."
+                ),
+                reservation_id=reservation.id,
+            )
+
+        reservation.review_alert_sent_at = current_time
+        alerted += 1
+
+    return alerted
+
+
 def release_expired_reservations(db: Session) -> int:
     """
     Marca como vencidas las reservas que no se pagaron a tiempo y cancela
@@ -269,8 +321,9 @@ def release_expired_reservations(db: Session) -> int:
             expired += 1
 
     expired += cancel_expired_reviews(db, current_time)
+    alerted = alert_clerks_about_due_reviews(db, current_time)
 
-    if expired:
+    if expired or alerted:
         db.commit()
 
     return expired

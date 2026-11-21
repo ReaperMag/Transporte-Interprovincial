@@ -16,6 +16,7 @@ class NotificationEvent(enum.StrEnum):
     PAYMENT_APPROVED = "payment_approved"
     PAYMENT_REJECTED = "payment_rejected"
     PAYMENT_REVIEW_EXPIRED = "payment_review_expired"
+    PAYMENT_REVIEW_DUE = "payment_review_due"
     TICKET_ISSUED = "ticket_issued"
 
 
