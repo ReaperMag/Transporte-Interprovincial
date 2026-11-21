@@ -13,5 +13,9 @@ export function RedirectCooperativeAccount({ children }: { children: ReactNode }
     return <Navigate to="/cooperativa/panel" replace />;
   }
 
+  if (account?.accountType === 'personal_bus') {
+    return <Navigate to="/personal-bus/viajes" replace />;
+  }
+
   return children;
 }
