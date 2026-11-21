@@ -79,7 +79,17 @@ const ROUTE_SHEET_WARNING_LABELS: Record<RouteSheetWarning, string> = {
   UNASSIGNED_FREQUENCIES: 'Hay salidas sin bus disponible.',
 };
 
+type PlanningView = 'routes' | 'frequencies';
+
 export function CooperativeRoutesPage() {
+  return <RoutePlanning view="routes" />;
+}
+
+export function CooperativeFrequenciesPage() {
+  return <RoutePlanning view="frequencies" />;
+}
+
+function RoutePlanning({ view }: { view: PlanningView }) {
   const [cities, setCities] = useState<RouteCity[]>([]);
   const [geographicCatalog, setGeographicCatalog] = useState<GeographicCatalog | null>(null);
   const [routes, setRoutes] = useState<CooperativeRoute[]>([]);
@@ -255,7 +265,7 @@ export function CooperativeRoutesPage() {
 
   useEffect(() => {
     let active = true;
-    if (!selectedGroupId || !serviceDate) return;
+    if (view !== 'frequencies' || !selectedGroupId || !serviceDate) return;
 
     void getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6)
       .then((results) => {
@@ -276,7 +286,7 @@ export function CooperativeRoutesPage() {
     return () => {
       active = false;
     };
-  }, [selectedGroupId, serviceDate, planKey]);
+  }, [view, selectedGroupId, serviceDate, planKey]);
 
   /** Recarga los datos actuales del servidor sin forzar regeneración del plan */
   const handleRefreshPlan = async () => {
@@ -432,6 +442,11 @@ export function CooperativeRoutesPage() {
     });
   }, [sheetFrequencies, cities, sheetOriginFilter, sheetDestinationFilter]);
 
+  const restBusesCount =
+    groups.find((group) => String(group.id) === selectedGroupId)?.restBusesCount ??
+    plans[serviceDates[0]]?.restBusesCount ??
+    0;
+
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
   const handleCloseRouteModal = () => {
@@ -510,11 +525,13 @@ export function CooperativeRoutesPage() {
     <section className="cooperative-routes" aria-labelledby="cooperative-routes-title">
       <header className="cooperative-routes__header">
         <p className="cooperative-routes__eyebrow">Planificación operativa</p>
-        <h2 id="cooperative-routes-title">Rutas y frecuencias</h2>
+        <h2 id="cooperative-routes-title">{view === 'routes' ? 'Rutas' : 'Frecuencias'}</h2>
         <p>
-          Gestiona los recorridos, asigna grupos de buses con sus tarifas y revisa la hoja de ruta
-          diaria automatizada.
+          {view === 'routes'
+            ? 'Gestiona los recorridos y asigna grupos de buses con sus tarifas.'
+            : 'Revisa la hoja de ruta diaria de cada grupo, con sus buses y descansos.'}
         </p>
+        {view === 'routes' && (
         <div className="cooperative-routes__header-actions">
           <button
             type="button"
@@ -550,6 +567,7 @@ export function CooperativeRoutesPage() {
             </p>
           )}
         </div>
+        )}
       </header>
 
       {/* Notificaciones flotantes / modales emergentes */}
@@ -630,10 +648,10 @@ export function CooperativeRoutesPage() {
         <p role="status">Cargando rutas, catálogo geográfico y grupos...</p>
       ) : (
         <>
-          {/* BLOQUE 1: RUTAS REGISTRADAS */}
+          {/* RUTAS REGISTRADAS */}
+          {view === 'routes' && (
           <section className="cooperative-routes__step" aria-labelledby="routes-builder-title">
             <div className="cooperative-routes__step-heading">
-              <span>1</span>
               <h3 id="routes-builder-title">Rutas registradas</h3>
             </div>
             <RouteFilters
@@ -750,10 +768,12 @@ export function CooperativeRoutesPage() {
             </div>
           </section>
 
-          {/* BLOQUE 2: HOJA DE RUTA DEL GRUPO */}
+          )}
+
+          {/* FRECUENCIAS: HOJA DE RUTA DEL GRUPO */}
+          {view === 'frequencies' && (
           <section className="cooperative-routes__step" aria-labelledby="route-sheet-title">
             <div className="cooperative-routes__step-heading">
-              <span>2</span>
               <h3 id="route-sheet-title">Hoja de ruta del grupo</h3>
             </div>
             <div className="cooperative-routes__sheet-controls">
@@ -855,12 +875,7 @@ export function CooperativeRoutesPage() {
             </div>
             <div className="cooperative-routes__sheet-meta">
               <span>
-                Buses en descanso por hoja:{' '}
-                <strong>
-                  {groups.find((group) => String(group.id) === selectedGroupId)?.restBusesCount ??
-                    plans[serviceDates[0]]?.restBusesCount ??
-                    0}
-                </strong>
+                Buses en descanso por hoja: <strong>{restBusesCount}</strong>
               </span>
               <Link to="/cooperativa/grupos">Configurar en el grupo</Link>
             </div>
@@ -987,35 +1002,34 @@ export function CooperativeRoutesPage() {
                           </tr>
                         ))
                       )}
+                      {Array.from({ length: restBusesCount }, (_, index) => (
+                        <tr key={`rest-${index}`} className="cooperative-routes__rest-row">
+                          <td>
+                            <strong>Descanso</strong>
+                          </td>
+                          <td>—</td>
+                          <td>—</td>
+                          {serviceDates.map((day) => {
+                            const bus = plans[day]?.standbyBuses[index];
+                            return (
+                              <td key={day}>
+                                {bus ? `Bus ${bus.number}` : <span aria-label="Sin bus">—</span>}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
-                </div>
-
-                <div className="cooperative-routes__standby-summary">
-                  <h5>Buses en descanso por día:</h5>
-                  <div className="cooperative-routes__standby-chips">
-                    {serviceDates.map((day) => {
-                      const dayPlan = plans[day];
-                      return (
-                        <div key={day} className="cooperative-routes__standby-chip">
-                          <strong>{dayLabel(day)}:</strong>
-                          <span>
-                            {dayPlan && dayPlan.standbyBuses.length > 0
-                              ? dayPlan.standbyBuses.map((b) => `Bus ${b.number}`).join(', ')
-                              : 'Sin descanso'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               </>
             )}
           </section>
+          )}
         </>
       )}
 
-      {isRouteModalOpen && (
+      {view === 'routes' && isRouteModalOpen && (
         <CreateRouteModal
           groups={groups}
           catalog={geographicCatalog}
@@ -1025,7 +1039,7 @@ export function CooperativeRoutesPage() {
         />
       )}
 
-      {configuringRoute && (
+      {view === 'routes' && configuringRoute && (
         <ConfigureRouteModal
           route={configuringRoute}
           groups={groups}

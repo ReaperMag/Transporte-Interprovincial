@@ -12,7 +12,8 @@ const sections: readonly SidebarSection[] = [
   { to: '/cooperativa/buses', label: 'Buses', icon: 'bus' },
   { to: '/cooperativa/grupos', label: 'Grupos de buses', icon: 'groups' },
   { to: '/cooperativa/tipos-asiento', label: 'Tipos de asiento', icon: 'bus' },
-  { to: '/cooperativa/rutas', label: 'Rutas y frecuencias', icon: 'route' },
+  { to: '/cooperativa/rutas', label: 'Rutas', icon: 'route' },
+  { to: '/cooperativa/frecuencias', label: 'Frecuencias', icon: 'route' },
   { to: '/cooperativa/oficinistas', label: 'Oficinistas', icon: 'users' },
   { to: '/cooperativa/configuracion', label: 'Configuración', icon: 'settings' },
 ];
