@@ -8,7 +8,12 @@ from app.core.database import get_db
 from app.core.permissions import require_bus_staff
 from app.modules.staff.models import Staff
 from app.modules.trips import bus_staff_service as service
-from app.modules.trips.bus_staff_schemas import BusStaffTripDetail, BusStaffTripSummary
+from app.modules.trips.bus_staff_schemas import (
+    BusStaffTripDetail,
+    BusStaffTripSummary,
+    TicketValidationRequest,
+    TicketValidationResult,
+)
 
 
 router = APIRouter(prefix="/bus-staff/trips", tags=["Personal del bus"])
@@ -69,3 +74,21 @@ def start_boarding(
     except service.BusStaffTripError as exc:
         raise_trip_error(exc)
     return service.build_trip_detail(db, trip)
+
+
+@router.post("/{trip_id}/tickets/validate", response_model=TicketValidationResult)
+def validate_ticket(
+    trip_id: int,
+    payload: TicketValidationRequest,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """
+    Valida el código del QR o el escrito a mano. Los boletos con descuento
+    devuelven needs_category_check para revisar el documento antes de subir.
+    """
+    try:
+        return service.validate_ticket(db, staff, trip_id, payload.code)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)

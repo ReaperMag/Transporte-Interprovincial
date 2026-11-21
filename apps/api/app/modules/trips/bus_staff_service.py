@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.modules.buses.models import Bus, TemplateSeat
 from app.modules.notifications.models import NotificationEvent
 from app.modules.notifications.service import notify
-from app.modules.passengers.models import Passenger
+from app.modules.passengers.models import Passenger, PassengerCategory
 from app.modules.reservations.models import Reservation, ReservationStatus
 from app.modules.reservations.service import (
     as_local,
@@ -22,6 +22,7 @@ from app.modules.trips.bus_staff_schemas import (
     BusStaffPassenger,
     BusStaffTripDetail,
     BusStaffTripSummary,
+    TicketValidationResult,
 )
 from app.modules.trips.models import Trip, TripStatus
 
@@ -247,3 +248,64 @@ def start_boarding(db: Session, staff: Staff, trip_id: int) -> Trip:
     db.commit()
     db.refresh(trip)
     return trip
+
+
+INVALID_TICKET_MESSAGES = {
+    TicketStatus.USED: "Este boleto ya se usó para subir al bus.",
+    TicketStatus.CANCELLED: "Este boleto fue cancelado y ya no es válido.",
+    TicketStatus.REJECTED: (
+        "Este boleto fue rechazado porque la categoría no corresponde. "
+        "La persona debe cambiarlo en la oficina."
+    ),
+    TicketStatus.NO_SHOW: "El pasajero no abordó a tiempo y el boleto ya no es válido.",
+}
+
+
+def ensure_boarding(trip: Trip) -> None:
+    if trip.status != TripStatus.BOARDING:
+        raise BusStaffTripConflictError(
+            "Los boletos solo se validan mientras el viaje está en abordaje."
+        )
+
+
+def mark_boarded(ticket: Ticket, staff: Staff) -> None:
+    ticket.status = TicketStatus.USED
+    ticket.validated_at = now_local()
+    ticket.validated_by_id = staff.id
+
+
+def validate_ticket(
+    db: Session, staff: Staff, trip_id: int, code: str
+) -> TicketValidationResult:
+    """
+    Valida el boleto leído del QR. Si es de tarifa normal, queda usado de una
+    vez. Si tiene descuento, primero se revisa el documento de la persona.
+    """
+    trip = get_staff_trip(db, staff, trip_id)
+    ensure_boarding(trip)
+
+    ticket = db.scalar(select(Ticket).where(Ticket.code == code.strip()))
+    if ticket is None:
+        raise BusStaffTicketNotFoundError("No existe un boleto con ese código.")
+
+    if ticket.trip_id != trip.id:
+        raise BusStaffTripConflictError("El boleto es de otro viaje.")
+
+    if ticket.status != TicketStatus.ISSUED:
+        raise BusStaffTripConflictError(INVALID_TICKET_MESSAGES[ticket.status])
+
+    if ticket.passenger_category != PassengerCategory.REGULAR:
+        return TicketValidationResult(
+            result="needs_category_check",
+            message="Verifica la cédula o el carné antes de dejarlo subir.",
+            passenger=build_passenger(db, ticket),
+        )
+
+    mark_boarded(ticket, staff)
+    db.commit()
+    db.refresh(ticket)
+    return TicketValidationResult(
+        result="boarded",
+        message="Boleto válido.",
+        passenger=build_passenger(db, ticket),
+    )

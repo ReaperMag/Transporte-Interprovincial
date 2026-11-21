@@ -1,7 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.modules.passengers.models import PassengerCategory
 from app.modules.tickets.models import SaleChannel, TicketStatus
@@ -43,3 +44,17 @@ class BusStaffTripDetail(BusStaffTripSummary):
     startedAt: datetime | None
     finishedAt: datetime | None
     passengers: list[BusStaffPassenger]
+
+
+class TicketValidationRequest(BaseModel):
+    """Código leído del QR o escrito a mano por el personal del bus."""
+
+    code: str = Field(min_length=1, max_length=64)
+
+
+class TicketValidationResult(BaseModel):
+    # boarded: el boleto quedó usado y la persona sube.
+    # needs_category_check: hay que revisar la cédula o el carné antes de subir.
+    result: Literal["boarded", "needs_category_check"]
+    message: str
+    passenger: BusStaffPassenger
