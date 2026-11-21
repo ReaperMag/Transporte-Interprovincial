@@ -6,6 +6,7 @@ from app.modules.roles_permissions.models import Role
 
 COOPERATIVE_ADMIN_ROLE = "cooperative_admin"
 COOPERATIVE_CLERK_ROLE = "cooperative_clerk"
+COOPERATIVE_BUS_STAFF_ROLE = "cooperative_bus_staff"
 
 
 DEFAULT_ROLES = (
@@ -18,6 +19,11 @@ DEFAULT_ROLES = (
         COOPERATIVE_CLERK_ROLE,
         "Oficinista de cooperativa",
         "Opera ventas, reservas y comprobantes de su cooperativa.",
+    ),
+    (
+        COOPERATIVE_BUS_STAFF_ROLE,
+        "Personal del bus",
+        "Conductor o controlador: maneja los viajes del bus que tiene asignado.",
     ),
 )
 
