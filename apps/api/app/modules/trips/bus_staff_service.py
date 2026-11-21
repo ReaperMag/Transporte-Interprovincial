@@ -388,3 +388,29 @@ def reject_ticket_category(
     db.commit()
     db.refresh(ticket)
     return build_passenger(db, ticket)
+
+
+def start_trip(db: Session, staff: Staff, trip_id: int) -> Trip:
+    """
+    Termina el abordaje y pone el viaje en curso. Los boletos de quienes no
+    abordaron, incluidos los rechazados por categoría, quedan como no abordados
+    y sus asientos se liberan para la venta a bordo.
+    """
+    trip = get_staff_trip(db, staff, trip_id)
+    ensure_boarding(trip)
+
+    for ticket in db.scalars(
+        select(Ticket).where(
+            Ticket.trip_id == trip.id,
+            Ticket.status.in_((TicketStatus.ISSUED, TicketStatus.REJECTED)),
+        )
+    ).all():
+        ticket.status = TicketStatus.NO_SHOW
+
+    trip.status = TripStatus.IN_PROGRESS
+    trip.started_at = now_local()
+    trip.started_by_id = staff.id
+
+    db.commit()
+    db.refresh(trip)
+    return trip

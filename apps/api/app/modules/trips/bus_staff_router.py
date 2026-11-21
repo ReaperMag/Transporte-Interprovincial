@@ -132,3 +132,18 @@ def reject_ticket_category(
         return service.reject_ticket_category(db, staff, trip_id, ticket_id)
     except service.BusStaffTripError as exc:
         raise_trip_error(exc)
+
+
+@router.post("/{trip_id}/start", response_model=BusStaffTripDetail)
+def start_trip(
+    trip_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    staff: Annotated[Staff, Depends(require_bus_staff)],
+    _: Annotated[None, Depends(validate_request_origin)],
+):
+    """Inicia el viaje y libera los asientos de quienes no abordaron."""
+    try:
+        trip = service.start_trip(db, staff, trip_id)
+    except service.BusStaffTripError as exc:
+        raise_trip_error(exc)
+    return service.build_trip_detail(db, trip)
