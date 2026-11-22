@@ -115,7 +115,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
   const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
-  const [startingCities, setStartingCities] = useState<Record<string, Record<number, string>>>({});
+  const [standbySlots, setStandbySlots] = useState<Record<string, string[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isAutoAssigning, setIsAutoAssigning] = useState(false);
@@ -199,6 +199,16 @@ function RoutePlanning({ view }: { view: PlanningView }) {
   /** Solo actualiza el estado visual; NO guarda ni publica nada en el servidor. */
   const displayPlanResults = (results: RouteSheet[]) => {
     setPlans(Object.fromEntries(results.map((plan) => [plan.serviceDate, plan])));
+    setStandbySlots(
+      Object.fromEntries(
+        results.map((plan) => [
+          plan.serviceDate,
+          Array.from({ length: plan.restBusesCount }, (_, index) =>
+            plan.standbyBuses[index] ? String(plan.standbyBuses[index].id) : '',
+          ),
+        ]),
+      ),
+    );
     setAssignedBuses(
       Object.fromEntries(
         results.map((plan) => [
@@ -208,16 +218,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
               frequency.frequencyId,
               frequency.busId ? String(frequency.busId) : '',
             ]),
-          ),
-        ]),
-      ),
-    );
-    setStartingCities(
-      Object.fromEntries(
-        results.map((plan) => [
-          plan.serviceDate,
-          Object.fromEntries(
-            plan.startingLocations.map((item) => [item.busId, String(item.cityId)]),
           ),
         ]),
       ),
@@ -468,56 +468,118 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     void handleAutoAssign();
   };
 
+  /** Guarda (y publica si está completa) la hoja de un día con las asignaciones y descansos dados. */
+  const persistDay = async (
+    day: string,
+    plan: RouteSheet,
+    dayAssignments: Record<number, string>,
+    standbyIds: number[],
+  ) => {
+    const dayBusIds = [
+      ...new Set(Object.values(dayAssignments).filter(Boolean).map(Number)),
+    ].sort((first, second) => first - second);
+
+    // La ubicación inicial de cada bus es la ciudad de salida de su primer servicio del día.
+    const originByRouteId = new Map(routes.map((route) => [route.id, route.originCityId]));
+    const firstOriginByBus = new Map<number, number>();
+    [...plan.frequencies]
+      .sort((first, second) => first.departureTime.localeCompare(second.departureTime))
+      .forEach((frequency) => {
+        const assigned = dayAssignments[frequency.frequencyId];
+        const origin = originByRouteId.get(frequency.routeId);
+        if (assigned && origin !== undefined && !firstOriginByBus.has(Number(assigned))) {
+          firstOriginByBus.set(Number(assigned), origin);
+        }
+      });
+
+    const saved = await saveRouteSheet({
+      busGroupId: Number(selectedGroupId),
+      serviceDate: day,
+      assignments: plan.frequencies.map((frequency) => ({
+        frequencyId: frequency.frequencyId,
+        busId: dayAssignments[frequency.frequencyId]
+          ? Number(dayAssignments[frequency.frequencyId])
+          : null,
+      })),
+      startingLocations: dayBusIds.map((busIdNum) => ({
+        busId: busIdNum,
+        cityId: Number(
+          firstOriginByBus.get(busIdNum) ??
+            plan.startingLocations.find((loc) => loc.busId === busIdNum)?.cityId ??
+            cities[0]?.id,
+        ),
+      })),
+      standbyBusIds: standbyIds,
+      mode: plan.mode,
+    });
+
+    const allAssigned = plan.frequencies.every((f) => Boolean(dayAssignments[f.frequencyId]));
+    const result =
+      allAssigned && saved.id && saved.status !== 'published'
+        ? await publishRouteSheet(saved.id)
+        : saved;
+    setPlans((current) => ({ ...current, [day]: result }));
+    setStandbySlots((current) => ({
+      ...current,
+      [day]: Array.from({ length: result.restBusesCount }, (_, index) =>
+        result.standbyBuses[index] ? String(result.standbyBuses[index].id) : '',
+      ),
+    }));
+  };
+
   const handleBusAssignmentChange = async (day: string, frequencyId: number, busId: string) => {
     const updatedDayAssignments = {
       ...(assignedBuses[day] ?? {}),
       [frequencyId]: busId,
     };
+    const plan = plans[day];
+    if (busId && (standbySlots[day] ?? []).includes(busId)) {
+      setError('Ese bus está en descanso este día; no puede asignarse a una frecuencia.');
+      return;
+    }
     setAssignedBuses((current) => ({
       ...current,
       [day]: updatedDayAssignments,
     }));
-
-    const plan = plans[day];
     if (!plan) return;
-    const dayStartingCities = startingCities[day] ?? {};
-    const dayBusIds = [
-      ...new Set(Object.values(updatedDayAssignments).filter(Boolean).map(Number)),
-    ].sort((first, second) => first - second);
 
     try {
-      const saved = await saveRouteSheet({
-        busGroupId: Number(selectedGroupId),
-        serviceDate: day,
-        assignments: plan.frequencies.map((frequency) => ({
-          frequencyId: frequency.frequencyId,
-          busId: updatedDayAssignments[frequency.frequencyId]
-            ? Number(updatedDayAssignments[frequency.frequencyId])
-            : null,
-        })),
-        startingLocations: dayBusIds.map((busIdNum) => ({
-          busId: busIdNum,
-          cityId: Number(
-            dayStartingCities[busIdNum] ??
-              plan.startingLocations.find((loc) => loc.busId === busIdNum)?.cityId ??
-              cities[0]?.id,
-          ),
-        })),
-        standbyBusIds: plan.standbyBuses.map((bus) => bus.id),
-        mode: plan.mode,
-      });
-
-      const allAssigned = plan.frequencies.every((f) =>
-        Boolean(updatedDayAssignments[f.frequencyId]),
+      await persistDay(
+        day,
+        plan,
+        updatedDayAssignments,
+        (standbySlots[day] ?? []).filter(Boolean).map(Number),
       );
-      if (allAssigned && saved.id && saved.status !== 'published') {
-        const published = await publishRouteSheet(saved.id);
-        setPlans((current) => ({ ...current, [day]: published }));
-      } else {
-        setPlans((current) => ({ ...current, [day]: saved }));
-      }
     } catch (saveError) {
-      console.warn('Auto-save/publish notice:', saveError);
+      setError(
+        saveError instanceof Error ? saveError.message : 'No fue posible guardar la asignación.',
+      );
+    }
+  };
+
+  const handleStandbyChange = async (day: string, slotIndex: number, busId: string) => {
+    const plan = plans[day];
+    if (!plan) return;
+    const previousSlots = standbySlots[day] ?? [];
+    const dayAssignments = assignedBuses[day] ?? {};
+    if (busId && previousSlots.some((id, index) => id === busId && index !== slotIndex)) {
+      setError('Un mismo bus no puede estar dos veces en descanso el mismo día.');
+      return;
+    }
+    if (busId && Object.values(dayAssignments).includes(busId)) {
+      setError('Ese bus ya tiene una frecuencia asignada este día; no puede quedar en descanso.');
+      return;
+    }
+    const nextSlots = previousSlots.map((id, index) => (index === slotIndex ? busId : id));
+    setStandbySlots((current) => ({ ...current, [day]: nextSlots }));
+    setError(null);
+    try {
+      await persistDay(day, plan, dayAssignments, nextSlots.filter(Boolean).map(Number));
+    } catch (saveError) {
+      setStandbySlots((current) => ({ ...current, [day]: previousSlots }));
+      setError(
+        saveError instanceof Error ? saveError.message : 'No fue posible guardar el descanso.',
+      );
     }
   };
 
@@ -786,7 +848,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                     setFrequencies([]);
                     setPlans({});
                     setAssignedBuses({});
-                    setStartingCities({});
                     setSheetOriginFilter(EMPTY_LOCATION_FILTER);
                     setSheetDestinationFilter(EMPTY_LOCATION_FILTER);
                   }}
@@ -808,7 +869,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                     setServiceDate(event.target.value);
                     setPlans({});
                     setAssignedBuses({});
-                    setStartingCities({});
                   }}
                 />
               </label>
@@ -987,7 +1047,16 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                                       <option
                                         value={bus.id}
                                         key={bus.id}
-                                        disabled={!bus.isActive || bus.status !== 'operativo'}
+                                        disabled={
+                                          !bus.isActive ||
+                                          bus.status !== 'operativo' ||
+                                          (standbySlots[day] ?? []).includes(String(bus.id)) ||
+                                          Object.entries(assignedBuses[day] ?? {}).some(
+                                            ([otherId, otherBus]) =>
+                                              otherBus === String(bus.id) &&
+                                              Number(otherId) !== frequency.frequencyId,
+                                          )
+                                        }
                                       >
                                         Bus {bus.number}
                                         {bus.status !== 'operativo'
@@ -1010,10 +1079,42 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                           <td>—</td>
                           <td>—</td>
                           {serviceDates.map((day) => {
-                            const bus = plans[day]?.standbyBuses[index];
+                            const dayPlan = plans[day];
+                            const slots = standbySlots[day] ?? [];
+                            const assignedIds = new Set(Object.values(assignedBuses[day] ?? {}));
+                            const canEditRest =
+                              dayPlan?.status !== 'published' || Boolean(dayPlan?.canReassign);
                             return (
                               <td key={day}>
-                                {bus ? `Bus ${bus.number}` : <span aria-label="Sin bus">—</span>}
+                                <select
+                                  aria-label={`Descanso ${index + 1} ${dayLabel(day)}`}
+                                  value={slots[index] ?? ''}
+                                  onChange={(event) =>
+                                    void handleStandbyChange(day, index, event.target.value)
+                                  }
+                                  disabled={!canEditRest}
+                                >
+                                  <option value="">Sin asignar</option>
+                                  {dayPlan?.buses.map((bus) => {
+                                    const busId = String(bus.id);
+                                    const takenElsewhere =
+                                      assignedIds.has(busId) ||
+                                      slots.some((id, i) => id === busId && i !== index);
+                                    return (
+                                      <option
+                                        value={bus.id}
+                                        key={bus.id}
+                                        disabled={
+                                          takenElsewhere ||
+                                          !bus.isActive ||
+                                          bus.status !== 'operativo'
+                                        }
+                                      >
+                                        Bus {bus.number}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
                               </td>
                             );
                           })}

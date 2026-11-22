@@ -516,7 +516,7 @@ def test_route_sheet_rejects_route_conflict_and_allows_replacement_bus(test_envi
         headers={"Origin": settings.frontend_origin},
     )
     assert conflict.status_code == 409
-    assert "se cruza" in conflict.json()["detail"]
+    assert "una vez al día" in conflict.json()["detail"]
 
     saved = client.put(
         f"{PLANNING_URL}/route-sheets",
