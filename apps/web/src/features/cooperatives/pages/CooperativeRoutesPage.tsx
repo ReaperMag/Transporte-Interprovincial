@@ -116,6 +116,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
   const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [standbySlots, setStandbySlots] = useState<Record<string, string[]>>({});
+  const [publishingDay, setPublishingDay] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isAutoAssigning, setIsAutoAssigning] = useState(false);
@@ -225,13 +226,12 @@ function RoutePlanning({ view }: { view: PlanningView }) {
   };
 
   /**
-   * Actualiza el estado visual Y guarda/publica automáticamente las hojas
-   * que tienen todos los buses asignados.
+   * Actualiza el estado visual Y guarda como borrador las hojas que tienen
+   * todos los buses asignados. La publicación es siempre manual.
    */
   const applyPlanResults = async (results: RouteSheet[], active = true) => {
     displayPlanResults(results);
 
-    // Publicación automática de hojas generadas completas
     for (const plan of results) {
       if (
         plan.status !== 'published' &&
@@ -250,11 +250,8 @@ function RoutePlanning({ view }: { view: PlanningView }) {
             standbyBusIds: plan.standbyBuses.map((b) => b.id),
             mode: plan.mode,
           });
-          if (saved.id && saved.status !== 'published') {
-            const published = await publishRouteSheet(saved.id);
-            if (active) {
-              setPlans((current) => ({ ...current, [plan.serviceDate]: published }));
-            }
+          if (active) {
+            setPlans((current) => ({ ...current, [plan.serviceDate]: saved }));
           }
         } catch {
           // Ignorado si faltan tarifas
@@ -468,7 +465,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     void handleAutoAssign();
   };
 
-  /** Guarda (y publica si está completa) la hoja de un día con las asignaciones y descansos dados. */
+  /** Guarda como borrador la hoja de un día con las asignaciones y descansos dados. */
   const persistDay = async (
     day: string,
     plan: RouteSheet,
@@ -513,11 +510,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
       mode: plan.mode,
     });
 
-    const allAssigned = plan.frequencies.every((f) => Boolean(dayAssignments[f.frequencyId]));
-    const result =
-      allAssigned && saved.id && saved.status !== 'published'
-        ? await publishRouteSheet(saved.id)
-        : saved;
+    const result = saved;
     setPlans((current) => ({ ...current, [day]: result }));
     setStandbySlots((current) => ({
       ...current,
@@ -525,6 +518,34 @@ function RoutePlanning({ view }: { view: PlanningView }) {
         result.standbyBuses[index] ? String(result.standbyBuses[index].id) : '',
       ),
     }));
+    return result;
+  };
+
+  const handlePublishDay = async (day: string) => {
+    const plan = plans[day];
+    if (!plan) return;
+    setPublishingDay(day);
+    setError(null);
+    try {
+      const sheet = await persistDay(
+        day,
+        plan,
+        assignedBuses[day] ?? {},
+        (standbySlots[day] ?? []).filter(Boolean).map(Number),
+      );
+      if (!sheet.id) throw new Error('No fue posible guardar la hoja antes de publicarla.');
+      const published = await publishRouteSheet(sheet.id);
+      setPlans((current) => ({ ...current, [day]: published }));
+      setSuccess(`Hoja del ${dayLabel(day)} publicada.`);
+    } catch (publishError) {
+      setError(
+        publishError instanceof Error
+          ? publishError.message
+          : 'No fue posible publicar la hoja del día.',
+      );
+    } finally {
+      setPublishingDay(null);
+    }
   };
 
   const handleBusAssignmentChange = async (day: string, frequencyId: number, busId: string) => {
@@ -1120,6 +1141,46 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                           })}
                         </tr>
                       ))}
+                      <tr className="cooperative-routes__publish-row">
+                        <td>
+                          <strong>Publicar hoja</strong>
+                        </td>
+                        <td>—</td>
+                        <td>—</td>
+                        {serviceDates.map((day) => {
+                          const dayPlan = plans[day];
+                          const isPublished = dayPlan?.status === 'published';
+                          const allAssigned =
+                            Boolean(dayPlan) &&
+                            dayPlan.frequencies.length > 0 &&
+                            dayPlan.frequencies.every((frequency) =>
+                              Boolean(assignedBuses[day]?.[frequency.frequencyId]),
+                            );
+                          return (
+                            <td key={day}>
+                              {isPublished ? (
+                                <span className="cooperative-routes__badge cooperative-routes__badge--success">
+                                  Publicada
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="cooperative-routes__button cooperative-routes__button--small"
+                                  onClick={() => void handlePublishDay(day)}
+                                  disabled={!allAssigned || publishingDay !== null}
+                                  title={
+                                    allAssigned
+                                      ? 'Publica la hoja de este día'
+                                      : 'Asigna un bus a todas las frecuencias para publicar'
+                                  }
+                                >
+                                  {publishingDay === day ? 'Publicando...' : 'Publicar'}
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
                     </tbody>
                   </table>
                 </div>
