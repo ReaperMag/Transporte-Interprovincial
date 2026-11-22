@@ -1,17 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
-  BUS_STAFF_POSITION_LABELS,
   BusStaffApiError,
   createBusStaff,
   getBusStaff,
   updateBusStaff,
 } from '../services/busStaff.service';
-import type {
-  BusStaffMember,
-  BusStaffPosition,
-  BusStaffUpdate,
-} from '../services/busStaff.service';
+import type { BusStaffMember, BusStaffUpdate } from '../services/busStaff.service';
 import { getCooperativeBuses } from '../services/bus.service';
 import type { CooperativeBus } from '../services/bus.service';
 import {
@@ -34,7 +29,6 @@ interface FormValues {
   idNumber: string;
   email: string;
   phone: string;
-  position: BusStaffPosition;
   assignedBusId: string;
   password: string;
   confirmPassword: string;
@@ -46,7 +40,6 @@ const emptyValues: FormValues = {
   idNumber: '',
   email: '',
   phone: '',
-  position: 'driver',
   assignedBusId: '',
   password: '',
   confirmPassword: '',
@@ -60,7 +53,6 @@ function formValuesFromMember(member?: BusStaffMember): FormValues {
         idNumber: member.idNumber,
         email: member.email,
         phone: member.phone ?? '',
-        position: member.position,
         assignedBusId: member.assignedBus ? String(member.assignedBus.id) : '',
         password: '',
         confirmPassword: '',
@@ -191,7 +183,7 @@ export function CooperativeBusStaffPage() {
         <div>
           <p className="office-users-page__kicker">Administración de la cooperativa</p>
           <h1>Personal del bus</h1>
-          <p>Crea las cuentas de los conductores y controladores, y asígnales el bus.</p>
+          <p>Crea las cuentas del personal del bus y asígnales el bus en el que trabajan.</p>
         </div>
         <button
           className="office-users-page__create"
@@ -251,7 +243,6 @@ export function CooperativeBusStaffPage() {
             <thead>
               <tr>
                 <th>Nombres y apellidos</th>
-                <th>Cargo</th>
                 <th>Cédula</th>
                 <th>Correo electrónico</th>
                 <th>Bus asignado</th>
@@ -262,13 +253,13 @@ export function CooperativeBusStaffPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td className="office-users-table__message" colSpan={7}>
+                  <td className="office-users-table__message" colSpan={6}>
                     Cargando personal del bus...
                   </td>
                 </tr>
               ) : filteredMembers.length === 0 ? (
                 <tr>
-                  <td className="office-users-table__message" colSpan={7}>
+                  <td className="office-users-table__message" colSpan={6}>
                     {search
                       ? 'No hay resultados para la búsqueda.'
                       : 'Aún no hay personal del bus registrado.'}
@@ -282,7 +273,6 @@ export function CooperativeBusStaffPage() {
                         {member.firstName} {member.lastName}
                       </strong>
                     </td>
-                    <td>{BUS_STAFF_POSITION_LABELS[member.position]}</td>
                     <td>{member.idNumber}</td>
                     <td>{member.email}</td>
                     <td>
@@ -417,7 +407,6 @@ function BusStaffDialog({ buses, member, mode, onClose, onSaved }: BusStaffDialo
       idNumber: values.idNumber.trim(),
       email: values.email.trim(),
       phone: values.phone.trim(),
-      position: values.position,
       assignedBusId: Number(values.assignedBusId),
     };
 
@@ -442,9 +431,6 @@ function BusStaffDialog({ buses, member, mode, onClose, onSaved }: BusStaffDialo
           return;
         }
         changes.phone = commonValues.phone;
-      }
-      if (commonValues.position !== initial.position) {
-        changes.position = commonValues.position;
       }
       if (values.assignedBusId !== initial.assignedBusId) {
         changes.assignedBusId = commonValues.assignedBusId;
@@ -558,20 +544,6 @@ function BusStaffDialog({ buses, member, mode, onClose, onSaved }: BusStaffDialo
                 value={values.phone}
                 disabled={isSaving}
               />
-            </label>
-            <label>
-              Cargo
-              <select
-                className="bus-staff-dialog__select"
-                onChange={(event) =>
-                  updateValue('position', event.target.value as BusStaffPosition)
-                }
-                value={values.position}
-                disabled={isSaving}
-              >
-                <option value="driver">{BUS_STAFF_POSITION_LABELS.driver}</option>
-                <option value="controller">{BUS_STAFF_POSITION_LABELS.controller}</option>
-              </select>
             </label>
             <label>
               Bus asignado

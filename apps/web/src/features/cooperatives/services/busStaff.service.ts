@@ -1,5 +1,3 @@
-export type BusStaffPosition = 'driver' | 'controller';
-
 export interface AssignedBus {
   id: number;
   number: string;
@@ -14,7 +12,6 @@ export interface BusStaffMember {
   idNumber: string;
   email: string;
   phone: string | null;
-  position: BusStaffPosition;
   isActive: boolean;
   assignedBus: AssignedBus | null;
 }
@@ -25,7 +22,6 @@ export interface BusStaffCreate {
   idNumber: string;
   email: string;
   phone: string;
-  position: BusStaffPosition;
   assignedBusId: number;
   password: string;
   confirmPassword: string;
@@ -34,11 +30,6 @@ export interface BusStaffCreate {
 export type BusStaffUpdate = Partial<
   Omit<BusStaffCreate, 'password' | 'confirmPassword'> & { isActive: boolean }
 >;
-
-export const BUS_STAFF_POSITION_LABELS: Record<BusStaffPosition, string> = {
-  driver: 'Conductor',
-  controller: 'Controlador',
-};
 
 export class BusStaffApiError extends Error {
   constructor(
