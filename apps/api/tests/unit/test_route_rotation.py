@@ -98,17 +98,18 @@ def test_conflict_leaves_frequency_without_a_bus():
     assert rotation.UNASSIGNED_FREQUENCIES in plan.warnings
 
 
-def test_bus_cannot_start_from_another_city_on_the_same_day():
+def test_bus_is_used_only_once_per_day():
     buses = [build_bus(1)]
     frequencies = [
         build_frequency(1, 8, origin=1, destination=2),
-        build_frequency(2, 10, origin=3, destination=4),
+        build_frequency(2, 15, origin=2, destination=1),
     ]
 
     plan = rotation.build_daily_plan(buses, frequencies, date(2025, 1, 6), 0)
 
     assert plan.assignments[0].bus_id == 1
     assert plan.assignments[1].bus_id is None
+    assert rotation.UNASSIGNED_FREQUENCIES in plan.warnings
 
 
 def test_non_operational_buses_are_excluded():
