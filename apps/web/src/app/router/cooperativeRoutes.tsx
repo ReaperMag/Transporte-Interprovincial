@@ -8,6 +8,7 @@ import { CooperativeLayout } from '../../features/cooperatives/components/Cooper
 import { CooperativeBusesPage } from '../../features/cooperatives/pages/CooperativeBusesPage';
 import { CooperativeRoutesPage } from '../../features/cooperatives/pages/CooperativeRoutesPage';
 import { CooperativeOfficeUsersPage } from '../../features/cooperatives/pages/CooperativeOfficeUsersPage';
+import { CooperativeBusStaffPage } from '../../features/cooperatives/pages/CooperativeBusStaffPage';
 
 export const cooperativeRoutes = (
   <Route
@@ -26,5 +27,6 @@ export const cooperativeRoutes = (
     <Route path="buses" element={<CooperativeBusesPage />} />
     <Route path="tipos-asiento" element={<CooperativeSeatTypesPage />} />
     <Route path="oficinistas" element={<CooperativeOfficeUsersPage />} />
+    <Route path="personal-bus" element={<CooperativeBusStaffPage />} />
   </Route>
 );
