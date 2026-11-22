@@ -53,6 +53,20 @@ function localDateValue(): string {
   return new Date(now.getTime() - localOffset).toISOString().slice(0, 10);
 }
 
+function tomorrowValue(): string {
+  const [year, month, day] = localDateValue().split('-').map(Number);
+  const result = new Date(year, month - 1, day + 1, 12);
+  return `${result.getFullYear()}-${String(result.getMonth() + 1).padStart(2, '0')}-${String(result.getDate()).padStart(2, '0')}`;
+}
+
+function daysBetween(start: string, end: string): number {
+  const startDate = new Date(`${start}T12:00:00`).getTime();
+  const endDate = new Date(`${end}T12:00:00`).getTime();
+  return Math.round((endDate - startDate) / 86_400_000);
+}
+
+const MAX_PERIOD_DAYS = 31;
+
 function displayTime(value: string): string {
   return value.slice(0, 5);
 }
@@ -167,7 +181,9 @@ function RoutePlanning({ view }: { view: PlanningView }) {
   const [frequencies, setFrequencies] = useState<CooperativeFrequency[]>([]);
   const [plans, setPlans] = useState<Record<string, RouteSheet>>({});
   const [selectedGroupId, setSelectedGroupId] = useState('');
-  const [serviceDate, setServiceDate] = useState(localDateValue);
+  const [minServiceDate] = useState(tomorrowValue);
+  const [serviceDate, setServiceDate] = useState(minServiceDate);
+  const [endDate, setEndDate] = useState(() => dateOffset(minServiceDate, 5));
   const [routeSearch, setRouteSearch] = useState('');
   const [routeGroupFilter, setRouteGroupFilter] = useState('all');
   const [routeStatusFilter, setRouteStatusFilter] = useState<RouteStatusFilter>('all');
@@ -178,10 +194,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [configuringRoute, setConfiguringRoute] = useState<CooperativeRoute | null>(null);
   const [isNewRouteConfig, setIsNewRouteConfig] = useState(false);
-  const [sheetOriginFilter, setSheetOriginFilter] =
-    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
-  const [sheetDestinationFilter, setSheetDestinationFilter] =
-    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
   const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [standbySlots, setStandbySlots] = useState<Record<string, string[]>>({});
@@ -206,10 +218,14 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     return () => clearTimeout(timer);
   }, [success]);
 
-  const planKey = `${selectedGroupId}:${serviceDate}`;
+  const periodDays = Math.min(
+    MAX_PERIOD_DAYS,
+    Math.max(1, daysBetween(serviceDate, endDate) + 1),
+  );
+  const planKey = `${selectedGroupId}:${serviceDate}:${periodDays}`;
   const serviceDates = useMemo(
-    () => Array.from({ length: 6 }, (_, index) => dateOffset(serviceDate, index)),
-    [serviceDate],
+    () => Array.from({ length: periodDays }, (_, index) => dateOffset(serviceDate, index)),
+    [serviceDate, periodDays],
   );
 
   useEffect(() => {
@@ -331,7 +347,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     let active = true;
     if (view !== 'frequencies' || !selectedGroupId || !serviceDate) return;
 
-    void getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6)
+    void getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, periodDays)
       .then((results) => {
         if (!active) return;
         displayPlanResults(results);
@@ -350,7 +366,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     return () => {
       active = false;
     };
-  }, [view, selectedGroupId, serviceDate, planKey]);
+  }, [view, selectedGroupId, serviceDate, periodDays, planKey]);
 
   /** Recarga los datos actuales del servidor sin forzar regeneración del plan */
   const handleRefreshPlan = async () => {
@@ -360,7 +376,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     try {
       const [freshFrequencies, results] = await Promise.all([
         getCooperativeFrequencies(Number(selectedGroupId)),
-        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6, false),
+        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, periodDays, false),
       ]);
       setFrequencies(freshFrequencies);
       displayPlanResults(results);
@@ -384,7 +400,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     try {
       const [freshFrequencies, results] = await Promise.all([
         getCooperativeFrequencies(Number(selectedGroupId)),
-        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6, true),
+        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, periodDays, true),
       ]);
       setFrequencies(freshFrequencies);
       await applyPlanResults(results, true);
@@ -489,22 +505,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
       })
       .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [frequencies, plans, serviceDates, routes]);
-
-  const filteredSheetFrequencies = useMemo(() => {
-    const citiesById = new Map(cities.map((city) => [city.id, city]));
-    return sheetFrequencies.filter((f) => {
-      return (
-        matchesLocationFilter(
-          f.originCityId === null ? undefined : citiesById.get(f.originCityId),
-          sheetOriginFilter,
-        ) &&
-        matchesLocationFilter(
-          f.destinationCityId === null ? undefined : citiesById.get(f.destinationCityId),
-          sheetDestinationFilter,
-        )
-      );
-    });
-  }, [sheetFrequencies, cities, sheetOriginFilter, sheetDestinationFilter]);
 
   const restBusesCount =
     groups.find((group) => String(group.id) === selectedGroupId)?.restBusesCount ??
@@ -1014,8 +1014,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                     setFrequencies([]);
                     setPlans({});
                     setAssignedBuses({});
-                    setSheetOriginFilter(EMPTY_LOCATION_FILTER);
-                    setSheetDestinationFilter(EMPTY_LOCATION_FILTER);
                   }}
                   disabled={!groups.length}
                 >
@@ -1027,40 +1025,41 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                 </select>
               </label>
               <label>
-                Inicio del periodo
+                Fecha de inicio
                 <input
                   type="date"
                   value={serviceDate}
+                  min={minServiceDate}
                   onChange={(event) => {
-                    setServiceDate(event.target.value);
+                    const value = event.target.value;
+                    if (!value || value < minServiceDate) return;
+                    setServiceDate(value);
+                    if (endDate < value) setEndDate(value);
+                    else if (daysBetween(value, endDate) >= MAX_PERIOD_DAYS) {
+                      setEndDate(dateOffset(value, MAX_PERIOD_DAYS - 1));
+                    }
                     setPlans({});
                     setAssignedBuses({});
                   }}
                 />
               </label>
-              <button
-                type="button"
-                className="cooperative-routes__button cooperative-routes__button--secondary cooperative-routes__button--refresh cooperative-routes__button--icon"
-                onClick={() => void handleRefreshPlan()}
-                disabled={isLoadingPlan || isRecalculating || isAutoAssigning || !selectedGroupId}
-                title="Recarga los datos actuales del servidor"
-              >
-                <span className="cooperative-routes__btn-icon" aria-hidden="true">
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="15"
-                    height="15"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
-                  </svg>
-                </span>
-                {isRecalculating ? 'Actualizando...' : 'Actualizar'}
-              </button>
+              <label>
+                Fecha de fin
+                <input
+                  type="date"
+                  value={endDate}
+                  min={serviceDate}
+                  max={dateOffset(serviceDate, MAX_PERIOD_DAYS - 1)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (!value || value < serviceDate) return;
+                    if (daysBetween(serviceDate, value) >= MAX_PERIOD_DAYS) return;
+                    setEndDate(value);
+                    setPlans({});
+                    setAssignedBuses({});
+                  }}
+                />
+              </label>
               <button
                 type="button"
                 className="cooperative-routes__button cooperative-routes__button--auto-assign cooperative-routes__button--icon"
@@ -1084,20 +1083,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                 </span>
                 {isAutoAssigning ? 'Auto-asignando...' : 'Auto-asignar buses'}
               </button>
-            </div>
-            <div className="cooperative-routes__location-filter-grid">
-              <RouteLocationFilter
-                title="Filtrar origen"
-                catalog={geographicCatalog}
-                value={sheetOriginFilter}
-                onChange={setSheetOriginFilter}
-              />
-              <RouteLocationFilter
-                title="Filtrar destino"
-                catalog={geographicCatalog}
-                value={sheetDestinationFilter}
-                onChange={setSheetDestinationFilter}
-              />
             </div>
             <div className="cooperative-routes__sheet-meta">
               <span>
@@ -1200,17 +1185,8 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredSheetFrequencies.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={3 + serviceDates.length}
-                            style={{ textAlign: 'center', padding: '2rem 1rem' }}
-                          >
-                            No hay frecuencias que coincidan con el origen y destino seleccionados.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredSheetFrequencies.map((frequency) => (
+                      {
+                        sheetFrequencies.map((frequency) => (
                           <tr key={frequency.frequencyId}>
                             <th scope="row">
                               <strong>{frequency.routeName}</strong>
@@ -1261,7 +1237,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                             })}
                           </tr>
                         ))
-                      )}
+                      }
                       {Array.from({ length: restBusesCount }, (_, index) => (
                         <tr key={`rest-${index}`} className="cooperative-routes__rest-row">
                           <th scope="row">

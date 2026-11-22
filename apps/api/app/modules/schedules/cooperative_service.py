@@ -234,6 +234,14 @@ def _validate_assignments(
             )
 
 
+def _ensure_editable_date(service_date: date) -> None:
+    """Solo se pueden modificar hojas desde mañana; hoy y los días pasados quedan fijos."""
+    if service_date <= datetime.now(LOCAL_TIMEZONE).date():
+        raise BusAssignmentError(
+            "No se pueden modificar las hojas de hoy ni de días anteriores."
+        )
+
+
 def _bus_read(bus: Bus) -> dict:
     return {
         "id": bus.id,
@@ -379,7 +387,8 @@ def get_route_sheet_auto_plan(
                     )
                 )
 
-        if sheet is not None and (not force or has_reservations):
+        is_editable_date = service_date > datetime.now(LOCAL_TIMEZONE).date()
+        if sheet is not None and (not force or has_reservations or not is_editable_date):
             results.append(
                 get_route_sheet(db, cooperative_id, bus_group_id, service_date)
             )
@@ -526,6 +535,7 @@ def save_route_sheet(
     cooperative_id: int,
     payload: RouteSheetSave,
 ) -> dict:
+    _ensure_editable_date(payload.service_date)
     group = db.scalar(
         select(BusGroup).where(
             BusGroup.id == payload.bus_group_id,
@@ -793,6 +803,7 @@ def publish_route_sheet(
             sheet.bus_group_id,
             sheet.service_date,
         )
+    _ensure_editable_date(sheet.service_date)
 
     active_frequency_ids = set(
         db.scalars(
