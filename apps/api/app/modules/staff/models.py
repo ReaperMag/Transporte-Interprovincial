@@ -10,8 +10,7 @@ from app.shared.tenant_model import TenantModel
 class StaffPosition(enum.StrEnum):
     ADMIN = "admin"  # Administra la cooperativa
     CLERK = "clerk"  # Oficinista
-    DRIVER = "driver"  # Chofer
-    CONTROLLER = "controller"  # Controlador o ayudante
+    BUS_STAFF = "bus_staff"  # Personal del bus, sin distinguir entre conductor y controlador
 
 
 class Staff(TenantModel):

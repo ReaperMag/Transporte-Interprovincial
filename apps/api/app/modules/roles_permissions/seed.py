@@ -23,7 +23,7 @@ DEFAULT_ROLES = (
     (
         COOPERATIVE_BUS_STAFF_ROLE,
         "Personal del bus",
-        "Conductor o controlador: maneja los viajes del bus que tiene asignado.",
+        "Maneja los viajes del bus que tiene asignado.",
     ),
 )
 

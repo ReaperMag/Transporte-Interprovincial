@@ -1,4 +1,4 @@
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import (
     BaseModel,
@@ -135,10 +135,6 @@ class StaffSelfRead(StaffSchema):
 # Personal del bus
 # ---------------------------------------------------------------------------
 
-# Conductor o controlador. Los dos tienen el mismo rol y los mismos permisos.
-BusStaffPosition = Literal["driver", "controller"]
-
-
 class BusStaffCreate(StaffSchema):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -151,7 +147,6 @@ class BusStaffCreate(StaffSchema):
     id_number: Annotated[str, StringConstraints(strip_whitespace=True)]
     email: EmailWithDomain
     phone: Phone
-    position: BusStaffPosition = "driver"
     assigned_bus_id: int
     password: str = Field(
         min_length=PASSWORD_MIN_LENGTH,
@@ -184,7 +179,6 @@ class BusStaffUpdate(StaffSchema):
     id_number: Annotated[str, StringConstraints(strip_whitespace=True)] | None = None
     email: EmailWithDomain | None = None
     phone: Phone | None = None
-    position: BusStaffPosition | None = None
     assigned_bus_id: int | None = None
     # Desactivar la cuenta conserva el historial; no se borra al trabajador.
     is_active: bool | None = None
@@ -215,20 +209,18 @@ class BusStaffRead(StaffSchema):
     id_number: str
     email: EmailStr
     phone: str | None
-    position: str
     is_active: bool
     assigned_bus: AssignedBusRead | None
 
 
 class BusStaffSelfRead(StaffSchema):
-    """Lo que ve el conductor o controlador de su propia cuenta."""
+    """Lo que ve el personal del bus de su propia cuenta."""
 
     first_name: str
     last_name: str
     id_number: str
     email: EmailStr
     phone: str | None
-    position: str
     cooperative_id: int
     cooperative_name: str
     cooperative_logo_url: str | None

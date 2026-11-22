@@ -48,7 +48,7 @@ def list_bus_staff(
     db: Annotated[Session, Depends(get_db)],
     account: Annotated[Account, Depends(require_cooperative_admin)],
 ) -> list[BusStaffRead]:
-    """Conductores y controladores de la cooperativa con su bus asignado."""
+    """Personal del bus de la cooperativa con su bus asignado."""
     return [
         service.to_bus_staff_read(db, staff, email)
         for staff, email in service.list_bus_staff(
@@ -81,7 +81,7 @@ def create_bus_staff(
     account: Annotated[Account, Depends(require_cooperative_admin)],
     _: Annotated[None, Depends(validate_request_origin)],
 ) -> BusStaffRead:
-    """Crea la cuenta de un conductor o controlador con su bus asignado."""
+    """Crea la cuenta de una persona del bus con su bus asignado."""
     try:
         staff, email = service.create_bus_staff(
             db,
@@ -119,5 +119,5 @@ def read_my_bus_staff_profile(
     staff: Annotated[Staff, Depends(require_bus_staff)],
     db: Annotated[Session, Depends(get_db)],
 ) -> BusStaffSelfRead:
-    """Datos del conductor o controlador que inició sesión y su bus asignado."""
+    """Datos de la persona del bus que inició sesión y su bus asignado."""
     return service.to_bus_staff_self_read(db, staff)

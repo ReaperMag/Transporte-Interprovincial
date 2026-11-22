@@ -391,7 +391,7 @@ El PDF se genera en el servidor con `fpdf2`.
 
 ## Control del viaje
 
-El personal del bus (conductor o controlador) controla los viajes de su bus
+El personal del bus controla los viajes de su bus
 asignado desde `/api/v1/bus-staff/trips`:
 
 - `GET /api/v1/bus-staff/trips` lista los viajes programados desde un día antes

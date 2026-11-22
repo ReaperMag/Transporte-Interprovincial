@@ -103,10 +103,6 @@ def require_office_staff(
         raise _forbidden()
     return staff
 
-# Cargos que puede tener el personal del bus. Ambos usan el mismo rol.
-BUS_STAFF_POSITIONS = (StaffPosition.DRIVER, StaffPosition.CONTROLLER)
-
-
 def get_bus_staff(db: Session, account: Account) -> Staff | None:
     """Perfil activo del personal del bus de la cuenta autenticada."""
     if (
@@ -120,7 +116,7 @@ def get_bus_staff(db: Session, account: Account) -> Staff | None:
     if (
         staff is None
         or not staff.is_active
-        or staff.position not in BUS_STAFF_POSITIONS
+        or staff.position != StaffPosition.BUS_STAFF
         or staff.cooperative_id != account.cooperative_id
     ):
         return None

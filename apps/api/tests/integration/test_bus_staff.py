@@ -88,12 +88,12 @@ def create_bus_staff(client, bus_id: int, **changes) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def test_admin_creates_a_driver_with_an_assigned_bus(cooperative):
+def test_admin_creates_bus_staff_with_an_assigned_bus(cooperative):
     client, engine, cooperative_id, buses = cooperative
 
     body = create_bus_staff(client, buses[0])
 
-    assert body["position"] == "driver"
+    assert "position" not in body
     assert body["isActive"] is True
     assert body["assignedBus"] == {"id": buses[0], "number": "40", "plate": "PBA-0040"}
     assert "password" not in body
@@ -102,26 +102,25 @@ def test_admin_creates_a_driver_with_an_assigned_bus(cooperative):
         staff = db.query(Staff).filter_by(account_id=account.id).one()
         assert account.cooperative_id == cooperative_id
         assert account.role.code == COOPERATIVE_BUS_STAFF_ROLE
-        assert staff.position == StaffPosition.DRIVER
+        assert staff.position == StaffPosition.BUS_STAFF
         assert staff.assigned_bus_id == buses[0]
         assert verify_password(PASSWORD, account.password_hash)
 
 
-def test_driver_and_controller_can_share_the_same_bus(cooperative):
+def test_two_bus_staff_accounts_can_share_the_same_bus(cooperative):
     client, _, _, buses = cooperative
 
     create_bus_staff(client, buses[0])
-    controller = create_bus_staff(
+    create_bus_staff(
         client,
         buses[0],
         email="controlador@example.com",
         idNumber="1722222229",
-        position="controller",
     )
 
-    assert controller["position"] == "controller"
     listed = client.get(URL).json()
-    assert [item["position"] for item in listed] == ["driver", "controller"]
+    assert len(listed) == 2
+    assert all("position" not in item for item in listed)
     assert {item["assignedBus"]["id"] for item in listed} == {buses[0]}
 
 
@@ -189,7 +188,7 @@ def test_cannot_assign_a_bus_of_another_cooperative(cooperative):
 @pytest.mark.parametrize(
     "changes",
     [
-        {"position": "clerk"},
+        {"position": "driver"},
         {"idNumber": "1234567890"},
         {"confirmPassword": "OtraClave12345!"},
         {"assignedBusId": None},
@@ -311,7 +310,7 @@ def test_bus_staff_logs_in_and_reads_its_assigned_bus(cooperative):
     profile = client.get(PROFILE_URL)
     assert profile.status_code == 200, profile.text
     assert profile.json()["firstName"] == "Carlos"
-    assert profile.json()["position"] == "driver"
+    assert "position" not in profile.json()
     assert profile.json()["cooperativeId"] == cooperative_id
     assert profile.json()["assignedBus"]["number"] == "40"
 
