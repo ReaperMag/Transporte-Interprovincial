@@ -53,6 +53,20 @@ function localDateValue(): string {
   return new Date(now.getTime() - localOffset).toISOString().slice(0, 10);
 }
 
+function tomorrowValue(): string {
+  const [year, month, day] = localDateValue().split('-').map(Number);
+  const result = new Date(year, month - 1, day + 1, 12);
+  return `${result.getFullYear()}-${String(result.getMonth() + 1).padStart(2, '0')}-${String(result.getDate()).padStart(2, '0')}`;
+}
+
+function daysBetween(start: string, end: string): number {
+  const startDate = new Date(`${start}T12:00:00`).getTime();
+  const endDate = new Date(`${end}T12:00:00`).getTime();
+  return Math.round((endDate - startDate) / 86_400_000);
+}
+
+const MAX_PERIOD_DAYS = 31;
+
 function displayTime(value: string): string {
   return value.slice(0, 5);
 }
@@ -79,7 +93,86 @@ const ROUTE_SHEET_WARNING_LABELS: Record<RouteSheetWarning, string> = {
   UNASSIGNED_FREQUENCIES: 'Hay salidas sin bus disponible.',
 };
 
+type PlanningView = 'routes' | 'frequencies';
+
+interface PublishConfirmDialogProps {
+  dayText: string;
+  frequencyCount: number;
+  restNames: string[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function PublishConfirmDialog({
+  dayText,
+  frequencyCount,
+  restNames,
+  onConfirm,
+  onCancel,
+}: PublishConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="cooperative-routes__dialog"
+      aria-labelledby="publish-confirm-title"
+      aria-describedby="publish-confirm-description"
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      <h3 id="publish-confirm-title">Publicar la hoja del {dayText}</h3>
+      <div id="publish-confirm-description">
+        <p>
+          Se publicarán {frequencyCount} {frequencyCount === 1 ? 'frecuencia' : 'frecuencias'} con
+          sus buses asignados.
+        </p>
+        <p>
+          {restNames.length > 0
+            ? `En descanso (solo lo ve la cooperativa): ${restNames.join(', ')}.`
+            : 'Ese día no hay buses en descanso.'}
+        </p>
+        <p>
+          Una vez publicada, la hoja solo se podrá reasignar mientras ningún viaje haya salido y no
+          existan reservas.
+        </p>
+      </div>
+      <div className="cooperative-routes__dialog-actions">
+        <button
+          type="button"
+          className="cooperative-routes__button cooperative-routes__button--secondary"
+          onClick={onCancel}
+          autoFocus
+        >
+          Cancelar
+        </button>
+        <button type="button" className="cooperative-routes__button" onClick={onConfirm}>
+          Publicar hoja
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 export function CooperativeRoutesPage() {
+  return <RoutePlanning view="routes" />;
+}
+
+export function CooperativeFrequenciesPage() {
+  return <RoutePlanning view="frequencies" />;
+}
+
+function RoutePlanning({ view }: { view: PlanningView }) {
   const [cities, setCities] = useState<RouteCity[]>([]);
   const [geographicCatalog, setGeographicCatalog] = useState<GeographicCatalog | null>(null);
   const [routes, setRoutes] = useState<CooperativeRoute[]>([]);
@@ -88,7 +181,9 @@ export function CooperativeRoutesPage() {
   const [frequencies, setFrequencies] = useState<CooperativeFrequency[]>([]);
   const [plans, setPlans] = useState<Record<string, RouteSheet>>({});
   const [selectedGroupId, setSelectedGroupId] = useState('');
-  const [serviceDate, setServiceDate] = useState(localDateValue);
+  const [minServiceDate] = useState(tomorrowValue);
+  const [serviceDate, setServiceDate] = useState(minServiceDate);
+  const [endDate, setEndDate] = useState(() => dateOffset(minServiceDate, 5));
   const [routeSearch, setRouteSearch] = useState('');
   const [routeGroupFilter, setRouteGroupFilter] = useState('all');
   const [routeStatusFilter, setRouteStatusFilter] = useState<RouteStatusFilter>('all');
@@ -99,13 +194,15 @@ export function CooperativeRoutesPage() {
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [configuringRoute, setConfiguringRoute] = useState<CooperativeRoute | null>(null);
   const [isNewRouteConfig, setIsNewRouteConfig] = useState(false);
-  const [sheetOriginFilter, setSheetOriginFilter] =
-    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
-  const [sheetDestinationFilter, setSheetDestinationFilter] =
-    useState<RouteLocationFilterValue>(EMPTY_LOCATION_FILTER);
   const newRouteButtonRef = useRef<HTMLButtonElement>(null);
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
-  const [startingCities, setStartingCities] = useState<Record<string, Record<number, string>>>({});
+  const [standbySlots, setStandbySlots] = useState<Record<string, string[]>>({});
+  const [publishingDay, setPublishingDay] = useState<string | null>(null);
+  const [confirmDay, setConfirmDay] = useState<string | null>(null);
+  const [daySaveState, setDaySaveState] = useState<Record<string, 'saving' | 'saved' | 'error'>>(
+    {},
+  );
+  const publishTriggerRef = useRef<HTMLElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isAutoAssigning, setIsAutoAssigning] = useState(false);
@@ -121,17 +218,14 @@ export function CooperativeRoutesPage() {
     return () => clearTimeout(timer);
   }, [success]);
 
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => {
-      setError(null);
-    }, 6000);
-    return () => clearTimeout(timer);
-  }, [error]);
-  const planKey = `${selectedGroupId}:${serviceDate}`;
+  const periodDays = Math.min(
+    MAX_PERIOD_DAYS,
+    Math.max(1, daysBetween(serviceDate, endDate) + 1),
+  );
+  const planKey = `${selectedGroupId}:${serviceDate}:${periodDays}`;
   const serviceDates = useMemo(
-    () => Array.from({ length: 6 }, (_, index) => dateOffset(serviceDate, index)),
-    [serviceDate],
+    () => Array.from({ length: periodDays }, (_, index) => dateOffset(serviceDate, index)),
+    [serviceDate, periodDays],
   );
 
   useEffect(() => {
@@ -189,6 +283,16 @@ export function CooperativeRoutesPage() {
   /** Solo actualiza el estado visual; NO guarda ni publica nada en el servidor. */
   const displayPlanResults = (results: RouteSheet[]) => {
     setPlans(Object.fromEntries(results.map((plan) => [plan.serviceDate, plan])));
+    setStandbySlots(
+      Object.fromEntries(
+        results.map((plan) => [
+          plan.serviceDate,
+          Array.from({ length: plan.restBusesCount }, (_, index) =>
+            plan.standbyBuses[index] ? String(plan.standbyBuses[index].id) : '',
+          ),
+        ]),
+      ),
+    );
     setAssignedBuses(
       Object.fromEntries(
         results.map((plan) => [
@@ -202,26 +306,15 @@ export function CooperativeRoutesPage() {
         ]),
       ),
     );
-    setStartingCities(
-      Object.fromEntries(
-        results.map((plan) => [
-          plan.serviceDate,
-          Object.fromEntries(
-            plan.startingLocations.map((item) => [item.busId, String(item.cityId)]),
-          ),
-        ]),
-      ),
-    );
   };
 
   /**
-   * Actualiza el estado visual Y guarda/publica automáticamente las hojas
-   * que tienen todos los buses asignados.
+   * Actualiza el estado visual Y guarda como borrador las hojas que tienen
+   * todos los buses asignados. La publicación es siempre manual.
    */
   const applyPlanResults = async (results: RouteSheet[], active = true) => {
     displayPlanResults(results);
 
-    // Publicación automática de hojas generadas completas
     for (const plan of results) {
       if (
         plan.status !== 'published' &&
@@ -240,11 +333,8 @@ export function CooperativeRoutesPage() {
             standbyBusIds: plan.standbyBuses.map((b) => b.id),
             mode: plan.mode,
           });
-          if (saved.id && saved.status !== 'published') {
-            const published = await publishRouteSheet(saved.id);
-            if (active) {
-              setPlans((current) => ({ ...current, [plan.serviceDate]: published }));
-            }
+          if (active) {
+            setPlans((current) => ({ ...current, [plan.serviceDate]: saved }));
           }
         } catch {
           // Ignorado si faltan tarifas
@@ -255,9 +345,9 @@ export function CooperativeRoutesPage() {
 
   useEffect(() => {
     let active = true;
-    if (!selectedGroupId || !serviceDate) return;
+    if (view !== 'frequencies' || !selectedGroupId || !serviceDate) return;
 
-    void getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6)
+    void getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, periodDays)
       .then((results) => {
         if (!active) return;
         displayPlanResults(results);
@@ -276,7 +366,7 @@ export function CooperativeRoutesPage() {
     return () => {
       active = false;
     };
-  }, [selectedGroupId, serviceDate, planKey]);
+  }, [view, selectedGroupId, serviceDate, periodDays, planKey]);
 
   /** Recarga los datos actuales del servidor sin forzar regeneración del plan */
   const handleRefreshPlan = async () => {
@@ -286,7 +376,7 @@ export function CooperativeRoutesPage() {
     try {
       const [freshFrequencies, results] = await Promise.all([
         getCooperativeFrequencies(Number(selectedGroupId)),
-        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6, false),
+        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, periodDays, false),
       ]);
       setFrequencies(freshFrequencies);
       displayPlanResults(results);
@@ -310,7 +400,7 @@ export function CooperativeRoutesPage() {
     try {
       const [freshFrequencies, results] = await Promise.all([
         getCooperativeFrequencies(Number(selectedGroupId)),
-        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, 6, true),
+        getRouteSheetAutoPlan(Number(selectedGroupId), serviceDate, periodDays, true),
       ]);
       setFrequencies(freshFrequencies);
       await applyPlanResults(results, true);
@@ -416,21 +506,10 @@ export function CooperativeRoutesPage() {
       .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [frequencies, plans, serviceDates, routes]);
 
-  const filteredSheetFrequencies = useMemo(() => {
-    const citiesById = new Map(cities.map((city) => [city.id, city]));
-    return sheetFrequencies.filter((f) => {
-      return (
-        matchesLocationFilter(
-          f.originCityId === null ? undefined : citiesById.get(f.originCityId),
-          sheetOriginFilter,
-        ) &&
-        matchesLocationFilter(
-          f.destinationCityId === null ? undefined : citiesById.get(f.destinationCityId),
-          sheetDestinationFilter,
-        )
-      );
-    });
-  }, [sheetFrequencies, cities, sheetOriginFilter, sheetDestinationFilter]);
+  const restBusesCount =
+    groups.find((group) => String(group.id) === selectedGroupId)?.restBusesCount ??
+    plans[serviceDates[0]]?.restBusesCount ??
+    0;
 
   const isLoadingPlan = Boolean(selectedGroupId && serviceDate && loadedPlanKey !== planKey);
 
@@ -453,56 +532,216 @@ export function CooperativeRoutesPage() {
     void handleAutoAssign();
   };
 
+  /** Guarda como borrador la hoja de un día con las asignaciones y descansos dados. */
+  const persistDayRaw = async (
+    day: string,
+    plan: RouteSheet,
+    dayAssignments: Record<number, string>,
+    standbyIds: number[],
+  ) => {
+    const dayBusIds = [
+      ...new Set(Object.values(dayAssignments).filter(Boolean).map(Number)),
+    ].sort((first, second) => first - second);
+
+    // La ubicación inicial de cada bus es la ciudad de salida de su primer servicio del día.
+    const originByRouteId = new Map(routes.map((route) => [route.id, route.originCityId]));
+    const firstOriginByBus = new Map<number, number>();
+    [...plan.frequencies]
+      .sort((first, second) => first.departureTime.localeCompare(second.departureTime))
+      .forEach((frequency) => {
+        const assigned = dayAssignments[frequency.frequencyId];
+        const origin = originByRouteId.get(frequency.routeId);
+        if (assigned && origin !== undefined && !firstOriginByBus.has(Number(assigned))) {
+          firstOriginByBus.set(Number(assigned), origin);
+        }
+      });
+
+    const saved = await saveRouteSheet({
+      busGroupId: Number(selectedGroupId),
+      serviceDate: day,
+      assignments: plan.frequencies.map((frequency) => ({
+        frequencyId: frequency.frequencyId,
+        busId: dayAssignments[frequency.frequencyId]
+          ? Number(dayAssignments[frequency.frequencyId])
+          : null,
+      })),
+      startingLocations: dayBusIds.map((busIdNum) => ({
+        busId: busIdNum,
+        cityId: Number(
+          firstOriginByBus.get(busIdNum) ??
+            plan.startingLocations.find((loc) => loc.busId === busIdNum)?.cityId ??
+            cities[0]?.id,
+        ),
+      })),
+      standbyBusIds: standbyIds,
+      mode: plan.mode,
+    });
+
+    const result = saved;
+    setPlans((current) => ({ ...current, [day]: result }));
+    setStandbySlots((current) => ({
+      ...current,
+      [day]: Array.from({ length: result.restBusesCount }, (_, index) =>
+        result.standbyBuses[index] ? String(result.standbyBuses[index].id) : '',
+      ),
+    }));
+    return result;
+  };
+
+  const requestPublishDay = (day: string, trigger: HTMLElement) => {
+    publishTriggerRef.current = trigger;
+    setConfirmDay(day);
+  };
+
+  const closePublishConfirm = () => {
+    setConfirmDay(null);
+    const trigger = publishTriggerRef.current;
+    requestAnimationFrame(() => {
+      if (trigger?.isConnected) trigger.focus();
+    });
+  };
+
+  const handlePublishDay = async (day: string) => {
+    const plan = plans[day];
+    if (!plan) return;
+    setConfirmDay(null);
+    setPublishingDay(day);
+    setError(null);
+    try {
+      const sheet = await persistDay(
+        day,
+        plan,
+        assignedBuses[day] ?? {},
+        (standbySlots[day] ?? []).filter(Boolean).map(Number),
+      );
+      if (!sheet.id) throw new Error('No fue posible guardar la hoja antes de publicarla.');
+      const published = await publishRouteSheet(sheet.id);
+      setPlans((current) => ({ ...current, [day]: published }));
+      setSuccess(`Hoja del ${dayLabel(day)} publicada.`);
+    } catch (publishError) {
+      setError(
+        publishError instanceof Error
+          ? publishError.message
+          : 'No fue posible publicar la hoja del día.',
+      );
+    } finally {
+      setPublishingDay(null);
+    }
+  };
+
+  const persistDay = async (
+    day: string,
+    plan: RouteSheet,
+    dayAssignments: Record<number, string>,
+    standbyIds: number[],
+  ): Promise<RouteSheet> => {
+    setDaySaveState((current) => ({ ...current, [day]: 'saving' }));
+    try {
+      const result = await persistDayRaw(day, plan, dayAssignments, standbyIds);
+      setDaySaveState((current) => ({ ...current, [day]: 'saved' }));
+      setTimeout(() => {
+        setDaySaveState((current) => {
+          if (current[day] !== 'saved') return current;
+          const next = { ...current };
+          delete next[day];
+          return next;
+        });
+      }, 2500);
+      return result;
+    } catch (saveError) {
+      setDaySaveState((current) => ({ ...current, [day]: 'error' }));
+      throw saveError;
+    }
+  };
+
+  /** Motivo por el que un bus no se puede elegir en una frecuencia ese día. */
+  const frequencyBusBlock = (
+    day: string,
+    bus: RouteSheet['buses'][number],
+    frequencyId: number,
+  ) => {
+    if (!bus.isActive || bus.status !== 'operativo') return bus.status.replaceAll('_', ' ');
+    if ((standbySlots[day] ?? []).includes(String(bus.id))) return 'en descanso';
+    const usedElsewhere = Object.entries(assignedBuses[day] ?? {}).some(
+      ([otherId, otherBus]) => otherBus === String(bus.id) && Number(otherId) !== frequencyId,
+    );
+    return usedElsewhere ? 'ya asignado' : null;
+  };
+
+  /** Motivo por el que un bus no se puede elegir como descanso ese día. */
+  const restBusBlock = (day: string, bus: RouteSheet['buses'][number], slotIndex: number) => {
+    if (!bus.isActive || bus.status !== 'operativo') return bus.status.replaceAll('_', ' ');
+    if (Object.values(assignedBuses[day] ?? {}).includes(String(bus.id))) {
+      return 'en una frecuencia';
+    }
+    const inOtherSlot = (standbySlots[day] ?? []).some(
+      (id, index) => id === String(bus.id) && index !== slotIndex,
+    );
+    return inOtherSlot ? 'en otro descanso' : null;
+  };
+
+  const dayStatus = (day: string): { label: string; tone: 'published' | 'draft' | 'proposal' } => {
+    const status = plans[day]?.status;
+    if (status === 'published') return { label: 'Publicada', tone: 'published' };
+    if (status === 'draft') return { label: 'Borrador', tone: 'draft' };
+    return { label: 'Propuesta', tone: 'proposal' };
+  };
+
   const handleBusAssignmentChange = async (day: string, frequencyId: number, busId: string) => {
     const updatedDayAssignments = {
       ...(assignedBuses[day] ?? {}),
       [frequencyId]: busId,
     };
+    const plan = plans[day];
+    if (busId && (standbySlots[day] ?? []).includes(busId)) {
+      setError('Ese bus está en descanso este día; no puede asignarse a una frecuencia.');
+      return;
+    }
     setAssignedBuses((current) => ({
       ...current,
       [day]: updatedDayAssignments,
     }));
+    if (!plan) return;
 
+    const previousAssignments = assignedBuses[day] ?? {};
+    try {
+      await persistDay(
+        day,
+        plan,
+        updatedDayAssignments,
+        (standbySlots[day] ?? []).filter(Boolean).map(Number),
+      );
+    } catch (saveError) {
+      setAssignedBuses((current) => ({ ...current, [day]: previousAssignments }));
+      setError(
+        saveError instanceof Error ? saveError.message : 'No fue posible guardar la asignación.',
+      );
+    }
+  };
+
+  const handleStandbyChange = async (day: string, slotIndex: number, busId: string) => {
     const plan = plans[day];
     if (!plan) return;
-    const dayStartingCities = startingCities[day] ?? {};
-    const dayBusIds = [
-      ...new Set(Object.values(updatedDayAssignments).filter(Boolean).map(Number)),
-    ].sort((first, second) => first - second);
-
+    const previousSlots = standbySlots[day] ?? [];
+    const dayAssignments = assignedBuses[day] ?? {};
+    if (busId && previousSlots.some((id, index) => id === busId && index !== slotIndex)) {
+      setError('Un mismo bus no puede estar dos veces en descanso el mismo día.');
+      return;
+    }
+    if (busId && Object.values(dayAssignments).includes(busId)) {
+      setError('Ese bus ya tiene una frecuencia asignada este día; no puede quedar en descanso.');
+      return;
+    }
+    const nextSlots = previousSlots.map((id, index) => (index === slotIndex ? busId : id));
+    setStandbySlots((current) => ({ ...current, [day]: nextSlots }));
+    setError(null);
     try {
-      const saved = await saveRouteSheet({
-        busGroupId: Number(selectedGroupId),
-        serviceDate: day,
-        assignments: plan.frequencies.map((frequency) => ({
-          frequencyId: frequency.frequencyId,
-          busId: updatedDayAssignments[frequency.frequencyId]
-            ? Number(updatedDayAssignments[frequency.frequencyId])
-            : null,
-        })),
-        startingLocations: dayBusIds.map((busIdNum) => ({
-          busId: busIdNum,
-          cityId: Number(
-            dayStartingCities[busIdNum] ??
-              plan.startingLocations.find((loc) => loc.busId === busIdNum)?.cityId ??
-              cities[0]?.id,
-          ),
-        })),
-        standbyBusIds: plan.standbyBuses.map((bus) => bus.id),
-        mode: plan.mode,
-      });
-
-      const allAssigned = plan.frequencies.every((f) =>
-        Boolean(updatedDayAssignments[f.frequencyId]),
-      );
-      if (allAssigned && saved.id && saved.status !== 'published') {
-        const published = await publishRouteSheet(saved.id);
-        setPlans((current) => ({ ...current, [day]: published }));
-      } else {
-        setPlans((current) => ({ ...current, [day]: saved }));
-      }
+      await persistDay(day, plan, dayAssignments, nextSlots.filter(Boolean).map(Number));
     } catch (saveError) {
-      console.warn('Auto-save/publish notice:', saveError);
+      setStandbySlots((current) => ({ ...current, [day]: previousSlots }));
+      setError(
+        saveError instanceof Error ? saveError.message : 'No fue posible guardar el descanso.',
+      );
     }
   };
 
@@ -510,11 +749,13 @@ export function CooperativeRoutesPage() {
     <section className="cooperative-routes" aria-labelledby="cooperative-routes-title">
       <header className="cooperative-routes__header">
         <p className="cooperative-routes__eyebrow">Planificación operativa</p>
-        <h2 id="cooperative-routes-title">Rutas y frecuencias</h2>
+        <h2 id="cooperative-routes-title">{view === 'routes' ? 'Rutas' : 'Frecuencias'}</h2>
         <p>
-          Gestiona los recorridos, asigna grupos de buses con sus tarifas y revisa la hoja de ruta
-          diaria automatizada.
+          {view === 'routes'
+            ? 'Gestiona los recorridos y asigna grupos de buses con sus tarifas.'
+            : 'Revisa la hoja de ruta diaria de cada grupo, con sus buses y descansos.'}
         </p>
+        {view === 'routes' && (
         <div className="cooperative-routes__header-actions">
           <button
             type="button"
@@ -550,11 +791,16 @@ export function CooperativeRoutesPage() {
             </p>
           )}
         </div>
+        )}
       </header>
 
       {/* Notificaciones flotantes / modales emergentes */}
       {(error || success) && (
-        <aside className="cooperative-routes__toast-container" aria-live="polite">
+        <div
+          className="cooperative-routes__toast-container"
+          role="region"
+          aria-label="Notificaciones"
+        >
           {error && (
             <div
               className="cooperative-routes__toast cooperative-routes__toast--error"
@@ -623,17 +869,17 @@ export function CooperativeRoutesPage() {
               </button>
             </div>
           )}
-        </aside>
+        </div>
       )}
 
       {isLoading ? (
         <p role="status">Cargando rutas, catálogo geográfico y grupos...</p>
       ) : (
         <>
-          {/* BLOQUE 1: RUTAS REGISTRADAS */}
+          {/* RUTAS REGISTRADAS */}
+          {view === 'routes' && (
           <section className="cooperative-routes__step" aria-labelledby="routes-builder-title">
             <div className="cooperative-routes__step-heading">
-              <span>1</span>
               <h3 id="routes-builder-title">Rutas registradas</h3>
             </div>
             <RouteFilters
@@ -750,10 +996,12 @@ export function CooperativeRoutesPage() {
             </div>
           </section>
 
-          {/* BLOQUE 2: HOJA DE RUTA DEL GRUPO */}
+          )}
+
+          {/* FRECUENCIAS: HOJA DE RUTA DEL GRUPO */}
+          {view === 'frequencies' && (
           <section className="cooperative-routes__step" aria-labelledby="route-sheet-title">
             <div className="cooperative-routes__step-heading">
-              <span>2</span>
               <h3 id="route-sheet-title">Hoja de ruta del grupo</h3>
             </div>
             <div className="cooperative-routes__sheet-controls">
@@ -766,9 +1014,6 @@ export function CooperativeRoutesPage() {
                     setFrequencies([]);
                     setPlans({});
                     setAssignedBuses({});
-                    setStartingCities({});
-                    setSheetOriginFilter(EMPTY_LOCATION_FILTER);
-                    setSheetDestinationFilter(EMPTY_LOCATION_FILTER);
                   }}
                   disabled={!groups.length}
                 >
@@ -780,41 +1025,41 @@ export function CooperativeRoutesPage() {
                 </select>
               </label>
               <label>
-                Inicio del periodo
+                Fecha de inicio
                 <input
                   type="date"
                   value={serviceDate}
+                  min={minServiceDate}
                   onChange={(event) => {
-                    setServiceDate(event.target.value);
+                    const value = event.target.value;
+                    if (!value || value < minServiceDate) return;
+                    setServiceDate(value);
+                    if (endDate < value) setEndDate(value);
+                    else if (daysBetween(value, endDate) >= MAX_PERIOD_DAYS) {
+                      setEndDate(dateOffset(value, MAX_PERIOD_DAYS - 1));
+                    }
                     setPlans({});
                     setAssignedBuses({});
-                    setStartingCities({});
                   }}
                 />
               </label>
-              <button
-                type="button"
-                className="cooperative-routes__button cooperative-routes__button--secondary cooperative-routes__button--refresh cooperative-routes__button--icon"
-                onClick={() => void handleRefreshPlan()}
-                disabled={isLoadingPlan || isRecalculating || isAutoAssigning || !selectedGroupId}
-                title="Recarga los datos actuales del servidor"
-              >
-                <span className="cooperative-routes__btn-icon" aria-hidden="true">
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="15"
-                    height="15"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
-                  </svg>
-                </span>
-                {isRecalculating ? 'Actualizando...' : 'Actualizar'}
-              </button>
+              <label>
+                Fecha de fin
+                <input
+                  type="date"
+                  value={endDate}
+                  min={serviceDate}
+                  max={dateOffset(serviceDate, MAX_PERIOD_DAYS - 1)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (!value || value < serviceDate) return;
+                    if (daysBetween(serviceDate, value) >= MAX_PERIOD_DAYS) return;
+                    setEndDate(value);
+                    setPlans({});
+                    setAssignedBuses({});
+                  }}
+                />
+              </label>
               <button
                 type="button"
                 className="cooperative-routes__button cooperative-routes__button--auto-assign cooperative-routes__button--icon"
@@ -839,28 +1084,9 @@ export function CooperativeRoutesPage() {
                 {isAutoAssigning ? 'Auto-asignando...' : 'Auto-asignar buses'}
               </button>
             </div>
-            <div className="cooperative-routes__location-filter-grid">
-              <RouteLocationFilter
-                title="Filtrar origen"
-                catalog={geographicCatalog}
-                value={sheetOriginFilter}
-                onChange={setSheetOriginFilter}
-              />
-              <RouteLocationFilter
-                title="Filtrar destino"
-                catalog={geographicCatalog}
-                value={sheetDestinationFilter}
-                onChange={setSheetDestinationFilter}
-              />
-            </div>
             <div className="cooperative-routes__sheet-meta">
               <span>
-                Buses en descanso por hoja:{' '}
-                <strong>
-                  {groups.find((group) => String(group.id) === selectedGroupId)?.restBusesCount ??
-                    plans[serviceDates[0]]?.restBusesCount ??
-                    0}
-                </strong>
+                Buses en descanso por hoja: <strong>{restBusesCount}</strong>
               </span>
               <Link to="/cooperativa/grupos">Configurar en el grupo</Link>
             </div>
@@ -905,46 +1131,69 @@ export function CooperativeRoutesPage() {
                     poder asignar las frecuencias.
                   </p>
                 )}
-                <div className="cooperative-routes__table-wrap">
+                <div
+                  className="cooperative-routes__table-wrap"
+                  role="region"
+                  aria-labelledby="route-sheet-caption"
+                  tabIndex={0}
+                >
                   <table className="cooperative-routes__sheet-table cooperative-routes__week-table">
+                    <caption id="route-sheet-caption" className="cooperative-routes__sr-only">
+                      Hoja de ruta semanal del grupo: bus asignado a cada frecuencia por día,
+                      buses en descanso y publicación de cada día
+                    </caption>
                     <thead>
                       <tr>
-                        <th>Origen – destino</th>
-                        <th>Salida</th>
-                        <th>Subrutas</th>
-                        {serviceDates.map((day) => (
-                          <th key={day}>
-                            <span>{dayLabel(day)}</span>
-                            <small>
-                              {plans[day]?.status === 'published'
-                                ? 'Publicada'
-                                : plans[day]?.status === 'draft'
-                                  ? 'Borrador'
-                                  : 'Auto'}
-                            </small>
-                          </th>
-                        ))}
+                        <th scope="col">Origen – destino</th>
+                        <th scope="col">Salida</th>
+                        <th scope="col">Subrutas</th>
+                        {serviceDates.map((day) => {
+                          const status = dayStatus(day);
+                          const saveState = daySaveState[day];
+                          return (
+                            <th scope="col" key={day}>
+                              <span>{dayLabel(day)}</span>
+                              <small
+                                className="cooperative-routes__day-status"
+                                data-tone={status.tone}
+                              >
+                                <span aria-hidden="true">
+                                  {status.tone === 'published'
+                                    ? '✓ '
+                                    : status.tone === 'draft'
+                                      ? '✎ '
+                                      : '◌ '}
+                                </span>
+                                {status.label}
+                              </small>
+                              <small
+                                className="cooperative-routes__save-state"
+                                data-state={saveState ?? 'idle'}
+                                aria-live="polite"
+                              >
+                                {saveState === 'saving'
+                                  ? 'Guardando…'
+                                  : saveState === 'saved'
+                                    ? 'Guardado'
+                                    : saveState === 'error'
+                                      ? 'No se guardó'
+                                      : ''}
+                              </small>
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredSheetFrequencies.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={3 + serviceDates.length}
-                            style={{ textAlign: 'center', padding: '2rem 1rem' }}
-                          >
-                            No hay frecuencias que coincidan con el origen y destino seleccionados.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredSheetFrequencies.map((frequency) => (
+                      {
+                        sheetFrequencies.map((frequency) => (
                           <tr key={frequency.frequencyId}>
-                            <td>
+                            <th scope="row">
                               <strong>{frequency.routeName}</strong>
                               <small>{frequency.resolutionNumber}</small>
-                            </td>
-                            <td>{displayTime(frequency.departureTime)}</td>
-                            <td>
+                            </th>
+                            <td data-label="Salida">{displayTime(frequency.departureTime)}</td>
+                            <td data-label="Subrutas">
                               {frequency.stops.length
                                 ? frequency.stops.join(' → ')
                                 : 'Sin paradas intermedias'}
@@ -954,9 +1203,10 @@ export function CooperativeRoutesPage() {
                               const isPublished = dayPlan?.status === 'published';
                               const canEditBus = !isPublished || dayPlan.canReassign;
                               return (
-                                <td key={day}>
+                                <td key={day} data-label={dayLabel(day)}>
                                   <select
                                     aria-label={`${frequency.routeName} ${dayLabel(day)}`}
+                                    aria-busy={daySaveState[day] === 'saving'}
                                     value={assignedBuses[day]?.[frequency.frequencyId] ?? ''}
                                     onChange={(event) =>
                                       void handleBusAssignmentChange(
@@ -968,54 +1218,143 @@ export function CooperativeRoutesPage() {
                                     disabled={!canEditBus}
                                   >
                                     <option value="">Sin asignar</option>
-                                    {dayPlan?.buses.map((bus) => (
-                                      <option
-                                        value={bus.id}
-                                        key={bus.id}
-                                        disabled={!bus.isActive || bus.status !== 'operativo'}
-                                      >
-                                        Bus {bus.number}
-                                        {bus.status !== 'operativo'
-                                          ? ` · ${bus.status.replaceAll('_', ' ')}`
-                                          : ''}
-                                      </option>
-                                    ))}
+                                    {dayPlan?.buses.map((bus) => {
+                                      const blocked = frequencyBusBlock(
+                                        day,
+                                        bus,
+                                        frequency.frequencyId,
+                                      );
+                                      return (
+                                        <option value={bus.id} key={bus.id} disabled={!!blocked}>
+                                          Bus {bus.number}
+                                          {blocked ? ` · ${blocked}` : ''}
+                                        </option>
+                                      );
+                                    })}
                                   </select>
                                 </td>
                               );
                             })}
                           </tr>
                         ))
-                      )}
+                      }
+                      {Array.from({ length: restBusesCount }, (_, index) => (
+                        <tr key={`rest-${index}`} className="cooperative-routes__rest-row">
+                          <th scope="row">
+                            <strong>Descanso</strong>
+                            <small>Solo visible para la cooperativa</small>
+                          </th>
+                          <td className="cooperative-routes__filler">—</td>
+                          <td className="cooperative-routes__filler">—</td>
+                          {serviceDates.map((day) => {
+                            const dayPlan = plans[day];
+                            const slots = standbySlots[day] ?? [];
+                            const canEditRest =
+                              dayPlan?.status !== 'published' || Boolean(dayPlan?.canReassign);
+                            return (
+                              <td key={day} data-label={dayLabel(day)}>
+                                <select
+                                  aria-label={`Descanso ${index + 1} ${dayLabel(day)}`}
+                                  aria-busy={daySaveState[day] === 'saving'}
+                                  value={slots[index] ?? ''}
+                                  onChange={(event) =>
+                                    void handleStandbyChange(day, index, event.target.value)
+                                  }
+                                  disabled={!canEditRest}
+                                >
+                                  <option value="">Sin asignar</option>
+                                  {dayPlan?.buses.map((bus) => {
+                                    const blocked = restBusBlock(day, bus, index);
+                                    return (
+                                      <option value={bus.id} key={bus.id} disabled={!!blocked}>
+                                        Bus {bus.number}
+                                        {blocked ? ` · ${blocked}` : ''}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                      <tr className="cooperative-routes__publish-row">
+                        <th scope="row">
+                          <strong>Publicar hoja</strong>
+                          <small>Una vez por día</small>
+                        </th>
+                        <td className="cooperative-routes__filler">—</td>
+                        <td className="cooperative-routes__filler">—</td>
+                        {serviceDates.map((day) => {
+                          const dayPlan = plans[day];
+                          const isPublished = dayPlan?.status === 'published';
+                          const total = dayPlan?.frequencies.length ?? 0;
+                          const assignedCount =
+                            dayPlan?.frequencies.filter((frequency) =>
+                              Boolean(assignedBuses[day]?.[frequency.frequencyId]),
+                            ).length ?? 0;
+                          const missing = total - assignedCount;
+                          const canPublish = total > 0 && missing === 0;
+                          return (
+                            <td key={day} data-label={dayLabel(day)}>
+                              {isPublished ? (
+                                <span className="cooperative-routes__badge cooperative-routes__badge--success">
+                                  ✓ Publicada
+                                </span>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="cooperative-routes__button cooperative-routes__button--small"
+                                    onClick={(event) =>
+                                      requestPublishDay(day, event.currentTarget)
+                                    }
+                                    disabled={!canPublish || publishingDay !== null}
+                                    aria-describedby={`publish-hint-${day}`}
+                                  >
+                                    {publishingDay === day ? 'Publicando...' : 'Publicar'}
+                                  </button>
+                                  <small
+                                    id={`publish-hint-${day}`}
+                                    className="cooperative-routes__hint"
+                                  >
+                                    {total === 0
+                                      ? 'Sin frecuencias'
+                                      : missing > 0
+                                        ? `Falta${missing === 1 ? '' : 'n'} ${missing} por asignar`
+                                        : 'Lista para publicar'}
+                                  </small>
+                                </>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
                     </tbody>
                   </table>
-                </div>
-
-                <div className="cooperative-routes__standby-summary">
-                  <h5>Buses en descanso por día:</h5>
-                  <div className="cooperative-routes__standby-chips">
-                    {serviceDates.map((day) => {
-                      const dayPlan = plans[day];
-                      return (
-                        <div key={day} className="cooperative-routes__standby-chip">
-                          <strong>{dayLabel(day)}:</strong>
-                          <span>
-                            {dayPlan && dayPlan.standbyBuses.length > 0
-                              ? dayPlan.standbyBuses.map((b) => `Bus ${b.number}`).join(', ')
-                              : 'Sin descanso'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               </>
             )}
           </section>
+          )}
         </>
       )}
 
-      {isRouteModalOpen && (
+      {confirmDay && plans[confirmDay] && (
+        <PublishConfirmDialog
+          dayText={dayLabel(confirmDay)}
+          frequencyCount={plans[confirmDay].frequencies.length}
+          restNames={(standbySlots[confirmDay] ?? [])
+            .filter(Boolean)
+            .map((id) => plans[confirmDay].buses.find((bus) => String(bus.id) === id)?.number)
+            .filter((number): number is string => Boolean(number))
+            .map((number) => `Bus ${number}`)}
+          onConfirm={() => void handlePublishDay(confirmDay)}
+          onCancel={closePublishConfirm}
+        />
+      )}
+
+      {view === 'routes' && isRouteModalOpen && (
         <CreateRouteModal
           groups={groups}
           catalog={geographicCatalog}
@@ -1025,7 +1364,7 @@ export function CooperativeRoutesPage() {
         />
       )}
 
-      {configuringRoute && (
+      {view === 'routes' && configuringRoute && (
         <ConfigureRouteModal
           route={configuringRoute}
           groups={groups}

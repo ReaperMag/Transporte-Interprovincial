@@ -6,7 +6,10 @@ import { CooperativeSeatTypesPage } from '../../features/cooperatives/pages/Coop
 import { CooperativeConfigurationPage } from '../../features/cooperatives/pages/CooperativeConfigurationPage';
 import { CooperativeLayout } from '../../features/cooperatives/components/CooperativeLayout';
 import { CooperativeBusesPage } from '../../features/cooperatives/pages/CooperativeBusesPage';
-import { CooperativeRoutesPage } from '../../features/cooperatives/pages/CooperativeRoutesPage';
+import {
+  CooperativeFrequenciesPage,
+  CooperativeRoutesPage,
+} from '../../features/cooperatives/pages/CooperativeRoutesPage';
 import { CooperativeOfficeUsersPage } from '../../features/cooperatives/pages/CooperativeOfficeUsersPage';
 import { CooperativeBusStaffPage } from '../../features/cooperatives/pages/CooperativeBusStaffPage';
 import { CooperativeBusHistoryPage } from '../../features/reports/pages/CooperativeBusHistoryPage';
@@ -26,6 +29,7 @@ export const cooperativeRoutes = (
     <Route path="configuracion" element={<CooperativeConfigurationPage />} />
     <Route path="grupos" element={<CooperativeBusGroupsPage />} />
     <Route path="rutas" element={<CooperativeRoutesPage />} />
+    <Route path="frecuencias" element={<CooperativeFrequenciesPage />} />
     <Route path="buses" element={<CooperativeBusesPage />} />
     <Route path="tipos-asiento" element={<CooperativeSeatTypesPage />} />
     <Route path="oficinistas" element={<CooperativeOfficeUsersPage />} />

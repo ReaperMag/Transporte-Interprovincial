@@ -138,7 +138,7 @@ const metrics: Array<{
     key: 'frequencies',
     title: 'Frecuencias activas',
     icon: 'calendar',
-    href: '/cooperativa/rutas',
+    href: '/cooperativa/frecuencias',
     detail: 'Servicios habilitados',
   },
 ];
@@ -167,7 +167,7 @@ const quickActions: Array<{
   {
     title: 'Rutas y frecuencias',
     description: 'Configurar servicios',
-    href: '/cooperativa/rutas',
+    href: '/cooperativa/frecuencias',
     icon: 'route',
     tone: 'purple',
   },

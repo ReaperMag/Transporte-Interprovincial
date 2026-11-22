@@ -1,0 +1,236 @@
+.personal-bus__trip-link {
+  color: inherit;
+  text-decoration: none;
+}
+.personal-bus__trip-link:hover .oficinista-operations__item,
+.personal-bus__trip-link:focus-visible .oficinista-operations__item {
+  border-color: var(--coop-primary);
+}
+.personal-bus__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #e8ecec;
+  color: #33424b;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.personal-bus__status--boarding,
+.personal-bus__status--issued {
+  background: #fef3c7;
+  color: #92400e;
+}
+.personal-bus__status--in_progress,
+.personal-bus__status--used {
+  background: #dcfce7;
+  color: #166534;
+}
+.personal-bus__status--rejected,
+.personal-bus__status--no_show,
+.personal-bus__status--cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.personal-bus .oficinista-operations__eyebrow a {
+  color: inherit;
+}
+.personal-bus__manual button {
+  flex-shrink: 0;
+}
+.personal-bus__scanner {
+  position: relative;
+  overflow: hidden;
+  max-width: 420px;
+  margin: 14px 0;
+  border-radius: 14px;
+  background: #14212b;
+  aspect-ratio: 1;
+}
+.personal-bus__scanner video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.personal-bus__scanner-frame {
+  position: absolute;
+  inset: 18%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+}
+.personal-bus__manual {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+}
+.personal-bus__manual label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.personal-bus__manual > div {
+  display: flex;
+  gap: 8px;
+}
+.personal-bus__manual input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #c8cfd0;
+  border-radius: 10px;
+  font: inherit;
+}
+.personal-bus__result {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+.personal-bus__result strong {
+  font-size: 1rem;
+}
+.personal-bus__result p {
+  margin: 6px 0 0;
+}
+.personal-bus__result--ok {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #14532d;
+}
+.personal-bus__result--check {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #78350f;
+}
+.personal-bus__result--error {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #7f1d1d;
+}
+.personal-bus__passengers {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.personal-bus__passengers li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border: 1px solid #e2e0da;
+  border-radius: 10px;
+  background: #ffffff;
+}
+.personal-bus__passengers li > span:nth-child(2) {
+  flex: 1;
+  min-width: 160px;
+}
+.personal-bus__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #c8cfd0;
+  border-radius: 10px;
+  font: inherit;
+  resize: vertical;
+}
+.personal-bus__problems {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.personal-bus__problems li {
+  padding: 10px 12px;
+  border-left: 3px solid #d97706;
+  border-radius: 8px;
+  background: #fffbeb;
+}
+.personal-bus__problems li small {
+  display: block;
+  margin-top: 4px;
+  color: #5b6670;
+}
+.personal-bus__alert {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(20, 33, 43, 0.55);
+}
+.personal-bus__alert-box {
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  padding: 22px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(20, 33, 43, 0.25);
+}
+.personal-bus__alert-box h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.personal-bus__alert-box p {
+  margin: 8px 0 14px;
+}
+.personal-bus__sales {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e0da;
+}
+.personal-bus__sales h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.personal-bus a.oficinista-operations__button,
+.personal-bus a.oficinista-operations__button--secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 9px 14px;
+  line-height: 1.2;
+  text-decoration: none;
+}
+.personal-bus__seat-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.personal-bus__seat-field p {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+@media (max-width: 560px) {
+  .personal-bus .oficinista-operations__form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.personal-bus__seat-grid {
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  margin-top: 8px;
+}
+.personal-bus .oficinista-operations__form .oficinista-operations__seat {
+  min-height: 56px;
+  padding: 6px;
+  border: 1px solid #94a3b8;
+  background: #fff;
+  color: #14212b;
+}
+.personal-bus .oficinista-operations__form .oficinista-operations__seat--selected {
+  border: 2px solid var(--coop-primary, #0e5a6b);
+  background: var(--coop-primary, #0e5a6b);
+  color: var(--coop-on-primary, #fff);
+}
+.personal-bus .oficinista-operations__form .oficinista-operations__seat:disabled {
+  background: #e2e8f0;
+  color: #64748b;
+  opacity: 0.7;
+}

@@ -4,6 +4,7 @@ import { passengerRoutes } from './passengerRoutes';
 import { publicRoutes } from './publicRoutes';
 import { oficinistaRoutes } from './oficinistaRoutes';
 import { cooperativeRoutes } from './cooperativeRoutes';
+import { personalBusRoutes } from './personalBusRoutes';
 
 export function AppRouter() {
   return (
@@ -14,6 +15,7 @@ export function AppRouter() {
         {passengerRoutes}
         {oficinistaRoutes}
         {cooperativeRoutes}
+        {personalBusRoutes}
       </Routes>
     </BrowserRouter>
   );

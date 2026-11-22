@@ -13,6 +13,10 @@ export function RequireCooperative({ children }: { children: ReactNode }) {
     return <Navigate to="/" replace />;
   }
 
+  if (account.accountType === 'personal_bus') {
+    return <Navigate to="/personal-bus/viajes" replace />;
+  }
+
   if (account.accountType === 'super_admin') {
     return <Navigate to="/admin/cooperativas" replace />;
   }

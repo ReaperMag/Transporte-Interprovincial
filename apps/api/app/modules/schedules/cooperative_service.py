@@ -24,7 +24,6 @@ from app.modules.trips.models import Trip, TripStatus
 
 
 LOCAL_TIMEZONE = ZoneInfo("America/Guayaquil")
-BUS_TURNAROUND_MINUTES = 30
 
 
 def _has_full_route_fares(db: Session, route: Route) -> bool:
@@ -214,131 +213,33 @@ def _as_local(value: datetime) -> datetime:
     return value.astimezone(LOCAL_TIMEZONE)
 
 
-def _schedule_entries(
-    db: Session,
-    cooperative_id: int,
-    bus_ids: set[int],
-    start: datetime,
-    end: datetime,
-    excluded_sheet_id: int | None,
-) -> list[tuple[int, datetime, int, int, int, str]]:
-    statement = (
-        select(Trip)
-        .join(Frequency, Trip.frequency_id == Frequency.id)
-        .join(Route, Frequency.route_id == Route.id)
-        .options(selectinload(Trip.frequency).selectinload(Frequency.route))
-        .where(
-            Trip.cooperative_id == cooperative_id,
-            Trip.bus_id.in_(bus_ids),
-            Trip.status != TripStatus.CANCELLED,
-            Trip.departure_at >= start,
-            Trip.departure_at < end,
-            Route.cooperative_id == cooperative_id,
-        )
-    )
-    if excluded_sheet_id is not None:
-        statement = statement.where(
-            (Trip.route_sheet_id.is_(None))
-            | (Trip.route_sheet_id != excluded_sheet_id)
-        )
-
-    entries = []
-    for trip in db.scalars(statement).all():
-        route = trip.frequency.route
-        if route.duration_minutes is None:
-            raise BusAssignmentError(
-                f"El viaje existente {trip.id} no tiene duración registrada y no se puede validar."
-            )
-        entries.append(
-            (
-                trip.bus_id,
-                _as_local(trip.departure_at),
-                route.duration_minutes,
-                route.origin_city_id,
-                route.destination_city_id,
-                f"viaje {trip.id}",
-            )
-        )
-    return entries
-
-
 def _validate_assignments(
-    db: Session,
-    cooperative_id: int,
-    service_date: date,
     assignments: list[tuple[Frequency, Bus]],
     starting_locations: dict[int, int],
-    excluded_sheet_id: int | None,
 ) -> None:
-    bus_ids = {bus.id for _, bus in assignments}
-    if not bus_ids:
-        return
-    start = _local_datetime(service_date, time.min) - timedelta(days=1)
-    end = _local_datetime(service_date, time.min) + timedelta(days=2)
-    entries = _schedule_entries(
-        db,
-        cooperative_id,
-        bus_ids,
-        start,
-        end,
-        excluded_sheet_id,
-    )
-
+    """Un bus solo puede salir una vez al día y debe empezar en la ciudad de su salida."""
+    seen: set[int] = set()
     for frequency, bus in assignments:
         route = frequency.route
-        if route.duration_minutes is None:
+        if bus.id in seen:
             raise BusAssignmentError(
-                f"La ruta {route.origin_city.name} - {route.destination_city.name} "
-                "necesita una duración para verificar la disponibilidad."
+                f"El bus {bus.number} ya tiene otra frecuencia asignada este día; "
+                "un bus solo puede aparecer una vez al día."
             )
-        entries.append(
-            (
-                bus.id,
-                _local_datetime(service_date, frequency.departure_time),
-                route.duration_minutes,
-                route.origin_city_id,
-                route.destination_city_id,
-                f"{route.origin_city.name} - {route.destination_city.name}",
-            )
-        )
-
-    entries.sort(key=lambda entry: (entry[0], entry[1]))
-    previous_by_bus: dict[int, tuple[int, datetime, int, int, int, str]] = {}
-    first_daily_routes: dict[int, int] = {}
-    for entry in entries:
-        bus_id, departure_at, duration, origin_id, destination_id, label = entry
-        previous = previous_by_bus.get(bus_id)
-        if previous is not None:
-            _, previous_departure, previous_duration, _, previous_destination, previous_label = previous
-            previous_arrival = previous_departure + timedelta(minutes=previous_duration)
-            next_allowed_departure = previous_arrival + timedelta(
-                minutes=BUS_TURNAROUND_MINUTES
-            )
-            bus = next(bus for _, bus in assignments if bus.id == bus_id)
-            if departure_at < next_allowed_departure:
-                raise BusAssignmentError(
-                    f"El bus {bus.number} se cruza entre {previous_label} y {label}; "
-                    f"debe tener {BUS_TURNAROUND_MINUTES} minutos para el cambio de servicio."
-                )
-            if (
-                previous_departure.date() == departure_at.date()
-                and previous_destination != origin_id
-            ):
-                raise BusAssignmentError(
-                    f"El bus {bus.number} termina {previous_label} en otra ciudad; "
-                    f"no puede iniciar {label} desde ese punto."
-                )
-        previous_by_bus[bus_id] = entry
-        if departure_at.date() == service_date:
-            first_daily_routes.setdefault(bus_id, origin_id)
-
-    for bus_id, origin_city_id in first_daily_routes.items():
-        if starting_locations.get(bus_id) != origin_city_id:
-            bus = next(bus for _, bus in assignments if bus.id == bus_id)
+        seen.add(bus.id)
+        if starting_locations.get(bus.id) != route.origin_city_id:
             raise BusAssignmentError(
                 f"Indica la ubicación inicial correcta del bus {bus.number}; "
                 "debe coincidir con la ciudad de salida de su primer servicio."
             )
+
+
+def _ensure_editable_date(service_date: date) -> None:
+    """Solo se pueden modificar hojas desde mañana; hoy y los días pasados quedan fijos."""
+    if service_date <= datetime.now(LOCAL_TIMEZONE).date():
+        raise BusAssignmentError(
+            "No se pueden modificar las hojas de hoy ni de días anteriores."
+        )
 
 
 def _bus_read(bus: Bus) -> dict:
@@ -486,13 +387,18 @@ def get_route_sheet_auto_plan(
                     )
                 )
 
-        if sheet is not None and (not force or has_reservations):
+        is_editable_date = service_date > datetime.now(LOCAL_TIMEZONE).date()
+        if sheet is not None and (not force or has_reservations or not is_editable_date):
             results.append(
                 get_route_sheet(db, cooperative_id, bus_group_id, service_date)
             )
             continue
 
         if sheet is not None and force and not has_reservations:
+            # Sin esto los viajes quedan huérfanos (route_sheet_id = NULL) y siguen
+            # bloqueando a sus buses en las validaciones de cruce.
+            for trip in list(sheet.trips):
+                db.delete(trip)
             db.delete(sheet)
             db.commit()
             sheet = None
@@ -629,6 +535,7 @@ def save_route_sheet(
     cooperative_id: int,
     payload: RouteSheetSave,
 ) -> dict:
+    _ensure_editable_date(payload.service_date)
     group = db.scalar(
         select(BusGroup).where(
             BusGroup.id == payload.bus_group_id,
@@ -776,14 +683,7 @@ def save_route_sheet(
     ):
         raise RouteSheetHasReservationsError
 
-    _validate_assignments(
-        db,
-        cooperative_id,
-        payload.service_date,
-        selected_assignments,
-        starting_locations,
-        sheet.id if sheet else None,
-    )
+    _validate_assignments(selected_assignments, starting_locations)
 
     if sheet is None:
         sheet = RouteSheet(
@@ -903,6 +803,7 @@ def publish_route_sheet(
             sheet.bus_group_id,
             sheet.service_date,
         )
+    _ensure_editable_date(sheet.service_date)
 
     active_frequency_ids = set(
         db.scalars(
@@ -964,14 +865,7 @@ def publish_route_sheet(
             )
         ).all()
     }
-    _validate_assignments(
-        db,
-        cooperative_id,
-        sheet.service_date,
-        list(assigned_pairs),
-        starting_locations,
-        sheet.id,
-    )
+    _validate_assignments(list(assigned_pairs), starting_locations)
 
     sheet.status = RouteSheetStatus.PUBLISHED
     db.commit()

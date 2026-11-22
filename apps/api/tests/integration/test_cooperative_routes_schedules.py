@@ -516,7 +516,7 @@ def test_route_sheet_rejects_route_conflict_and_allows_replacement_bus(test_envi
         headers={"Origin": settings.frontend_origin},
     )
     assert conflict.status_code == 409
-    assert "se cruza" in conflict.json()["detail"]
+    assert "una vez al día" in conflict.json()["detail"]
 
     saved = client.put(
         f"{PLANNING_URL}/route-sheets",
@@ -584,6 +584,35 @@ def test_route_sheet_requires_correct_starting_city_and_disallows_edit_after_pub
     )
     assert invalid_location.status_code == 409
     assert "ubicación inicial" in invalid_location.json()["detail"]
+
+
+def test_route_sheet_cannot_be_modified_for_today(test_environment):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    client, engine = test_environment
+    cooperative = create_cooperative_account(engine)
+    assert login(client).status_code == 200
+    group_id, bus_ids = create_group_and_buses(engine, cooperative.id)
+    ambato_id = create_city(client, "Ambato", "Tungurahua")
+    quito_id = create_city(client, "Quito", "Pichincha")
+    route = create_route(client, ambato_id, quito_id, group_id=group_id, duration=180)
+    frequency = create_frequency(client, route["id"], group_id, "08:00")
+    today = datetime.now(ZoneInfo("America/Guayaquil")).date()
+
+    response = client.put(
+        f"{PLANNING_URL}/route-sheets",
+        json={
+            "busGroupId": group_id,
+            "serviceDate": today.isoformat(),
+            "assignments": [{"frequencyId": frequency["id"], "busId": bus_ids[0]}],
+            "startingLocations": [{"busId": bus_ids[0], "cityId": ambato_id}],
+        },
+        headers={"Origin": settings.frontend_origin},
+    )
+
+    assert response.status_code == 409
+    assert "hoy" in response.json()["detail"]
 
 
 def test_draft_route_sheet_can_replace_a_bus(test_environment):

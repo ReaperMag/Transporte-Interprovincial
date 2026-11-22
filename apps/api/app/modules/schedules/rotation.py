@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
+from datetime import date, time
 
 ANCHOR_MONDAY = date(2025, 1, 6)
-BUS_TURNAROUND_MINUTES = 30
 
 NO_OPERATIONAL_BUSES = "NO_OPERATIONAL_BUSES"
 REST_COUNT_TOO_HIGH = "REST_COUNT_TOO_HIGH"
@@ -77,37 +76,18 @@ def build_daily_plan(
         rotation = working[offset:] + working[:offset]
 
     ordered = sorted(frequencies, key=lambda item: (item.departure_time, item.id))
-    last_arrival: dict[int, datetime] = {}
-    last_destination: dict[int, int] = {}
     first_origin: dict[int, int] = {}
     used_bus_ids: set[int] = set()
     assignments: list[RotationAssignment] = []
-    pointer = 0
 
+    # Cada bus sale una sola vez al día: se reparten en orden de rotación.
+    available = list(rotation)
     for frequency in ordered:
         route = frequency.route
-        duration = route.duration_minutes
-        departure = datetime.combine(service_date, frequency.departure_time)
-        assigned_bus = None
-        if duration is not None and rotation:
-            for step in range(len(rotation)):
-                index = (pointer + step) % len(rotation)
-                candidate = rotation[index]
-                previous_arrival = last_arrival.get(candidate.id)
-                fits = previous_arrival is None or (
-                    departure
-                    >= previous_arrival + timedelta(minutes=BUS_TURNAROUND_MINUTES)
-                    and last_destination.get(candidate.id) == route.origin_city_id
-                )
-                if fits:
-                    assigned_bus = candidate
-                    pointer = (index + 1) % len(rotation)
-                    break
+        assigned_bus = available.pop(0) if available else None
 
         if assigned_bus is not None:
-            last_arrival[assigned_bus.id] = departure + timedelta(minutes=duration)
-            last_destination[assigned_bus.id] = route.destination_city_id
-            first_origin.setdefault(assigned_bus.id, route.origin_city_id)
+            first_origin[assigned_bus.id] = route.origin_city_id
             used_bus_ids.add(assigned_bus.id)
 
         assignments.append(
@@ -117,7 +97,7 @@ def build_daily_plan(
                 departure_time=frequency.departure_time,
                 origin_city_id=route.origin_city_id,
                 destination_city_id=route.destination_city_id,
-                duration_minutes=duration or 0,
+                duration_minutes=route.duration_minutes or 0,
             )
         )
 
