@@ -16,7 +16,6 @@ export interface PersonalBusProfile {
   idNumber: string;
   email: string;
   phone: string | null;
-  position: 'driver' | 'controller';
   cooperativeId: number;
   cooperativeName: string;
   cooperativeLogoUrl: string | null;
