@@ -9,7 +9,7 @@ import { useAuth } from '../context/useAuth';
 export function LoginContainer() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { refreshSession, logout } = useAuth();
+  const { refreshSession } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   async function handleLogin(credentials: LoginCredentials) {
@@ -18,12 +18,6 @@ export function LoginContainer() {
 
     try {
       const account = await loginAccount(credentials);
-      if (account.accountType === 'personal_bus') {
-        // El panel del personal del bus llega en la sub-issue del frontend del chofer.
-        await logout();
-        setError('El panel del personal del bus todavía no está disponible.');
-        return;
-      }
       await refreshSession();
       navigate(
         account.accountType === 'super_admin'
@@ -32,12 +26,14 @@ export function LoginContainer() {
             ? '/cooperativa/panel'
             : account.accountType === 'oficinista'
               ? '/oficinista/panel'
-              : typeof location.state?.returnTo === 'string' &&
-                  /^\/pasajero\/viajes\/\d+\/asientos\?origen=\d+&destino=\d+$/.test(
-                    location.state.returnTo,
-                  )
-                ? location.state.returnTo
-                : '/pasajero',
+              : account.accountType === 'personal_bus'
+                ? '/personal-bus/viajes'
+                : typeof location.state?.returnTo === 'string' &&
+                    /^\/pasajero\/viajes\/\d+\/asientos\?origen=\d+&destino=\d+$/.test(
+                      location.state.returnTo,
+                    )
+                  ? location.state.returnTo
+                  : '/pasajero',
         { replace: true },
       );
     } catch (err) {
