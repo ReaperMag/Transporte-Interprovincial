@@ -11,6 +11,7 @@ const sections: readonly SidebarSection[] = [
   { to: '/oficinista/panel', label: 'Mi perfil', icon: 'profile', end: true },
   { to: '/oficinista/pagos-pendientes', label: 'Comprobantes', icon: 'receipt', end: true },
   { to: '/oficinista/ventas', label: 'Vender boleto', icon: 'ticket', end: true },
+  { to: '/oficinista/problemas', label: 'Problemas de viajes', icon: 'bus', end: true },
 ];
 
 export function OficinistaLayout() {
