@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -32,6 +32,7 @@ from app.modules.trips.bus_staff_schemas import (
     TripProblemRead,
 )
 from app.modules.trips.models import Trip, TripProblem, TripProblemType, TripStatus
+from app.modules.trips.service import ECUADOR_TIMEZONE
 
 
 # El abordaje se puede iniciar desde este tiempo antes de la salida.
@@ -445,6 +446,16 @@ PROBLEM_TYPE_LABELS = {
 REPORTABLE_TRIP_STATUSES = OPEN_TRIP_STATUSES
 
 
+def stored_utc_to_local(value: datetime) -> datetime:
+    """
+    created_at lo guarda la base de datos en UTC sin zona horaria. Se convierte
+    a la hora de Ecuador para mostrarla igual que el resto de horarios.
+    """
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(ECUADOR_TIMEZONE)
+
+
 def staff_name(db: Session, staff_id: int | None) -> str | None:
     staff = db.get(Staff, staff_id) if staff_id else None
     return f"{staff.first_name} {staff.last_name}" if staff else None
@@ -457,7 +468,7 @@ def build_problem_read(db: Session, problem: TripProblem) -> TripProblemRead:
         problemType=problem.problem_type,
         comment=problem.comment,
         reportedByName=staff_name(db, problem.reported_by_id),
-        reportedAt=problem.created_at,
+        reportedAt=stored_utc_to_local(problem.created_at),
         resolvedAt=problem.resolved_at,
         resolvedByName=staff_name(db, problem.resolved_by_id),
     )

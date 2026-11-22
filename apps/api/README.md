@@ -370,6 +370,25 @@ Reglas principales:
 - **Privacidad:** cada boleto lo ven quien lo compró, el pasajero a cuyo
   nombre está y el personal de oficina de la cooperativa del viaje.
 
+## Reportes de viaje
+
+El reporte de un viaje está disponible desde que empieza su abordaje. Muestra
+la ruta y el bus, el personal que inició el abordaje, el viaje y la llegada,
+los horarios programado y real con la duración, los pasajeros (boletos
+vendidos, abordaron, no se presentaron y rechazados por categoría), las ventas
+a bordo con quién las cobró, el total recaudado en línea, en oficina y a bordo,
+y los problemas reportados. No cuenta los boletos cancelados.
+
+- Personal del bus, solo para su bus asignado:
+  - `GET /api/v1/bus-staff/trips/{id}/report` y `GET .../report/pdf`.
+  - `GET /api/v1/bus-staff/history`: viajes del bus del más reciente al más
+    antiguo, con un resumen de cada uno.
+- Administrador y oficinista de la cooperativa, para todos sus buses:
+  - `GET /api/v1/cooperatives/me/trips/{id}/report` y `GET .../report/pdf`.
+  - `GET /api/v1/cooperatives/me/buses/{busId}/history`.
+
+El PDF se genera en el servidor con `fpdf2`.
+
 ## Control del viaje
 
 El personal del bus (conductor o controlador) controla los viajes de su bus
@@ -402,6 +421,27 @@ asignado desde `/api/v1/bus-staff/trips`:
 
 Cada acción guarda qué persona la hizo. Por ahora se asume que todos los
 pasajeros suben en el terminal de origen.
+
+### Venta a bordo
+
+Con el viaje en curso, el personal del bus vende pasajes a quienes suben en
+la vía, solo en efectivo:
+
+- `GET /api/v1/bus-staff/trips/{id}/onboard-sales/options` muestra las paradas
+  registradas de la ruta, los asientos libres del tramo y la tarifa sugerida
+  de cada asiento. El tramo se indica con `originCityId` y `destinationCityId`;
+  si no se envía, se usa el recorrido completo.
+- `POST /api/v1/bus-staff/trips/{id}/onboard-sales` registra la venta con los
+  datos del pasajero, el asiento, las paradas registradas más cercanas a donde
+  subió y a donde va, y la descripción de esos lugares. Si no se envía
+  `price`, se cobra la tarifa del tramo con el descuento de la categoría; si el
+  tramo no tiene tarifa, el precio es obligatorio. El boleto queda usado, con
+  canal `on_board` y la persona que lo vendió.
+- `GET /api/v1/bus-staff/trips/{id}/onboard-sales` lista las ventas a bordo
+  del viaje con el total cobrado.
+
+Se pueden vender los asientos libres del tramo, incluidos los que se
+liberaron porque el pasajero no abordó.
 
 ## Búsqueda de viajes
 
