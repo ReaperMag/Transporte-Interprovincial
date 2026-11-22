@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getCooperativeBuses } from '../../cooperatives/services/bus.service';
 import type { CooperativeBus } from '../../cooperatives/services/bus.service';
 import { getCooperativeBusHistory } from '../services/reports.service';
@@ -69,7 +69,7 @@ export function CooperativeBusHistoryPage() {
       <header className="oficinista-operations__header">
         <p className="oficinista-operations__eyebrow">Reportes</p>
         <h1 id="bus-history-title">Historial de viajes por bus</h1>
-        <p>Elige un bus para ver sus viajes desde el abordaje, con lo recaudado en cada uno.</p>
+        <p>Elige un bus para ver sus viajes desde el abordaje y abre el reporte de cada uno.</p>
       </header>
 
       {error && (
@@ -134,6 +134,7 @@ export function CooperativeBusHistoryPage() {
                         <th>Ventas a bordo</th>
                         <th>Recaudado</th>
                         <th>Problemas abiertos</th>
+                        <th>Reporte</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -150,6 +151,13 @@ export function CooperativeBusHistoryPage() {
                           <td>{trip.onboardSales}</td>
                           <td>{formatMoney(trip.total)}</td>
                           <td>{trip.openProblems}</td>
+                          <td>
+                            <Link
+                              to={`/cooperativa/reportes/viajes/${trip.tripId}?bus=${visibleHistory.busId}`}
+                            >
+                              Ver reporte
+                            </Link>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

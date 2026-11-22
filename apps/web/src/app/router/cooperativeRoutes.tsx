@@ -10,6 +10,7 @@ import { CooperativeRoutesPage } from '../../features/cooperatives/pages/Coopera
 import { CooperativeOfficeUsersPage } from '../../features/cooperatives/pages/CooperativeOfficeUsersPage';
 import { CooperativeBusStaffPage } from '../../features/cooperatives/pages/CooperativeBusStaffPage';
 import { CooperativeBusHistoryPage } from '../../features/reports/pages/CooperativeBusHistoryPage';
+import { CooperativeTripReportPage } from '../../features/reports/pages/TripReportPage';
 
 export const cooperativeRoutes = (
   <Route
@@ -30,5 +31,6 @@ export const cooperativeRoutes = (
     <Route path="oficinistas" element={<CooperativeOfficeUsersPage />} />
     <Route path="personal-bus" element={<CooperativeBusStaffPage />} />
     <Route path="reportes" element={<CooperativeBusHistoryPage />} />
+    <Route path="reportes/viajes/:tripId" element={<CooperativeTripReportPage />} />
   </Route>
 );
