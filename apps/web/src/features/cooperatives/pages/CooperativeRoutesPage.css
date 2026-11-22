@@ -1242,3 +1242,210 @@
 .cooperative-routes__standby-chip strong {
   color: #0e5a6b;
 }
+
+/* ---- Mejoras de UX de la hoja de ruta semanal ---- */
+.cooperative-routes__sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.cooperative-routes__table-wrap {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(40rem, 80vh);
+  container-type: inline-size;
+}
+
+.cooperative-routes__table-wrap:focus-visible {
+  outline: 2px solid #0e5a6b;
+  outline-offset: 2px;
+}
+
+.cooperative-routes__week-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Encabezado de columnas y primera columna fijos al desplazar */
+.cooperative-routes__week-table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+}
+
+.cooperative-routes__week-table tbody th[scope='row'] {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: #ffffff;
+  color: inherit;
+  font-size: inherit;
+  text-align: start;
+  box-shadow: 1px 0 0 #e2e8f0;
+}
+
+.cooperative-routes__week-table thead th:first-child {
+  inset-inline-start: 0;
+  z-index: 3;
+}
+
+.cooperative-routes__week-table tbody th small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Filas de descanso y de publicación */
+.cooperative-routes__rest-row td,
+.cooperative-routes__rest-row th[scope='row'] {
+  background: #fffbeb;
+}
+
+.cooperative-routes__publish-row td,
+.cooperative-routes__publish-row th[scope='row'] {
+  background: #f1f5f9;
+  border-top: 2px solid #cbd5e1;
+}
+
+.cooperative-routes__week-table select,
+.cooperative-routes__week-table .cooperative-routes__button {
+  min-block-size: 2.75rem;
+}
+
+.cooperative-routes__hint {
+  display: block;
+  margin-top: 0.3rem;
+  color: #475569;
+  font-size: 0.75rem;
+}
+
+/* Estado del día y guardado */
+.cooperative-routes__day-status[data-tone='published'] {
+  color: #166534;
+}
+
+.cooperative-routes__day-status[data-tone='draft'] {
+  color: #92400e;
+}
+
+.cooperative-routes__day-status[data-tone='proposal'] {
+  color: #475569;
+}
+
+.cooperative-routes__save-state {
+  min-block-size: 1rem;
+}
+
+.cooperative-routes__save-state[data-state='saving'] {
+  color: #0e5a6b;
+}
+
+.cooperative-routes__save-state[data-state='saved'] {
+  color: #166534;
+}
+
+.cooperative-routes__save-state[data-state='error'] {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+/* Diálogo de confirmación */
+.cooperative-routes__dialog {
+  inline-size: min(calc(100vw - 2rem), 28rem);
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  box-shadow: 0 20px 40px -12px rgb(15 23 42 / 35%);
+  color: #0f172a;
+}
+
+.cooperative-routes__dialog::backdrop {
+  background: rgb(15 23 42 / 45%);
+}
+
+.cooperative-routes__dialog h3 {
+  margin: 0 0 0.75rem;
+}
+
+.cooperative-routes__dialog p {
+  margin: 0 0 0.6rem;
+  color: #334155;
+}
+
+.cooperative-routes__dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+/* Vista de tarjetas por día en espacios angostos */
+@container (width < 700px) {
+  .cooperative-routes__week-table {
+    min-width: 0;
+  }
+
+  .cooperative-routes__week-table,
+  .cooperative-routes__week-table thead,
+  .cooperative-routes__week-table tbody,
+  .cooperative-routes__week-table tr,
+  .cooperative-routes__week-table th,
+  .cooperative-routes__week-table td {
+    display: block;
+  }
+
+  .cooperative-routes__week-table thead {
+    display: none;
+  }
+
+  .cooperative-routes__week-table tr {
+    margin-block-end: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.65rem;
+    overflow: hidden;
+  }
+
+  .cooperative-routes__week-table tbody th[scope='row'] {
+    position: sticky;
+    inset-block-start: 0;
+    inset-inline-start: auto;
+    z-index: 2;
+    background: #f1f5f9;
+    box-shadow: none;
+  }
+
+  .cooperative-routes__week-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .cooperative-routes__week-table td::before {
+    content: attr(data-label);
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .cooperative-routes__week-table td.cooperative-routes__filler {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cooperative-routes__toast {
+    animation: none;
+  }
+}

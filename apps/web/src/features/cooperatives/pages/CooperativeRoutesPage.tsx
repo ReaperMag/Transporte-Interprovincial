@@ -81,6 +81,75 @@ const ROUTE_SHEET_WARNING_LABELS: Record<RouteSheetWarning, string> = {
 
 type PlanningView = 'routes' | 'frequencies';
 
+interface PublishConfirmDialogProps {
+  dayText: string;
+  frequencyCount: number;
+  restNames: string[];
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function PublishConfirmDialog({
+  dayText,
+  frequencyCount,
+  restNames,
+  onConfirm,
+  onCancel,
+}: PublishConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="cooperative-routes__dialog"
+      aria-labelledby="publish-confirm-title"
+      aria-describedby="publish-confirm-description"
+      onCancel={(event) => {
+        event.preventDefault();
+        onCancel();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onCancel();
+      }}
+    >
+      <h3 id="publish-confirm-title">Publicar la hoja del {dayText}</h3>
+      <div id="publish-confirm-description">
+        <p>
+          Se publicarán {frequencyCount} {frequencyCount === 1 ? 'frecuencia' : 'frecuencias'} con
+          sus buses asignados.
+        </p>
+        <p>
+          {restNames.length > 0
+            ? `En descanso (solo lo ve la cooperativa): ${restNames.join(', ')}.`
+            : 'Ese día no hay buses en descanso.'}
+        </p>
+        <p>
+          Una vez publicada, la hoja solo se podrá reasignar mientras ningún viaje haya salido y no
+          existan reservas.
+        </p>
+      </div>
+      <div className="cooperative-routes__dialog-actions">
+        <button
+          type="button"
+          className="cooperative-routes__button cooperative-routes__button--secondary"
+          onClick={onCancel}
+          autoFocus
+        >
+          Cancelar
+        </button>
+        <button type="button" className="cooperative-routes__button" onClick={onConfirm}>
+          Publicar hoja
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 export function CooperativeRoutesPage() {
   return <RoutePlanning view="routes" />;
 }
@@ -117,6 +186,11 @@ function RoutePlanning({ view }: { view: PlanningView }) {
   const [assignedBuses, setAssignedBuses] = useState<Record<string, Record<number, string>>>({});
   const [standbySlots, setStandbySlots] = useState<Record<string, string[]>>({});
   const [publishingDay, setPublishingDay] = useState<string | null>(null);
+  const [confirmDay, setConfirmDay] = useState<string | null>(null);
+  const [daySaveState, setDaySaveState] = useState<Record<string, 'saving' | 'saved' | 'error'>>(
+    {},
+  );
+  const publishTriggerRef = useRef<HTMLElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isAutoAssigning, setIsAutoAssigning] = useState(false);
@@ -132,13 +206,6 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     return () => clearTimeout(timer);
   }, [success]);
 
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => {
-      setError(null);
-    }, 6000);
-    return () => clearTimeout(timer);
-  }, [error]);
   const planKey = `${selectedGroupId}:${serviceDate}`;
   const serviceDates = useMemo(
     () => Array.from({ length: 6 }, (_, index) => dateOffset(serviceDate, index)),
@@ -466,7 +533,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
   };
 
   /** Guarda como borrador la hoja de un día con las asignaciones y descansos dados. */
-  const persistDay = async (
+  const persistDayRaw = async (
     day: string,
     plan: RouteSheet,
     dayAssignments: Record<number, string>,
@@ -521,9 +588,23 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     return result;
   };
 
+  const requestPublishDay = (day: string, trigger: HTMLElement) => {
+    publishTriggerRef.current = trigger;
+    setConfirmDay(day);
+  };
+
+  const closePublishConfirm = () => {
+    setConfirmDay(null);
+    const trigger = publishTriggerRef.current;
+    requestAnimationFrame(() => {
+      if (trigger?.isConnected) trigger.focus();
+    });
+  };
+
   const handlePublishDay = async (day: string) => {
     const plan = plans[day];
     if (!plan) return;
+    setConfirmDay(null);
     setPublishingDay(day);
     setError(null);
     try {
@@ -548,6 +629,64 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     }
   };
 
+  const persistDay = async (
+    day: string,
+    plan: RouteSheet,
+    dayAssignments: Record<number, string>,
+    standbyIds: number[],
+  ): Promise<RouteSheet> => {
+    setDaySaveState((current) => ({ ...current, [day]: 'saving' }));
+    try {
+      const result = await persistDayRaw(day, plan, dayAssignments, standbyIds);
+      setDaySaveState((current) => ({ ...current, [day]: 'saved' }));
+      setTimeout(() => {
+        setDaySaveState((current) => {
+          if (current[day] !== 'saved') return current;
+          const next = { ...current };
+          delete next[day];
+          return next;
+        });
+      }, 2500);
+      return result;
+    } catch (saveError) {
+      setDaySaveState((current) => ({ ...current, [day]: 'error' }));
+      throw saveError;
+    }
+  };
+
+  /** Motivo por el que un bus no se puede elegir en una frecuencia ese día. */
+  const frequencyBusBlock = (
+    day: string,
+    bus: RouteSheet['buses'][number],
+    frequencyId: number,
+  ) => {
+    if (!bus.isActive || bus.status !== 'operativo') return bus.status.replaceAll('_', ' ');
+    if ((standbySlots[day] ?? []).includes(String(bus.id))) return 'en descanso';
+    const usedElsewhere = Object.entries(assignedBuses[day] ?? {}).some(
+      ([otherId, otherBus]) => otherBus === String(bus.id) && Number(otherId) !== frequencyId,
+    );
+    return usedElsewhere ? 'ya asignado' : null;
+  };
+
+  /** Motivo por el que un bus no se puede elegir como descanso ese día. */
+  const restBusBlock = (day: string, bus: RouteSheet['buses'][number], slotIndex: number) => {
+    if (!bus.isActive || bus.status !== 'operativo') return bus.status.replaceAll('_', ' ');
+    if (Object.values(assignedBuses[day] ?? {}).includes(String(bus.id))) {
+      return 'en una frecuencia';
+    }
+    const inOtherSlot = (standbySlots[day] ?? []).some(
+      (id, index) => id === String(bus.id) && index !== slotIndex,
+    );
+    return inOtherSlot ? 'en otro descanso' : null;
+  };
+
+  const dayStatus = (day: string): { label: string; tone: 'published' | 'draft' | 'proposal' } => {
+    const status = plans[day]?.status;
+    if (status === 'published') return { label: 'Publicada', tone: 'published' };
+    if (status === 'draft') return { label: 'Borrador', tone: 'draft' };
+    return { label: 'Propuesta', tone: 'proposal' };
+  };
+
   const handleBusAssignmentChange = async (day: string, frequencyId: number, busId: string) => {
     const updatedDayAssignments = {
       ...(assignedBuses[day] ?? {}),
@@ -564,6 +703,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
     }));
     if (!plan) return;
 
+    const previousAssignments = assignedBuses[day] ?? {};
     try {
       await persistDay(
         day,
@@ -572,6 +712,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
         (standbySlots[day] ?? []).filter(Boolean).map(Number),
       );
     } catch (saveError) {
+      setAssignedBuses((current) => ({ ...current, [day]: previousAssignments }));
       setError(
         saveError instanceof Error ? saveError.message : 'No fue posible guardar la asignación.',
       );
@@ -655,7 +796,11 @@ function RoutePlanning({ view }: { view: PlanningView }) {
 
       {/* Notificaciones flotantes / modales emergentes */}
       {(error || success) && (
-        <aside className="cooperative-routes__toast-container" aria-live="polite">
+        <div
+          className="cooperative-routes__toast-container"
+          role="region"
+          aria-label="Notificaciones"
+        >
           {error && (
             <div
               className="cooperative-routes__toast cooperative-routes__toast--error"
@@ -724,7 +869,7 @@ function RoutePlanning({ view }: { view: PlanningView }) {
               </button>
             </div>
           )}
-        </aside>
+        </div>
       )}
 
       {isLoading ? (
@@ -1001,25 +1146,57 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                     poder asignar las frecuencias.
                   </p>
                 )}
-                <div className="cooperative-routes__table-wrap">
+                <div
+                  className="cooperative-routes__table-wrap"
+                  role="region"
+                  aria-labelledby="route-sheet-caption"
+                  tabIndex={0}
+                >
                   <table className="cooperative-routes__sheet-table cooperative-routes__week-table">
+                    <caption id="route-sheet-caption" className="cooperative-routes__sr-only">
+                      Hoja de ruta semanal del grupo: bus asignado a cada frecuencia por día,
+                      buses en descanso y publicación de cada día
+                    </caption>
                     <thead>
                       <tr>
-                        <th>Origen – destino</th>
-                        <th>Salida</th>
-                        <th>Subrutas</th>
-                        {serviceDates.map((day) => (
-                          <th key={day}>
-                            <span>{dayLabel(day)}</span>
-                            <small>
-                              {plans[day]?.status === 'published'
-                                ? 'Publicada'
-                                : plans[day]?.status === 'draft'
-                                  ? 'Borrador'
-                                  : 'Auto'}
-                            </small>
-                          </th>
-                        ))}
+                        <th scope="col">Origen – destino</th>
+                        <th scope="col">Salida</th>
+                        <th scope="col">Subrutas</th>
+                        {serviceDates.map((day) => {
+                          const status = dayStatus(day);
+                          const saveState = daySaveState[day];
+                          return (
+                            <th scope="col" key={day}>
+                              <span>{dayLabel(day)}</span>
+                              <small
+                                className="cooperative-routes__day-status"
+                                data-tone={status.tone}
+                              >
+                                <span aria-hidden="true">
+                                  {status.tone === 'published'
+                                    ? '✓ '
+                                    : status.tone === 'draft'
+                                      ? '✎ '
+                                      : '◌ '}
+                                </span>
+                                {status.label}
+                              </small>
+                              <small
+                                className="cooperative-routes__save-state"
+                                data-state={saveState ?? 'idle'}
+                                aria-live="polite"
+                              >
+                                {saveState === 'saving'
+                                  ? 'Guardando…'
+                                  : saveState === 'saved'
+                                    ? 'Guardado'
+                                    : saveState === 'error'
+                                      ? 'No se guardó'
+                                      : ''}
+                              </small>
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -1035,12 +1212,12 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                       ) : (
                         filteredSheetFrequencies.map((frequency) => (
                           <tr key={frequency.frequencyId}>
-                            <td>
+                            <th scope="row">
                               <strong>{frequency.routeName}</strong>
                               <small>{frequency.resolutionNumber}</small>
-                            </td>
-                            <td>{displayTime(frequency.departureTime)}</td>
-                            <td>
+                            </th>
+                            <td data-label="Salida">{displayTime(frequency.departureTime)}</td>
+                            <td data-label="Subrutas">
                               {frequency.stops.length
                                 ? frequency.stops.join(' → ')
                                 : 'Sin paradas intermedias'}
@@ -1050,9 +1227,10 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                               const isPublished = dayPlan?.status === 'published';
                               const canEditBus = !isPublished || dayPlan.canReassign;
                               return (
-                                <td key={day}>
+                                <td key={day} data-label={dayLabel(day)}>
                                   <select
                                     aria-label={`${frequency.routeName} ${dayLabel(day)}`}
+                                    aria-busy={daySaveState[day] === 'saving'}
                                     value={assignedBuses[day]?.[frequency.frequencyId] ?? ''}
                                     onChange={(event) =>
                                       void handleBusAssignmentChange(
@@ -1064,27 +1242,19 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                                     disabled={!canEditBus}
                                   >
                                     <option value="">Sin asignar</option>
-                                    {dayPlan?.buses.map((bus) => (
-                                      <option
-                                        value={bus.id}
-                                        key={bus.id}
-                                        disabled={
-                                          !bus.isActive ||
-                                          bus.status !== 'operativo' ||
-                                          (standbySlots[day] ?? []).includes(String(bus.id)) ||
-                                          Object.entries(assignedBuses[day] ?? {}).some(
-                                            ([otherId, otherBus]) =>
-                                              otherBus === String(bus.id) &&
-                                              Number(otherId) !== frequency.frequencyId,
-                                          )
-                                        }
-                                      >
-                                        Bus {bus.number}
-                                        {bus.status !== 'operativo'
-                                          ? ` · ${bus.status.replaceAll('_', ' ')}`
-                                          : ''}
-                                      </option>
-                                    ))}
+                                    {dayPlan?.buses.map((bus) => {
+                                      const blocked = frequencyBusBlock(
+                                        day,
+                                        bus,
+                                        frequency.frequencyId,
+                                      );
+                                      return (
+                                        <option value={bus.id} key={bus.id} disabled={!!blocked}>
+                                          Bus {bus.number}
+                                          {blocked ? ` · ${blocked}` : ''}
+                                        </option>
+                                      );
+                                    })}
                                   </select>
                                 </td>
                               );
@@ -1094,21 +1264,22 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                       )}
                       {Array.from({ length: restBusesCount }, (_, index) => (
                         <tr key={`rest-${index}`} className="cooperative-routes__rest-row">
-                          <td>
+                          <th scope="row">
                             <strong>Descanso</strong>
-                          </td>
-                          <td>—</td>
-                          <td>—</td>
+                            <small>Solo visible para la cooperativa</small>
+                          </th>
+                          <td className="cooperative-routes__filler">—</td>
+                          <td className="cooperative-routes__filler">—</td>
                           {serviceDates.map((day) => {
                             const dayPlan = plans[day];
                             const slots = standbySlots[day] ?? [];
-                            const assignedIds = new Set(Object.values(assignedBuses[day] ?? {}));
                             const canEditRest =
                               dayPlan?.status !== 'published' || Boolean(dayPlan?.canReassign);
                             return (
-                              <td key={day}>
+                              <td key={day} data-label={dayLabel(day)}>
                                 <select
                                   aria-label={`Descanso ${index + 1} ${dayLabel(day)}`}
+                                  aria-busy={daySaveState[day] === 'saving'}
                                   value={slots[index] ?? ''}
                                   onChange={(event) =>
                                     void handleStandbyChange(day, index, event.target.value)
@@ -1117,21 +1288,11 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                                 >
                                   <option value="">Sin asignar</option>
                                   {dayPlan?.buses.map((bus) => {
-                                    const busId = String(bus.id);
-                                    const takenElsewhere =
-                                      assignedIds.has(busId) ||
-                                      slots.some((id, i) => id === busId && i !== index);
+                                    const blocked = restBusBlock(day, bus, index);
                                     return (
-                                      <option
-                                        value={bus.id}
-                                        key={bus.id}
-                                        disabled={
-                                          takenElsewhere ||
-                                          !bus.isActive ||
-                                          bus.status !== 'operativo'
-                                        }
-                                      >
+                                      <option value={bus.id} key={bus.id} disabled={!!blocked}>
                                         Bus {bus.number}
+                                        {blocked ? ` · ${blocked}` : ''}
                                       </option>
                                     );
                                   })}
@@ -1142,40 +1303,52 @@ function RoutePlanning({ view }: { view: PlanningView }) {
                         </tr>
                       ))}
                       <tr className="cooperative-routes__publish-row">
-                        <td>
+                        <th scope="row">
                           <strong>Publicar hoja</strong>
-                        </td>
-                        <td>—</td>
-                        <td>—</td>
+                          <small>Una vez por día</small>
+                        </th>
+                        <td className="cooperative-routes__filler">—</td>
+                        <td className="cooperative-routes__filler">—</td>
                         {serviceDates.map((day) => {
                           const dayPlan = plans[day];
                           const isPublished = dayPlan?.status === 'published';
-                          const allAssigned =
-                            Boolean(dayPlan) &&
-                            dayPlan.frequencies.length > 0 &&
-                            dayPlan.frequencies.every((frequency) =>
+                          const total = dayPlan?.frequencies.length ?? 0;
+                          const assignedCount =
+                            dayPlan?.frequencies.filter((frequency) =>
                               Boolean(assignedBuses[day]?.[frequency.frequencyId]),
-                            );
+                            ).length ?? 0;
+                          const missing = total - assignedCount;
+                          const canPublish = total > 0 && missing === 0;
                           return (
-                            <td key={day}>
+                            <td key={day} data-label={dayLabel(day)}>
                               {isPublished ? (
                                 <span className="cooperative-routes__badge cooperative-routes__badge--success">
-                                  Publicada
+                                  ✓ Publicada
                                 </span>
                               ) : (
-                                <button
-                                  type="button"
-                                  className="cooperative-routes__button cooperative-routes__button--small"
-                                  onClick={() => void handlePublishDay(day)}
-                                  disabled={!allAssigned || publishingDay !== null}
-                                  title={
-                                    allAssigned
-                                      ? 'Publica la hoja de este día'
-                                      : 'Asigna un bus a todas las frecuencias para publicar'
-                                  }
-                                >
-                                  {publishingDay === day ? 'Publicando...' : 'Publicar'}
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    className="cooperative-routes__button cooperative-routes__button--small"
+                                    onClick={(event) =>
+                                      requestPublishDay(day, event.currentTarget)
+                                    }
+                                    disabled={!canPublish || publishingDay !== null}
+                                    aria-describedby={`publish-hint-${day}`}
+                                  >
+                                    {publishingDay === day ? 'Publicando...' : 'Publicar'}
+                                  </button>
+                                  <small
+                                    id={`publish-hint-${day}`}
+                                    className="cooperative-routes__hint"
+                                  >
+                                    {total === 0
+                                      ? 'Sin frecuencias'
+                                      : missing > 0
+                                        ? `Falta${missing === 1 ? '' : 'n'} ${missing} por asignar`
+                                        : 'Lista para publicar'}
+                                  </small>
+                                </>
                               )}
                             </td>
                           );
@@ -1189,6 +1362,20 @@ function RoutePlanning({ view }: { view: PlanningView }) {
           </section>
           )}
         </>
+      )}
+
+      {confirmDay && plans[confirmDay] && (
+        <PublishConfirmDialog
+          dayText={dayLabel(confirmDay)}
+          frequencyCount={plans[confirmDay].frequencies.length}
+          restNames={(standbySlots[confirmDay] ?? [])
+            .filter(Boolean)
+            .map((id) => plans[confirmDay].buses.find((bus) => String(bus.id) === id)?.number)
+            .filter((number): number is string => Boolean(number))
+            .map((number) => `Bus ${number}`)}
+          onConfirm={() => void handlePublishDay(confirmDay)}
+          onCancel={closePublishConfirm}
+        />
       )}
 
       {view === 'routes' && isRouteModalOpen && (
