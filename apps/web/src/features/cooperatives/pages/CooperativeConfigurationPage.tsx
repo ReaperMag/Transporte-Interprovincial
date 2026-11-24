@@ -26,7 +26,12 @@ const emptyProfile: EditableProfile = {
   tiktokUrl: '',
   websiteUrl: '',
   description: '',
+  paymentReviewTimeoutMinutes: '30',
 };
+
+// Límites del backend para el tiempo de revisión del comprobante, en minutos.
+const MIN_REVIEW_MINUTES = 10;
+const MAX_REVIEW_MINUTES = 120;
 
 function toEditableProfile(profile: CooperativeProfile): EditableProfile {
   return {
@@ -41,6 +46,7 @@ function toEditableProfile(profile: CooperativeProfile): EditableProfile {
     tiktokUrl: profile.tiktokUrl ?? '',
     websiteUrl: profile.websiteUrl ?? '',
     description: profile.description ?? '',
+    paymentReviewTimeoutMinutes: String(profile.paymentReviewTimeoutMinutes),
   };
 }
 
@@ -56,6 +62,7 @@ function toNullableProfile(profile: EditableProfile): NullableEditableProfile {
     tiktokUrl: profile.tiktokUrl.trim() || null,
     websiteUrl: profile.websiteUrl.trim() || null,
     description: profile.description.trim() || null,
+    paymentReviewTimeoutMinutes: Number(profile.paymentReviewTimeoutMinutes),
   } satisfies NullableEditableProfile;
 }
 
@@ -118,7 +125,15 @@ export function CooperativeConfigurationPage() {
     event.preventDefault();
     setSuccess(null);
 
-    const validationError = phoneError(profile.phone) ?? emailError(profile.email, false);
+    const reviewMinutes = Number(profile.paymentReviewTimeoutMinutes);
+    const validationError =
+      phoneError(profile.phone) ??
+      emailError(profile.email, false) ??
+      (Number.isInteger(reviewMinutes) &&
+      reviewMinutes >= MIN_REVIEW_MINUTES &&
+      reviewMinutes <= MAX_REVIEW_MINUTES
+        ? null
+        : `El tiempo de revisión debe estar entre ${MIN_REVIEW_MINUTES} y ${MAX_REVIEW_MINUTES} minutos.`);
     if (validationError) {
       setError(validationError);
       return;
@@ -303,6 +318,32 @@ export function CooperativeConfigurationPage() {
                       value={profile.description}
                       onChange={(event) => updateField('description', event.target.value)}
                     />
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset disabled={isSaving}>
+                <legend>Revisión de comprobantes</legend>
+                <div className="cooperative-configuration__fields">
+                  <label>
+                    Tiempo máximo de revisión (minutos)
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={MIN_REVIEW_MINUTES}
+                      max={MAX_REVIEW_MINUTES}
+                      step={1}
+                      required
+                      value={profile.paymentReviewTimeoutMinutes}
+                      onChange={(event) =>
+                        updateField('paymentReviewTimeoutMinutes', event.target.value)
+                      }
+                    />
+                    <small>
+                      Si el comprobante no se revisa en este tiempo, la reserva se cancela y se
+                      liberan los asientos. Puede ser de {MIN_REVIEW_MINUTES} a {MAX_REVIEW_MINUTES}{' '}
+                      minutos.
+                    </small>
                   </label>
                 </div>
               </fieldset>

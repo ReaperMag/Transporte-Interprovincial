@@ -1,0 +1,87 @@
+.reports-table-wrap {
+  overflow-x: auto;
+}
+
+.reports-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.reports-table th {
+  padding: 10px 12px;
+  background: #f8f7f4;
+  color: #68757b;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.reports-table td {
+  padding: 12px;
+  border-top: 1px solid #ebe8e2;
+  color: #334155;
+}
+
+.reports-table td a {
+  color: var(--coop-primary, #0e5a6b);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reports-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  font-size: 0.82rem;
+  list-style: none;
+}
+
+.reports-list li {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #ebe8e2;
+  border-radius: 10px;
+}
+
+.reports-list small {
+  color: #64748b;
+  font-size: 0.74rem;
+}
+
+.reports-page .oficinista-operations__empty,
+.reports-page .oficinista-operations__item > p {
+  font-size: 0.84rem;
+}
+
+.reports-page a.oficinista-operations__button,
+.reports-page a.oficinista-operations__button--secondary {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+}
+
+.reports-page__filter {
+  display: grid;
+  max-width: 360px;
+  gap: 6px;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.reports-page__filter select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #14212b;
+  font: inherit;
+}

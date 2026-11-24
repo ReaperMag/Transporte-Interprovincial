@@ -16,6 +16,7 @@ export interface CooperativeProfile extends CooperativeIdentity {
   tiktokUrl: string | null;
   websiteUrl: string | null;
   description: string | null;
+  paymentReviewTimeoutMinutes: number;
 }
 
 export interface CooperativeRouteFrequencyAssignment {

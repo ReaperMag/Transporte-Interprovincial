@@ -267,6 +267,14 @@ def init_db() -> None:
                     "REFERENCES passengers(id) ON DELETE SET NULL"
                 )
             )
+    # Issue #83: el personal del bus ya no se divide en conductor y controlador.
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE staff SET position = 'bus_staff' "
+                "WHERE position IN ('driver', 'controller')"
+            )
+        )
 
 
 def reset_db() -> None:

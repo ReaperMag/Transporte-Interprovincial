@@ -1,0 +1,47 @@
+.bus-staff-dialog__select {
+  min-width: 0;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.bus-staff-status {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.bus-staff-status--active {
+  background: #e3f1ea;
+  color: #23704a;
+}
+
+.bus-staff-status--inactive {
+  background: #ebe8e2;
+  color: #68757b;
+}
+
+.bus-staff-table__activate {
+  border: 1px solid #6aa486;
+  background: transparent;
+  color: #23704a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 7px 12px;
+}
+
+.bus-staff-table__activate:hover {
+  background: #e3f1ea;
+}
+
+.bus-staff-page__notice {
+  margin: 0;
+  padding: 12px 24px;
+  background: #e3f1ea;
+  color: #23704a;
+  font-size: 0.78rem;
+}

@@ -59,7 +59,7 @@ export function PersonalBusLayout() {
         navigationLabel="Secciones del personal del bus"
         sections={sections}
         accountEmail={account?.email}
-        accountRole={profile?.position === 'controller' ? 'Controlador' : 'Conductor'}
+        accountRole="Personal del bus"
         fallbackInitials="PB"
       />
       <div className="oficinista-main">

@@ -15,6 +15,8 @@ const sections: readonly SidebarSection[] = [
   { to: '/cooperativa/rutas', label: 'Rutas', icon: 'route' },
   { to: '/cooperativa/frecuencias', label: 'Frecuencias', icon: 'route' },
   { to: '/cooperativa/oficinistas', label: 'Oficinistas', icon: 'users' },
+  { to: '/cooperativa/personal-bus', label: 'Personal del bus', icon: 'users' },
+  { to: '/cooperativa/reportes', label: 'Reportes de viajes', icon: 'receipt' },
   { to: '/cooperativa/configuracion', label: 'Configuración', icon: 'settings' },
 ];
 

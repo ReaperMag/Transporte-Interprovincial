@@ -64,7 +64,7 @@ def bus_trip(payments):
                 first_name="Carlos",
                 last_name="Conductor",
                 id_number="1700000019",
-                position=StaffPosition.DRIVER,
+                position=StaffPosition.BUS_STAFF,
                 assigned_bus_id=trip.bus_id,
             )
         )

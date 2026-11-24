@@ -4,7 +4,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.permissions import BUS_STAFF_POSITIONS
 from app.core.security import hash_password
 from app.modules.accounts.models import Account, AccountType
 from app.modules.accounts.repository import create_account, get_account_by_email
@@ -89,7 +88,7 @@ def create_bus_staff(
             last_name=data.last_name,
             id_number=data.id_number,
             phone=data.phone,
-            position=StaffPosition(data.position),
+            position=StaffPosition.BUS_STAFF,
             assigned_bus_id=data.assigned_bus_id,
         )
         db.add(staff)
@@ -112,7 +111,7 @@ def _bus_staff_statement(cooperative_id: int):
         .join(Account, Account.id == Staff.account_id)
         .where(
             Staff.cooperative_id == cooperative_id,
-            Staff.position.in_(BUS_STAFF_POSITIONS),
+            Staff.position == StaffPosition.BUS_STAFF,
             Account.cooperative_id == cooperative_id,
             Account.account_type == AccountType.COOPERATIVE,
         )
@@ -182,9 +181,6 @@ def update_bus_staff(
         get_assignable_bus(db, cooperative_id, changes["assigned_bus_id"])
         staff.assigned_bus_id = changes["assigned_bus_id"]
 
-    if "position" in changes:
-        staff.position = StaffPosition(changes["position"])
-
     if "is_active" in changes:
         staff.is_active = changes["is_active"]
         account.is_active = changes["is_active"]
@@ -214,7 +210,6 @@ def to_bus_staff_read(db: Session, staff: Staff, email: str) -> BusStaffRead:
         id_number=staff.id_number,
         email=email,
         phone=staff.phone,
-        position=staff.position.value,
         is_active=staff.is_active,
         assigned_bus=(
             AssignedBusRead(id=bus.id, number=bus.number, plate=bus.plate)
@@ -235,7 +230,6 @@ def to_bus_staff_self_read(db: Session, staff: Staff) -> BusStaffSelfRead:
         id_number=staff.id_number,
         email=account.email,
         phone=staff.phone,
-        position=staff.position.value,
         cooperative_id=cooperative.id,
         cooperative_name=cooperative.name,
         cooperative_logo_url=cooperative.logo_url,

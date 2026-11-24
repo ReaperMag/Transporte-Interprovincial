@@ -290,13 +290,13 @@ def test_admin_lists_only_clerks_from_own_cooperative(test_environment):
         engine,
         email="driver@example.com",
         role_code=COOPERATIVE_ADMIN_ROLE,
-        position=StaffPosition.DRIVER,
+        position=StaffPosition.BUS_STAFF,
     )
     create_cooperative_account(
         engine,
         email="controller@example.com",
         role_code=COOPERATIVE_ADMIN_ROLE,
-        position=StaffPosition.CONTROLLER,
+        position=StaffPosition.BUS_STAFF,
     )
 
     assert login(client, "first-admin@example.com").status_code == 200

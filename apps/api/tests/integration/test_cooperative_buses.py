@@ -338,7 +338,7 @@ def test_bus_with_staff_assignment_cannot_be_deleted(test_environment):
                 first_name="Chofer",
                 last_name="Asignado",
                 id_number="1712345675",
-                position=StaffPosition.DRIVER,
+                position=StaffPosition.BUS_STAFF,
                 assigned_bus_id=created.json()["id"],
             )
         )
